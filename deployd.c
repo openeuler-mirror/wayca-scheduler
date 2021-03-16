@@ -18,6 +18,12 @@
 #define WAYCA_SCD_DEFAULT_CONFIG_PATH "/etc/waycadeployer/deployer.cfg"
 static char *config_file_path = WAYCA_SCD_DEFAULT_CONFIG_PATH;
 
+/* default CPU binding modes */
+static enum CPUBIND default_task_bind = AUTO;
+
+/* default memory bandwidth requirment of the application */
+static enum MEMBAND default_mem_bandwidth = ALL;
+
 #define NR_CPUS 1024
 
 static int ccl_cpus_load[NR_CPUS];
@@ -162,8 +168,9 @@ static int process_auto_bind(struct program *prog)
 
 static int parse_cfg_file(void)
 {
-	FILE *fp;
 	char buf[PATH_MAX];
+	size_t len = 0;
+	FILE *fp;
 
 	fp = fopen(config_file_path, "r");
 	if (!fp) {
@@ -183,18 +190,31 @@ static int parse_cfg_file(void)
 			fclose(fp);
 			return -1;
 		}
-		if (fgets(buf, sizeof(buf), fp)) {
-			char occupied_cpus[PATH_MAX];
-			char *p = buf;
 
-			if (!str_start_with(p, "occupied_cpus")) {
-				fprintf(stderr,
-					"Lacking occupied_cpus, wrong config file");
-				fclose(fp);
-				return -1;
+		while (getline(&p, &len, fp) != EOF) {
+			if (str_start_with(p, "occupied_cpus")) {
+				char occupied_cpus[PATH_MAX];
+				cfg_strtostr(p, occupied_cpus);
+				occupied_cpu_to_load(occupied_cpus);
 			}
-			cfg_strtostr(p, occupied_cpus);
-			occupied_cpu_to_load(occupied_cpus);
+			else if (str_start_with(p, "occupied_io_nodes")) {
+				char occupied_io_nodes[PATH_MAX];
+				cfg_strtostr(p, occupied_io_nodes);
+			}
+			else if (str_start_with(p, "default_task_bind")) {
+				char default_task_bind_str[PATH_MAX];
+				cfg_strtostr(p, default_task_bind_str);
+				cfg_strtocpubind(default_task_bind_str, &default_task_bind);
+				fprintf(stdout, "default task bind is %s\n", cpubind_string[default_task_bind]);
+			}
+			else if (str_start_with(p, "default_mem_bandwidth")) {
+				char default_mem_bandwidth_str[PATH_MAX];
+				cfg_strtostr(p, default_mem_bandwidth_str);
+				cfg_strtomemband(default_mem_bandwidth_str, &default_mem_bandwidth);
+				fprintf(stdout, "default memory bandwidth is %s\n", memband_string[default_mem_bandwidth]);
+			}
+
+			free(p);
 		}
 	}
 
