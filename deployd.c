@@ -2,6 +2,7 @@
 #include <sched.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <string.h>
 #include <getopt.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -13,6 +14,9 @@
 #include <wayca-scheduler.h>
 
 #include "common.h"
+
+#define WAYCA_SCD_DEFAULT_CONFIG_PATH "/etc/waycadeployer/deployer.cfg"
+static char *config_file_path = WAYCA_SCD_DEFAULT_CONFIG_PATH;
 
 #define NR_CPUS 1024
 
@@ -156,14 +160,12 @@ static int process_auto_bind(struct program *prog)
 	return 0;
 }
 
-#define CFG_FILE_PATH "/etc/waycadeployer/deployer.cfg"
-
 static int parse_cfg_file(void)
 {
 	FILE *fp;
 	char buf[PATH_MAX];
 
-	fp = fopen(CFG_FILE_PATH, "r");
+	fp = fopen(config_file_path, "r");
 	if (!fp) {
 		perror("Failed to open waycadeployer configuration file");
 		return -1;
@@ -257,6 +259,24 @@ static int deploy_program(struct program *prog, int fd)
 	return 0;
 }
 
+void parse_command_line(int argc, char **argv)
+{
+	int opt;
+
+	while ((opt = getopt(argc, argv, "f:s:")) != EOF) {
+		switch (opt) {
+		case 'f':
+			config_file_path = strdup(optarg);
+			break;
+		case 's':
+			wayca_scheduler_socket_path = strdup(optarg);
+			break;
+		default:
+			break;
+		}
+	}
+}
+
 int main(int argc, char **argv)
 {
 	struct sockaddr_un cli_addr;
@@ -267,6 +287,7 @@ int main(int argc, char **argv)
 	int ret;
 	int i;
 
+	parse_command_line(argc, argv);
 	parse_cfg_file();
 
 	ret = init_socket();
@@ -333,5 +354,7 @@ int main(int argc, char **argv)
 	}
 
 	unlink(SOCKET_PATH);
+	free(config_file_path);
+	free(wayca_scheduler_socket_path);
 	return 0;
 }
