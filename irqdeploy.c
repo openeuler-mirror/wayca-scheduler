@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <stdbool.h>
-#include <waycadeployer.h>
+#include <wayca-scheduler.h>
 
 static void usage(void)
 {

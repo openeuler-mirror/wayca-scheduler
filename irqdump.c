@@ -7,7 +7,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "waycadeployer.h"
+#include "wayca-scheduler.h"
 
 #define MAX_IRQNAME_LEN 128
 #define MAX_IRQNUM	2048

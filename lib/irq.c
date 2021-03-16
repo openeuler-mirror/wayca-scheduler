@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <fcntl.h>
 #include <string.h>
-#include <waycadeployer.h>
+#include <wayca-scheduler.h>
 
 /*
  * bitmap code is taken from the Linux kernel&irqbalance and minimally adapted for use

@@ -10,7 +10,7 @@
 #include <sys/un.h>
 #include <sys/stat.h>
 #include <linux/limits.h>
-#include <waycadeployer.h>
+#include <wayca-scheduler.h>
 
 #include "common.h"
 

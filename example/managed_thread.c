@@ -1,4 +1,4 @@
-#include <waycadeployer.h>
+#include <wayca-scheduler.h>
 
 void *thread_fun1(void *param)
 {

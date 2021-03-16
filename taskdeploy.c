@@ -5,7 +5,7 @@
 #include <getopt.h>
 #include <stdbool.h>
 #include <string.h>
-#include <waycadeployer.h>
+#include <wayca-scheduler.h>
 
 #include "lib/common.h"
 

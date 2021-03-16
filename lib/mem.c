@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <sys/syscall.h>
-#include <waycadeployer.h>
+#include <wayca-scheduler.h>
 
 #include "common.h"
 
