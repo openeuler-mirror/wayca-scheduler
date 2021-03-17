@@ -29,7 +29,7 @@ SRCS = $(wildcard *.c)
 install:
 	install *.so* /usr/lib/
 	install $(tools) /usr/bin
-	install include/waycadeployer.h /usr/include
+	install include/wayca-scheduler.h /usr/include
 clean:
 	-rm *.o lib/*.o
 	-rm *.so*

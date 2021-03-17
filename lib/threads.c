@@ -8,7 +8,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <sys/syscall.h>
-#include <waycadeployer.h>
+#include <wayca-scheduler.h>
 
 #define thread_sched_setaffinity(pid, size, cpuset) \
   syscall(__NR_sched_setaffinity, (pid_t)pid, (size_t)size, (void *)cpuset)

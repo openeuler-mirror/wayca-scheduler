@@ -12,7 +12,14 @@
  * PACKAGE: we are going to use memory controllers in multiple NUMA nodes in one package
  * ALL: we are going to all memory controller
  */
-enum MEMBAND {LOW, DIE, PACKAGE, ALL};
+enum MEMBAND {LOW = 0, DIE, PACKAGE, ALL};
+
+static const char *memband_string[] = {
+	[LOW]		= "LOW",
+	[DIE]		= "DIE",
+	[PACKAGE]	= "PACKAGE",
+	[ALL]		= "ALL",
+};
 
 /*
  * CPU binding modes
@@ -21,7 +28,13 @@ enum MEMBAND {LOW, DIE, PACKAGE, ALL};
  * FINE: for threads created by wayca_managed_thread APIs, wayca-deployer can do fine-
  * grained binding for each thread or threadpool
  */
-enum CPUBIND {AUTO, COARSE, FINE};
+enum CPUBIND {AUTO = 0, COARSE, FINE};
+
+static const char *cpubind_string[] = {
+	[AUTO]		= "AUTO",
+	[COARSE]	= "DIE",
+	[FINE]		= "FINE",
+};
 
 struct program {
 	pid_t pid;
@@ -40,7 +53,8 @@ static inline int cfg_strtostr(char *buf, char *str)
 
 
 	p = strchr(buf, '\n');
-	*p = 0;
+	if (p)
+		*p = 0;
 
 	p = strchr(buf, '=');
 	if (!p)
@@ -54,5 +68,27 @@ static inline int cfg_strtostr(char *buf, char *str)
 static inline bool str_start_with(const char *str, const char *start)
 {
 	return !strncmp(str, start, strlen(start));
+}
+
+static inline void cfg_strtocpubind(const char *str, enum CPUBIND *cpubind)
+{
+	int i;
+
+	for (i = 0; i < sizeof(cpubind_string) / sizeof(cpubind_string[0]); i++)
+		if (!strcmp(str, cpubind_string[i])) {
+			*cpubind = i;
+			break;
+		}
+}
+
+static inline void cfg_strtomemband(const char *str, enum MEMBAND *memband)
+{
+	int i;
+
+	for (i = 0; i < sizeof(memband_string) / sizeof(memband_string[0]); i++)
+		if (!strcmp(str, memband_string[i])) {
+			*memband = i;
+			break;
+		}
 }
 #endif

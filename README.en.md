@@ -129,7 +129,7 @@ One more example, we do a 1:1 mapping between wayca-managed thread and CPU:
 ```
 Fine-grained binding only supports those threads created by wayca-managed APIs as below:
 ```
-#include <waycadeployer.h>
+#include <wayca-scheduler.h>
 
 void *thread_fun1(void *param)
 {

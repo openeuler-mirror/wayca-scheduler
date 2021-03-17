@@ -1,6 +1,15 @@
 #ifndef LIB_COMMON_H_
 #define LIB_COMMON_H_
 
+#define _GNU_SOURCE
+#include <sched.h>
+
+static const char *wayca_scheduler_socket_path = "/etc/wayca-scheduler/wayca.socket";
+
+/* default configurations */
+#define MAX_MANAGED_MAPS	100
+#define SOCKET_PATH		wayca_scheduler_socket_path
+
 /* leverage the bitmap of cpu_set_t */
 #define node_set_t cpu_set_t
 #define NODE_ZERO CPU_ZERO
