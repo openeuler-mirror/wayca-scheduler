@@ -1,0 +1,304 @@
+guodong@ubuntu:~/wayca-deployer.git/tools$ ./unified-bench.sh
+null:Jobs:1:CPUs:0-3:Result:
+Simple syscall: 0.1389 microseconds
+null:Jobs:1:CPUs:0-7:Result:
+Simple syscall: 0.1389 microseconds
+null:Jobs:1:CPUs:0-11:Result:
+Simple syscall: 0.1389 microseconds
+null:Jobs:1:CPUs:0-23:Result:
+Simple syscall: 0.1389 microseconds
+null:Jobs:1:CPUs:0,4,8,12:Result:
+Simple syscall: 0.1389 microseconds
+null:Jobs:2:CPUs:0-3:Result:
+Simple syscall: 0.1389 microseconds
+null:Jobs:2:CPUs:0-7:Result:
+Simple syscall: 0.1389 microseconds
+null:Jobs:2:CPUs:0-11:Result:
+Simple syscall: 0.1389 microseconds
+null:Jobs:2:CPUs:0-23:Result:
+Simple syscall: 0.1389 microseconds
+null:Jobs:2:CPUs:0,4,8,12:Result:
+Simple syscall: 0.1389 microseconds
+null:Jobs:3:CPUs:0-3:Result:
+Simple syscall: 0.1389 microseconds
+null:Jobs:3:CPUs:0-7:Result:
+Simple syscall: 0.1389 microseconds
+null:Jobs:3:CPUs:0-11:Result:
+Simple syscall: 0.1389 microseconds
+null:Jobs:3:CPUs:0-23:Result:
+Simple syscall: 0.1389 microseconds
+null:Jobs:3:CPUs:0,4,8,12:Result:
+Simple syscall: 0.1389 microseconds
+null:Jobs:4:CPUs:0-3:Result:
+Simple syscall: 0.1389 microseconds
+null:Jobs:4:CPUs:0-7:Result:
+Simple syscall: 0.1389 microseconds
+null:Jobs:4:CPUs:0-11:Result:
+Simple syscall: 0.1389 microseconds
+null:Jobs:4:CPUs:0-23:Result:
+Simple syscall: 0.1389 microseconds
+null:Jobs:4:CPUs:0,4,8,12:Result:
+Simple syscall: 0.1389 microseconds
+null:Jobs:8:CPUs:0-3:Result:
+Simple syscall: 0.2773 microseconds
+null:Jobs:8:CPUs:0-7:Result:
+Simple syscall: 0.1389 microseconds
+null:Jobs:8:CPUs:0-11:Result:
+Simple syscall: 0.1389 microseconds
+null:Jobs:8:CPUs:0-23:Result:
+Simple syscall: 0.1389 microseconds
+null:Jobs:8:CPUs:0,4,8,12:Result:
+Simple syscall: 0.2784 microseconds
+null:Jobs:12:CPUs:0-3:Result:
+Simple syscall: 0.4168 microseconds
+null:Jobs:12:CPUs:0-7:Result:
+Simple syscall: 0.2542 microseconds
+null:Jobs:12:CPUs:0-11:Result:
+Simple syscall: 0.1389 microseconds
+null:Jobs:12:CPUs:0-23:Result:
+Simple syscall: 0.1389 microseconds
+null:Jobs:12:CPUs:0,4,8,12:Result:
+Simple syscall: 0.4169 microseconds
+null:Jobs:24:CPUs:0-3:Result:
+Simple syscall: 0.8340 microseconds
+null:Jobs:24:CPUs:0-7:Result:
+Simple syscall: 0.4239 microseconds
+null:Jobs:24:CPUs:0-11:Result:
+Simple syscall: 0.2785 microseconds
+null:Jobs:24:CPUs:0-23:Result:
+Simple syscall: 0.1389 microseconds
+null:Jobs:24:CPUs:0,4,8,12:Result:
+Simple syscall: 0.8335 microseconds
+null:Jobs:48:CPUs:0-3:Result:
+Simple syscall: 1.6671 microseconds
+null:Jobs:48:CPUs:0-7:Result:
+Simple syscall: 0.8333 microseconds
+null:Jobs:48:CPUs:0-11:Result:
+Simple syscall: 0.5920 microseconds
+null:Jobs:48:CPUs:0-23:Result:
+Simple syscall: 0.2789 microseconds
+null:Jobs:48:CPUs:0,4,8,12:Result:
+Simple syscall: 1.8057 microseconds
+null:Jobs:72:CPUs:0-3:Result:
+Simple syscall: 2.5320 microseconds
+null:Jobs:72:CPUs:0-7:Result:
+Simple syscall: 1.6394 microseconds
+null:Jobs:72:CPUs:0-11:Result:
+Simple syscall: 0.7566 microseconds
+null:Jobs:72:CPUs:0-23:Result:
+Simple syscall: 0.4157 microseconds
+null:Jobs:72:CPUs:0,4,8,12:Result:
+Simple syscall: 2.5115 microseconds
+null:Jobs:96:CPUs:0-3:Result:
+Simple syscall: 3.3342 microseconds
+null:Jobs:96:CPUs:0-7:Result:
+Simple syscall: 1.8057 microseconds
+null:Jobs:96:CPUs:0-11:Result:
+Simple syscall: 1.1119 microseconds
+null:Jobs:96:CPUs:0-23:Result:
+Simple syscall: 0.5558 microseconds
+null:Jobs:96:CPUs:0,4,8,12:Result:
+Simple syscall: 3.6112 microseconds
+read:Jobs:1:CPUs:0-3:Result:
+Simple read: 0.1826 microseconds
+read:Jobs:1:CPUs:0-7:Result:
+Simple read: 0.1816 microseconds
+read:Jobs:1:CPUs:0-11:Result:
+Simple read: 0.1809 microseconds
+read:Jobs:1:CPUs:0-23:Result:
+Simple read: 0.1809 microseconds
+read:Jobs:1:CPUs:0,4,8,12:Result:
+Simple read: 0.1812 microseconds
+read:Jobs:2:CPUs:0-3:Result:
+Simple read: 0.1869 microseconds
+read:Jobs:2:CPUs:0-7:Result:
+Simple read: 0.2350 microseconds
+read:Jobs:2:CPUs:0-11:Result:
+Simple read: 0.2381 microseconds
+read:Jobs:2:CPUs:0-23:Result:
+Simple read: 0.2359 microseconds
+read:Jobs:2:CPUs:0,4,8,12:Result:
+Simple read: 0.2309 microseconds
+read:Jobs:3:CPUs:0-3:Result:
+Simple read: 0.1924 microseconds
+read:Jobs:3:CPUs:0-7:Result:
+Simple read: 0.2670 microseconds
+read:Jobs:3:CPUs:0-11:Result:
+Simple read: 0.3054 microseconds
+read:Jobs:3:CPUs:0-23:Result:
+Simple read: 0.3054 microseconds
+read:Jobs:3:CPUs:0,4,8,12:Result:
+Simple read: 0.3049 microseconds
+read:Jobs:4:CPUs:0-3:Result:
+Simple read: 0.1929 microseconds
+read:Jobs:4:CPUs:0-7:Result:
+Simple read: 0.3705 microseconds
+read:Jobs:4:CPUs:0-11:Result:
+Simple read: 0.3427 microseconds
+read:Jobs:4:CPUs:0-23:Result:
+Simple read: 0.4152 microseconds
+read:Jobs:4:CPUs:0,4,8,12:Result:
+Simple read: 0.4086 microseconds
+read:Jobs:8:CPUs:0-3:Result:
+Simple read: 0.3851 microseconds
+read:Jobs:8:CPUs:0-7:Result:
+Simple read: 0.6953 microseconds
+read:Jobs:8:CPUs:0-11:Result:
+Simple read: 0.9415 microseconds
+read:Jobs:8:CPUs:0-23:Result:
+Simple read: 0.6985 microseconds
+read:Jobs:8:CPUs:0,4,8,12:Result:
+Simple read: 0.8194 microseconds
+read:Jobs:12:CPUs:0-3:Result:
+Simple read: 0.5765 microseconds
+read:Jobs:12:CPUs:0-7:Result:
+Simple read: 0.9441 microseconds
+read:Jobs:12:CPUs:0-11:Result:
+Simple read: 1.2717 microseconds
+read:Jobs:12:CPUs:0-23:Result:
+Simple read: 1.5258 microseconds
+read:Jobs:12:CPUs:0,4,8,12:Result:
+Simple read: 1.2271 microseconds
+read:Jobs:24:CPUs:0-3:Result:
+Simple read: 1.1585 microseconds
+read:Jobs:24:CPUs:0-7:Result:
+Simple read: 2.0841 microseconds
+read:Jobs:24:CPUs:0-11:Result:
+Simple read: 2.5245 microseconds
+read:Jobs:24:CPUs:0-23:Result:
+Simple read: 3.1181 microseconds
+read:Jobs:24:CPUs:0,4,8,12:Result:
+Simple read: 2.4538 microseconds
+read:Jobs:48:CPUs:0-3:Result:
+Simple read: 2.3144 microseconds
+read:Jobs:48:CPUs:0-7:Result:
+Simple read: 2.7821 microseconds
+read:Jobs:48:CPUs:0-11:Result:
+Simple read: 5.0463 microseconds
+read:Jobs:48:CPUs:0-23:Result:
+Simple read: 6.2246 microseconds
+read:Jobs:48:CPUs:0,4,8,12:Result:
+Simple read: 4.0917 microseconds
+read:Jobs:72:CPUs:0-3:Result:
+Simple read: 3.5046 microseconds
+read:Jobs:72:CPUs:0-7:Result:
+Simple read: 4.3604 microseconds
+read:Jobs:72:CPUs:0-11:Result:
+^Bz
+^Bz
+Simple read: 5.5021 microseconds
+read:Jobs:72:CPUs:0-23:Result:
+Simple read: 9.3178 microseconds
+read:Jobs:72:CPUs:0,4,8,12:Result:
+Simple read: 7.4381 microseconds
+read:Jobs:96:CPUs:0-3:Result:
+Simple read: 4.6159 microseconds
+read:Jobs:96:CPUs:0-7:Result:
+Simple read: 6.9493 microseconds
+read:Jobs:96:CPUs:0-11:Result:
+Simple read: 9.0528 microseconds
+read:Jobs:96:CPUs:0-23:Result:
+Simple read: 12.4622 microseconds
+read:Jobs:96:CPUs:0,4,8,12:Result:
+Simple read: 9.8842 microseconds
+write:Jobs:1:CPUs:0-3:Result:
+Simple write: 0.1587 microseconds
+write:Jobs:1:CPUs:0-7:Result:
+Simple write: 0.1587 microseconds
+write:Jobs:1:CPUs:0-11:Result:
+Simple write: 0.1579 microseconds
+write:Jobs:1:CPUs:0-23:Result:
+Simple write: 0.1587 microseconds
+write:Jobs:1:CPUs:0,4,8,12:Result:
+Simple write: 0.1588 microseconds
+write:Jobs:2:CPUs:0-3:Result:
+Simple write: 0.1669 microseconds
+write:Jobs:2:CPUs:0-7:Result:
+Simple write: 0.2160 microseconds
+write:Jobs:2:CPUs:0-11:Result:
+Simple write: 0.2145 microseconds
+write:Jobs:2:CPUs:0-23:Result:
+Simple write: 0.2103 microseconds
+write:Jobs:2:CPUs:0,4,8,12:Result:
+Simple write: 0.2142 microseconds
+write:Jobs:3:CPUs:0-3:Result:
+Simple write: 0.1738 microseconds
+write:Jobs:3:CPUs:0-7:Result:
+Simple write: 0.2236 microseconds
+write:Jobs:3:CPUs:0-11:Result:
+Simple write: 0.2673 microseconds
+write:Jobs:3:CPUs:0-23:Result:
+Simple write: 0.2746 microseconds
+write:Jobs:3:CPUs:0,4,8,12:Result:
+Simple write: 0.2661 microseconds
+write:Jobs:4:CPUs:0-3:Result:
+Simple write: 0.1751 microseconds
+write:Jobs:4:CPUs:0-7:Result:
+Simple write: 0.2973 microseconds
+write:Jobs:4:CPUs:0-11:Result:
+Simple write: 0.3001 microseconds
+write:Jobs:4:CPUs:0-23:Result:
+Simple write: 0.3766 microseconds
+write:Jobs:4:CPUs:0,4,8,12:Result:
+Simple write: 0.3606 microseconds
+write:Jobs:8:CPUs:0-3:Result:
+Simple write: 0.3498 microseconds
+write:Jobs:8:CPUs:0-7:Result:
+Simple write: 0.5471 microseconds
+write:Jobs:8:CPUs:0-11:Result:
+Simple write: 0.6701 microseconds
+write:Jobs:8:CPUs:0-23:Result:
+Simple write: 0.6340 microseconds
+write:Jobs:8:CPUs:0,4,8,12:Result:
+Simple write: 0.7251 microseconds
+write:Jobs:12:CPUs:0-3:Result:
+Simple write: 0.5258 microseconds
+write:Jobs:12:CPUs:0-7:Result:
+Simple write: 0.7004 microseconds
+write:Jobs:12:CPUs:0-11:Result:
+Simple write: 0.9674 microseconds
+write:Jobs:12:CPUs:0-23:Result:
+Simple write: 1.0699 microseconds
+write:Jobs:12:CPUs:0,4,8,12:Result:
+Simple write: 1.0852 microseconds
+write:Jobs:24:CPUs:0-3:Result:
+Simple write: 1.0500 microseconds
+write:Jobs:24:CPUs:0-7:Result:
+Simple write: 1.5293 microseconds
+write:Jobs:24:CPUs:0-11:Result:
+Simple write: 1.8099 microseconds
+write:Jobs:24:CPUs:0-23:Result:
+Simple write: 2.1950 microseconds
+write:Jobs:24:CPUs:0,4,8,12:Result:
+Simple write: 2.1552 microseconds
+write:Jobs:48:CPUs:0-3:Result:
+Simple write: 2.1065 microseconds
+write:Jobs:48:CPUs:0-7:Result:
+Simple write: 3.2876 microseconds
+write:Jobs:48:CPUs:0-11:Result:
+Simple write: 3.8608 microseconds
+write:Jobs:48:CPUs:0-23:Result:
+Simple write: 4.4679 microseconds
+write:Jobs:48:CPUs:0,4,8,12:Result:
+Simple write: 4.3364 microseconds
+write:Jobs:72:CPUs:0-3:Result:
+Simple write: 3.1806 microseconds
+write:Jobs:72:CPUs:0-7:Result:
+Simple write: 4.3883 microseconds
+write:Jobs:72:CPUs:0-11:Result:
+Simple write: 5.8618 microseconds
+write:Jobs:72:CPUs:0-23:Result:
+Simple write: 6.6399 microseconds
+write:Jobs:72:CPUs:0,4,8,12:Result:
+Simple write: 6.5174 microseconds
+write:Jobs:96:CPUs:0-3:Result:
+Simple write: 4.2211 microseconds
+write:Jobs:96:CPUs:0-7:Result:
+Simple write: 6.0614 microseconds
+write:Jobs:96:CPUs:0-11:Result:
+Simple write: 7.9984 microseconds
+write:Jobs:96:CPUs:0-23:Result:
+Simple write: 8.8585 microseconds
+write:Jobs:96:CPUs:0,4,8,12:Result:
+Simple write: 8.6990 microseconds
+

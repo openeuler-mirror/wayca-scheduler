@@ -1,0 +1,270 @@
+Benching CPU 0-3 for lock_type 3, round 1:
+Function pass time (in seconds):    8.281388
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-3 for lock_type 3, round 2:
+Function pass time (in seconds):    8.091474
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-3 for lock_type 3, round 3:
+Function pass time (in seconds):    8.231954
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-8 for lock_type 3, round 1:
+Function pass time (in seconds):    8.816195
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-8 for lock_type 3, round 2:
+Function pass time (in seconds):    9.363090
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-8 for lock_type 3, round 3:
+Function pass time (in seconds):    9.253619
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-15 for lock_type 3, round 1:
+Function pass time (in seconds):   10.671878
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-15 for lock_type 3, round 2:
+Function pass time (in seconds):   11.578338
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-15 for lock_type 3, round 3:
+Function pass time (in seconds):   12.845081
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-23 for lock_type 3, round 1:
+Function pass time (in seconds):   13.379061
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-23 for lock_type 3, round 2:
+Function pass time (in seconds):   11.139227
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-23 for lock_type 3, round 3:
+Function pass time (in seconds):   13.304826
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,4,8,12 for lock_type 3, round 1:
+Function pass time (in seconds):   16.351911
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,4,8,12 for lock_type 3, round 2:
+Function pass time (in seconds):   16.451107
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,4,8,12 for lock_type 3, round 3:
+Function pass time (in seconds):   16.690064
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,6,12,18 for lock_type 3, round 1:
+Function pass time (in seconds):   16.200808
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,6,12,18 for lock_type 3, round 2:
+Function pass time (in seconds):   16.643885
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,6,12,18 for lock_type 3, round 3:
+Function pass time (in seconds):   15.892563
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,1,24,25 for lock_type 3, round 1:
+Function pass time (in seconds):    9.658472
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,1,24,25 for lock_type 3, round 2:
+Function pass time (in seconds):    9.778867
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,1,24,25 for lock_type 3, round 3:
+Function pass time (in seconds):    9.799176
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,1,48,49 for lock_type 3, round 1:
+Function pass time (in seconds):   10.233384
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,1,48,49 for lock_type 3, round 2:
+Function pass time (in seconds):    9.736539
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,1,48,49 for lock_type 3, round 3:
+Function pass time (in seconds):   20.119418
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,1,72,73 for lock_type 3, round 1:
+Function pass time (in seconds):   14.931413
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,1,72,73 for lock_type 3, round 2:
+Function pass time (in seconds):   11.648344
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,1,72,73 for lock_type 3, round 3:
+Function pass time (in seconds):   12.175964
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,24,48,72 for lock_type 3, round 1:
+Function pass time (in seconds):   23.566027
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,24,48,72 for lock_type 3, round 2:
+Function pass time (in seconds):   20.969604
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,24,48,72 for lock_type 3, round 3:
+Function pass time (in seconds):   21.073004
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-3 for lock_type 4, round 1:
+Function pass time (in seconds):    9.029012
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-3 for lock_type 4, round 2:
+Function pass time (in seconds):    9.728527
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-3 for lock_type 4, round 3:
+Function pass time (in seconds):    8.875612
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-8 for lock_type 4, round 1:
+Function pass time (in seconds):    8.990839
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-8 for lock_type 4, round 2:
+Function pass time (in seconds):   18.351705
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-8 for lock_type 4, round 3:
+Function pass time (in seconds):   19.315550
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-15 for lock_type 4, round 1:
+Function pass time (in seconds):   15.515409
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-15 for lock_type 4, round 2:
+Function pass time (in seconds):   19.315575
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-15 for lock_type 4, round 3:
+Function pass time (in seconds):   16.124791
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-23 for lock_type 4, round 1:
+Function pass time (in seconds):   12.809931
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-23 for lock_type 4, round 2:
+Function pass time (in seconds):   13.116396
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-23 for lock_type 4, round 3:
+Function pass time (in seconds):   21.122569
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,4,8,12 for lock_type 4, round 1:
+Function pass time (in seconds):   26.893765
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,4,8,12 for lock_type 4, round 2:
+Function pass time (in seconds):   26.390431
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,4,8,12 for lock_type 4, round 3:
+Function pass time (in seconds):   23.288723
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,6,12,18 for lock_type 4, round 1:
+Function pass time (in seconds):   23.443774
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,6,12,18 for lock_type 4, round 2:
+Function pass time (in seconds):   24.977406
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,6,12,18 for lock_type 4, round 3:
+Function pass time (in seconds):   25.828034
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,1,24,25 for lock_type 4, round 1:
+Function pass time (in seconds):   20.581768
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,1,24,25 for lock_type 4, round 2:
+Function pass time (in seconds):   19.759081
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,1,24,25 for lock_type 4, round 3:
+Function pass time (in seconds):   23.346414
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,1,48,49 for lock_type 4, round 1:
+Function pass time (in seconds):   52.817434
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,1,48,49 for lock_type 4, round 2:
+Function pass time (in seconds):   59.306969
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,1,48,49 for lock_type 4, round 3:
+Function pass time (in seconds):   29.158924
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,1,72,73 for lock_type 4, round 1:
+Function pass time (in seconds):   53.267432
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,1,72,73 for lock_type 4, round 2:
+Function pass time (in seconds):   54.747116
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,1,72,73 for lock_type 4, round 3:
+Function pass time (in seconds):   57.727988
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,24,48,72 for lock_type 4, round 1:
+Function pass time (in seconds):   96.473233
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,24,48,72 for lock_type 4, round 2:
+Function pass time (in seconds):  104.886090
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,24,48,72 for lock_type 4, round 3:
+Function pass time (in seconds):   83.450469
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-3 for lock_type 5, round 1:
+Function pass time (in seconds):   23.243470
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-3 for lock_type 5, round 2:
+Function pass time (in seconds):   19.050092
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-3 for lock_type 5, round 3:
+Function pass time (in seconds):   19.461402
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-8 for lock_type 5, round 1:
+Function pass time (in seconds):   23.669860
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-8 for lock_type 5, round 2:
+Function pass time (in seconds):   28.586358
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-8 for lock_type 5, round 3:
+Function pass time (in seconds):   27.826175
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-15 for lock_type 5, round 1:
+Function pass time (in seconds):   28.728204
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-15 for lock_type 5, round 2:
+Function pass time (in seconds):   26.676572
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-15 for lock_type 5, round 3:
+Function pass time (in seconds):   29.292499
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-23 for lock_type 5, round 1:
+Function pass time (in seconds):   30.471593
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-23 for lock_type 5, round 2:
+Function pass time (in seconds):   31.589236
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0-23 for lock_type 5, round 3:
+Function pass time (in seconds):   30.738147
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,4,8,12 for lock_type 5, round 1:
+Function pass time (in seconds):   38.194332
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,4,8,12 for lock_type 5, round 2:
+Function pass time (in seconds):   33.074869
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,4,8,12 for lock_type 5, round 3:
+Function pass time (in seconds):   28.155414
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,6,12,18 for lock_type 5, round 1:
+Function pass time (in seconds):   36.299173
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,6,12,18 for lock_type 5, round 2:
+Function pass time (in seconds):   35.502235
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,6,12,18 for lock_type 5, round 3:
+Function pass time (in seconds):   36.976752
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,1,24,25 for lock_type 5, round 1:
+Function pass time (in seconds):   42.480044
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,1,24,25 for lock_type 5, round 2:
+Function pass time (in seconds):   55.792382
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,1,24,25 for lock_type 5, round 3:
+Function pass time (in seconds):   61.916379
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,1,48,49 for lock_type 5, round 1:
+Function pass time (in seconds):   79.063953
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,1,48,49 for lock_type 5, round 2:
+Function pass time (in seconds):   99.600909
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,1,48,49 for lock_type 5, round 3:
+Function pass time (in seconds):   84.501182
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,1,72,73 for lock_type 5, round 1:
+Function pass time (in seconds):  136.547110
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,1,72,73 for lock_type 5, round 2:
+Function pass time (in seconds):  142.042116
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,1,72,73 for lock_type 5, round 3:
+Function pass time (in seconds):  138.954256
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,24,48,72 for lock_type 5, round 1:
+Function pass time (in seconds):  116.930079
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,24,48,72 for lock_type 5, round 2:
+Function pass time (in seconds):  113.411362
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
+Benching CPU 0,24,48,72 for lock_type 5, round 3:
+Function pass time (in seconds):  132.732625
+Hash: 0 (should be 0 if -m is even or aaaaaaaaaaaaaaa if -m is odd)
