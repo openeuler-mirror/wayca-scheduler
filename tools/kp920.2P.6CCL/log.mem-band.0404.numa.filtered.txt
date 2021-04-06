@@ -1,0 +1,54 @@
+numactl -C 0,4,8,12 -m 0 /usr/lib/lmbench/bin/stream -P 4 -M 1024M -N 5
+STREAM copy latency: 1.57 nanoseconds
+STREAM copy bandwidth: 40847.22 MB/sec
+STREAM scale latency: 1.59 nanoseconds
+STREAM scale bandwidth: 40354.15 MB/sec
+STREAM add latency: 2.88 nanoseconds
+STREAM add bandwidth: 33388.14 MB/sec
+STREAM triad latency: 2.74 nanoseconds
+STREAM triad bandwidth: 35059.70 MB/sec
+numactl -C 0,1,4,5 -m 1 /usr/lib/lmbench/bin/stream -P 4 -M 1024M -N 5
+STREAM copy latency: 1.75 nanoseconds
+STREAM copy bandwidth: 36672.18 MB/sec
+STREAM scale latency: 1.76 nanoseconds
+STREAM scale bandwidth: 36286.00 MB/sec
+STREAM add latency: 3.38 nanoseconds
+STREAM add bandwidth: 28430.84 MB/sec
+STREAM triad latency: 2.19 nanoseconds
+STREAM triad bandwidth: 43737.23 MB/sec
+numactl -C 0,1,4,8 -m 1 /usr/lib/lmbench/bin/stream -P 4 -M 1024M -N 5
+STREAM copy latency: 1.75 nanoseconds
+STREAM copy bandwidth: 36536.90 MB/sec
+STREAM scale latency: 1.75 nanoseconds
+STREAM scale bandwidth: 36578.99 MB/sec
+STREAM add latency: 2.20 nanoseconds
+STREAM add bandwidth: 43703.36 MB/sec
+STREAM triad latency: 2.24 nanoseconds
+STREAM triad bandwidth: 42891.25 MB/sec
+numactl -C 0,4,8,12 -m 1 /usr/lib/lmbench/bin/stream -P 4 -M 1024M -N 5
+STREAM copy latency: 1.71 nanoseconds
+STREAM copy bandwidth: 37400.12 MB/sec
+STREAM scale latency: 1.73 nanoseconds
+STREAM scale bandwidth: 37010.79 MB/sec
+STREAM add latency: 3.24 nanoseconds
+STREAM add bandwidth: 29594.21 MB/sec
+STREAM triad latency: 2.12 nanoseconds
+STREAM triad bandwidth: 45241.17 MB/sec
+numactl -C 0,4,8,12 -m 2 /usr/lib/lmbench/bin/stream -P 4 -M 1024M -N 5
+STREAM copy latency: 2.04 nanoseconds
+STREAM copy bandwidth: 31446.97 MB/sec
+STREAM scale latency: 2.24 nanoseconds
+STREAM scale bandwidth: 28613.93 MB/sec
+STREAM add latency: 3.22 nanoseconds
+STREAM add bandwidth: 29816.77 MB/sec
+STREAM triad latency: 3.25 nanoseconds
+STREAM triad bandwidth: 29525.16 MB/sec
+numactl -C 0,4,8,12 -m 3 /usr/lib/lmbench/bin/stream -P 4 -M 1024M -N 5
+STREAM copy latency: 2.21 nanoseconds
+STREAM copy bandwidth: 28985.56 MB/sec
+STREAM scale latency: 2.33 nanoseconds
+STREAM scale bandwidth: 27469.21 MB/sec
+STREAM add latency: 6.74 nanoseconds
+STREAM add bandwidth: 14238.26 MB/sec
+STREAM triad latency: 3.49 nanoseconds
+STREAM triad bandwidth: 27495.33 MB/sec

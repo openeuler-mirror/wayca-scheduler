@@ -1,0 +1,93 @@
+numactl --physcpubind=1,0 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 10.3585 microseconds
+numactl --physcpubind=1,4 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.7567 microseconds
+numactl --physcpubind=1,8 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.7207 microseconds
+numactl --physcpubind=1,12 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.7727 microseconds
+numactl --physcpubind=1,16 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.7444 microseconds
+numactl --physcpubind=1,20 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.7309 microseconds
+numactl --physcpubind=0,0 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.8581 microseconds
+numactl --physcpubind=5,0 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.6553 microseconds
+numactl --physcpubind=5,4 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 10.2520 microseconds
+numactl --physcpubind=5,8 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.5479 microseconds
+numactl --physcpubind=5,12 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.4020 microseconds
+numactl --physcpubind=5,16 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.6910 microseconds
+numactl --physcpubind=5,20 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.7014 microseconds
+numactl --physcpubind=4,4 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.8362 microseconds
+numactl --physcpubind=9,0 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.6990 microseconds
+numactl --physcpubind=9,4 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.6415 microseconds
+numactl --physcpubind=9,8 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 10.1423 microseconds
+numactl --physcpubind=9,12 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.7197 microseconds
+numactl --physcpubind=9,16 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.5435 microseconds
+numactl --physcpubind=9,20 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.8594 microseconds
+numactl --physcpubind=8,8 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.9150 microseconds
+numactl --physcpubind=13,0 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.5461 microseconds
+numactl --physcpubind=13,4 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.5998 microseconds
+numactl --physcpubind=13,8 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.5784 microseconds
+numactl --physcpubind=13,12 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 10.2909 microseconds
+numactl --physcpubind=13,16 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.7242 microseconds
+numactl --physcpubind=13,20 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.7709 microseconds
+numactl --physcpubind=12,12 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.8385 microseconds
+numactl --physcpubind=17,0 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.4393 microseconds
+numactl --physcpubind=17,4 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.6966 microseconds
+numactl --physcpubind=17,8 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.5742 microseconds
+numactl --physcpubind=17,12 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.6576 microseconds
+numactl --physcpubind=17,16 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 10.0853 microseconds
+numactl --physcpubind=17,20 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.4074 microseconds
+numactl --physcpubind=16,16 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.8542 microseconds
+numactl --physcpubind=21,0 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.4802 microseconds
+numactl --physcpubind=21,4 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.7369 microseconds
+numactl --physcpubind=21,8 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.8377 microseconds
+numactl --physcpubind=21,12 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.6665 microseconds
+numactl --physcpubind=21,16 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 11.5132 microseconds
+numactl --physcpubind=21,20 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 9.9519 microseconds
+numactl --physcpubind=20,20 --membind=0 /home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 4
+Pipe latency: 12.0012 microseconds
+LMBENCH_SCHED='CUSTOM_SPREAD 0 24'
+/home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 20
+Pipe latency: 15.0120 microseconds
+LMBENCH_SCHED='CUSTOM_SPREAD 0 64'
+/home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 20
+Pipe latency: 17.2992 microseconds
+LMBENCH_SCHED='CUSTOM_SPREAD 0 72'
+/home/guodong/lmbench-3.0-a9/bin/lat_pipe -W 1 -N 20
+Pipe latency: 17.7730 microseconds

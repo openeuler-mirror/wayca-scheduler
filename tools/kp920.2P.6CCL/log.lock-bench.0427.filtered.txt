@@ -1,0 +1,68 @@
+numactl --physcpubind=0-3 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 4 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):    8.193357
+numactl --physcpubind=0-1,4-5 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 4 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):    8.588916
+numactl --physcpubind=0-1,4,8 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 4 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   12.631508
+numactl --physcpubind=0,4,8,12 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 4 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   16.469239
+numactl --physcpubind=0,1,24,25 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 4 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):    9.810093
+numactl --physcpubind=0,1,48,49 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 4 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):    9.217564
+numactl --physcpubind=0,1,72,73 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 4 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   20.832344
+numactl --physcpubind=0,24,48,72 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 4 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   29.358383
+numactl --physcpubind=0-3 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 4 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):    9.095881
+numactl --physcpubind=0-1,4-5 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 4 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   18.527733
+numactl --physcpubind=0-1,4,8 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 4 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   21.171472
+numactl --physcpubind=0,4,8,12 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 4 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   23.319886
+numactl --physcpubind=0,1,24,25 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 4 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   18.250107
+numactl --physcpubind=0,1,48,49 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 4 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   54.691010
+numactl --physcpubind=0,1,72,73 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 4 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   45.662539
+numactl --physcpubind=0,24,48,72 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 4 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   90.677025
+numactl --physcpubind=0,1,2,3,4,5,6,7 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 8 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   11.258243
+numactl --physcpubind=0,1,3,4,6,7,9,10 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 8 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   15.903585
+numactl --physcpubind=0,2,4,6,8,10,12,14 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 8 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   15.411796
+numactl --physcpubind=0,2,5,7,10,12,15,17 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 8 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   18.550333
+numactl --physcpubind=0,3,6,9,12,15,18,21 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 8 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   20.626485
+numactl --physcpubind=0,2,4,6,24,26,28,30 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 8 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   21.309754
+numactl --physcpubind=0,2,4,6,48,50,52,54 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 8 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   33.702410
+numactl --physcpubind=0,2,4,6,72,74,76,78 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 8 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   32.734826
+numactl --physcpubind=0,2,24,26,48,50,72,74 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 8 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   41.908939
+numactl --physcpubind=0,1,2,3,4,5,6,7 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 8 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   23.143592
+numactl --physcpubind=0,1,3,4,6,7,9,10 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 8 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   26.709748
+numactl --physcpubind=0,2,4,6,8,10,12,14 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 8 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   25.810939
+numactl --physcpubind=0,2,5,7,10,12,15,17 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 8 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   29.585649
+numactl --physcpubind=0,3,6,9,12,15,18,21 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 8 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   34.860903
+numactl --physcpubind=0,2,4,6,24,26,28,30 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 8 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   35.847824
+numactl --physcpubind=0,2,4,6,48,50,52,54 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 8 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   58.327006
+numactl --physcpubind=0,2,4,6,72,74,76,78 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 8 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   74.612532
+numactl --physcpubind=0,2,24,26,48,50,72,74 /home/guodong/attractivechaos.benchmarks.git/lock/lock_test -t 8 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   83.424125
