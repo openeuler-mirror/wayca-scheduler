@@ -11,7 +11,7 @@ wayca-irqdeploy: libwaycadeployer.so.1.0 irqdeploy.c
 	$(CC) $(CFLAGS) irqdeploy.c -L. -lwaycadeployer -I./include -o $@
 wayca-irqdump: libwaycadeployer.so.1.0 irqdump.c
 	$(CC) $(CFLAGS) irqdump.c -L. -lwaycadeployer -I./include -o $@
-libwaycadeployer.so.1.0: lib/threads.o lib/managed_threads.o lib/irq.o lib/mem.o lib/topo.o
+libwaycadeployer.so.1.0: lib/threads.o lib/managed_threads.o lib/irq.o lib/mem.o lib/topo.o lib/group.o
 	$(CC) -fPIC -pthread -shared -Wl,-soname,libwaycadeployer.so.1 -o $@ $^
 	-ln -s libwaycadeployer.so.1.0 libwaycadeployer.so
 	-ln -s libwaycadeployer.so.1.0 libwaycadeployer.so.1
