@@ -33,6 +33,7 @@ int cores_in_package(void);
 int cores_in_total(void);
 int nodes_in_package(void);
 int nodes_in_total(void);
+void topo_print(void);
 
 int wayca_managed_thread_create(int id, pthread_t *thread, const pthread_attr_t *attr,
 				void *(*start_routine) (void *), void *arg);

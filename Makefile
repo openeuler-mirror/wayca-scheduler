@@ -1,11 +1,13 @@
 #Todo: move to autoconf + automake
 tools = wayca-deployer wayca-deployd wayca-irqdump wayca-irqdeploy wayca-taskdeploy
-all: $(tools)
+tests = wayca_group wayca_thread wayca_topo
+
+all: $(tools) $(tests)
 wayca-deployd: libwaycadeployer.so.1.0 deployd.c
 	$(CC) $(CFLAGS) deployd.c -L. -lwaycadeployer -I./include -o $@
 wayca-deployer: libwaycadeployer.so.1.0 deployer.c perf.c
 	$(CC) $(CFLAGS) deployer.c perf.c -L. -lwaycadeployer -I./include -o $@
-wayca-taskdeploy: libwaycadeployer.so.1.0 taskdeploy.c
+wayca-taskdeploy: libwaycadeployer.so.1.0 taskdeploy.c perf.c
 	$(CC) $(CFLAGS) taskdeploy.c perf.c -L. -lwaycadeployer -I./include -o $@
 wayca-irqdeploy: libwaycadeployer.so.1.0 irqdeploy.c
 	$(CC) $(CFLAGS) irqdeploy.c -L. -lwaycadeployer -I./include -o $@
@@ -15,6 +17,13 @@ libwaycadeployer.so.1.0: lib/threads.o lib/managed_threads.o lib/irq.o lib/mem.o
 	$(CC) -fPIC -pthread -shared -Wl,-soname,libwaycadeployer.so.1 -o $@ $^
 	-ln -s libwaycadeployer.so.1.0 libwaycadeployer.so
 	-ln -s libwaycadeployer.so.1.0 libwaycadeployer.so.1
+# test stubs
+wayca_group: libwaycadeployer.so.1.0 test/wayca_group.c
+	$(CC) $(CFLAGS) test/wayca_group.c -L. -lwaycadeployer -I./include -o test/$@
+wayca_thread: libwaycadeployer.so.1.0 test/wayca_thread.c
+	$(CC) $(CFLAGS) test/wayca_thread.c -L. -lwaycadeployer -I./include -o test/$@
+wayca_topo: libwaycadeployer.so.1.0 test/wayca_topo.c
+	$(CC) $(CFLAGS) test/wayca_topo.c -L. -lwaycadeployer -I./include -o test/$@
 
 CFLAGS +=-g -Wall -fPIC -DWAYCA_DEPLOY_VERSION=\"0.1\"
 SRCS = $(wildcard *.c)
@@ -31,6 +40,7 @@ install:
 	install $(tools) /usr/bin
 	install include/wayca-scheduler.h /usr/include
 clean:
-	-rm *.o lib/*.o
-	-rm *.so*
-	-rm $(tools)
+	-rm -f *.o lib/*.o
+	-rm -f *.so*
+	-rm -f $(tools)
+	-cd test && rm -f $(tests)
