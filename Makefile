@@ -5,7 +5,7 @@ wayca-deployd: libwaycadeployer.so.1.0 deployd.c
 	$(CC) $(CFLAGS) deployd.c -L. -lwaycadeployer -I./include -o $@
 wayca-deployer: libwaycadeployer.so.1.0 deployer.c perf.c
 	$(CC) $(CFLAGS) deployer.c perf.c -L. -lwaycadeployer -I./include -o $@
-wayca-taskdeploy: libwaycadeployer.so.1.0 taskdeploy.c
+wayca-taskdeploy: libwaycadeployer.so.1.0 taskdeploy.c perf.c
 	$(CC) $(CFLAGS) taskdeploy.c perf.c -L. -lwaycadeployer -I./include -o $@
 wayca-irqdeploy: libwaycadeployer.so.1.0 irqdeploy.c
 	$(CC) $(CFLAGS) irqdeploy.c -L. -lwaycadeployer -I./include -o $@
@@ -31,6 +31,6 @@ install:
 	install $(tools) /usr/bin
 	install include/wayca-scheduler.h /usr/include
 clean:
-	-rm *.o lib/*.o
-	-rm *.so*
-	-rm $(tools)
+	-rm -f *.o lib/*.o
+	-rm -f *.so*
+	-rm -f $(tools)
