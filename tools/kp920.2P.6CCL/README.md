@@ -29,8 +29,8 @@ SOCKET 1 CHANNEL 7 DIMM 1
 None
 ```
 
-More details please refer to 'DUT_6CCL_8CCL_specs.pdf', which contains spec of both this machine (known as 6CCL) and another machine.
+More details please refer to 'DUT_6CCL_8CCL_specs.pdf', which contains spec of both this machine (known as 6CCL-机器一) and another machine.
 
-A high-level summary of the benchmarking results is in 'Summary_hardware_parameters_digging_20210427.docx.pdf'
+A high-level summary of the benchmarking results is in 'Summary_hardware_parameters_digging_20210518.docx.pdf'
 == END ==
 
