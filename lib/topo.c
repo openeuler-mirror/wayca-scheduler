@@ -23,11 +23,27 @@ static struct wayca_topo topo;
 /* return -1 on error, 0 on success */
 static int topo_path_read_s32(const char *base, const char *filename, int *result)
 {
-	int dir_fd = open(base, O_RDONLY|O_CLOEXEC);
-	int fd = openat(dir_fd, filename, O_RDONLY);
-	FILE *f = fdopen(fd, "r");
-
+	int dir_fd;
+	int fd;
+	FILE *f;
 	int ret, t;
+
+	dir_fd = open(base, O_RDONLY|O_CLOEXEC);
+	if (dir_fd == -1) return -1;
+
+	fd = openat(dir_fd, filename, O_RDONLY);
+	if (fd == -1) {
+		close(dir_fd);
+		return -1;
+	}
+
+	f = fdopen(fd, "r");
+	if (f == NULL) {
+		close(fd);
+		close(dir_fd);
+		return -1;
+	}
+
 	ret = fscanf(f, "%d", &t);
 
 	/* close */
@@ -50,12 +66,27 @@ static int topo_path_read_s32(const char *base, const char *filename, int *resul
  * return -1 on error, 0 on success */
 static int topo_path_read_multi_s32(const char *base, const char *filename, size_t nmemb, int array[])
 {
-	int dir_fd = open(base, O_RDONLY|O_CLOEXEC);
-	int fd = openat(dir_fd, filename, O_RDONLY);
-	FILE *f = fdopen(fd, "r");
+	int dir_fd;
+	int fd;
+	FILE *f;
 	int i, t;
-
 	int ret = 0;
+
+	dir_fd = open(base, O_RDONLY|O_CLOEXEC);
+	if (dir_fd == -1) return -1;
+
+	fd = openat(dir_fd, filename, O_RDONLY);
+	if (fd == -1) {
+		close(dir_fd);
+		return -1;
+	}
+
+	f = fdopen(fd, "r");
+	if (f == NULL) {
+		close(fd);
+		close(dir_fd);
+		return -1;
+	}
 
 	for (i = 0; i < nmemb; i++) {
 		if (fscanf(f, "%d", &t) != 1) {
@@ -280,8 +311,10 @@ static int topo_read_cpu_topology(int cpu_index, struct wayca_topo *p_topo)
 	sprintf(path_buffer, "%s/cpu%d/topology", CPU_FNAME, cpu_index);
 
 	/* read "cluster_id" */
-	if (topo_path_read_s32(path_buffer, "cluster_id", &cluster_id) != 0)	/* on failure */
-		return -1;
+	if (topo_path_read_s32(path_buffer, "cluster_id", &cluster_id) != 0) {	/* on failure */
+		p_topo->cpus[cpu_index]->p_cluster = NULL;
+		goto read_package_info;
+	}
 
 	/* check this "cluster_id" exists or not */
 	for (i = 0; i < p_topo->n_clusters; i++) {
@@ -316,6 +349,7 @@ static int topo_read_cpu_topology(int cpu_index, struct wayca_topo *p_topo)
 	/* link this cluster back to current CPU */
 	p_topo->cpus[cpu_index]->p_cluster = p_topo->ccls[i];
 
+read_package_info:
 	/* read "physical_package_id" */
 	if (topo_path_read_s32(path_buffer, "physical_package_id", &ppkg_id) != 0)	/* on failure */
 		return -1;
@@ -340,7 +374,7 @@ static int topo_read_cpu_topology(int cpu_index, struct wayca_topo *p_topo)
 			return -1;	/* no enough memory */
 		/* initialize this package's cpu_map */
 		p_topo->packages[i]->cpu_map = CPU_ALLOC(p_topo->kernel_max_cpus);
-		if (!p_topo->ccls[i]->cpu_map)
+		if (!p_topo->packages[i]->cpu_map)
 			return -1;			/* no enough memory */
 		/* read "package_cpus_list" */
 		if (topo_path_read_cpulist(path_buffer, "package_cpus_list",
@@ -409,6 +443,8 @@ void topo_init(void)
 	cpu_set_t *node_possible;
 	int i = 0;
 
+	memset(p_topo, 0, sizeof(struct wayca_topo));
+
 	/* read "cpu/kernel_max" to determine maximum size for future memory allocations */
 	if (topo_path_read_s32(CPU_FNAME, "kernel_max", &p_topo->kernel_max_cpus) == 0)
 		p_topo->kernel_max_cpus += 1;
@@ -441,7 +477,9 @@ void topo_init(void)
 
 	/* read all cpu%d topology */
 	for (i = 0; i < p_topo->n_cpus; i++) {
-		topo_read_cpu_topology(i, p_topo);
+		if (topo_read_cpu_topology(i, p_topo) == -1) {         /* on failure */
+			goto cleanup_on_error;
+		}
 	}
 	/* at the end of the cpu%d for loop, the following has been established:
 	 *  - p_topo->n_nodes
@@ -472,7 +510,9 @@ void topo_init(void)
 
 	/* read all node%d topology */
 	for (i = 0; i < p_topo->n_nodes; i++) {
-		topo_read_node_topology(i, p_topo);
+		if (topo_read_node_topology(i, p_topo) == -1) /* on failure */ {
+			goto cleanup_on_error;
+		}
 	}
 	/* at the end of the cpu%d for loop, the following has been established:
 	 *  - p_topo->nodes[]->distance
@@ -511,7 +551,8 @@ void topo_print_wayca_node(size_t setsize, struct wayca_node *p_node, size_t dis
 void topo_print_wayca_cpu(struct wayca_cpu *p_cpu)
 {
 	PRINT_DBG("core_id: %d\n", p_cpu->core_id);
-	PRINT_DBG("belongs to cluster_id: \t%08x\n", p_cpu->p_cluster->cluster_id);
+	if (p_cpu->p_cluster != NULL)
+		PRINT_DBG("belongs to cluster_id: \t%08x\n", p_cpu->p_cluster->cluster_id);
 	PRINT_DBG("belongs to node: \t%d\n", p_cpu->p_numa_node->node_idx);
 	PRINT_DBG("belongs to package_id: \t%08x\n", p_cpu->p_package->physical_package_id);
 }
@@ -527,12 +568,16 @@ void topo_print(void)
 	PRINT_DBG("n_cpus: %lu\n", p_topo->n_cpus);
 	PRINT_DBG("\tCpu count in cpu_map: %d\n", CPU_COUNT_S(p_topo->setsize, p_topo->cpu_map));
 	for (i = 0; i < p_topo->n_cpus; i++) {
+		if (p_topo->cpus[i] == NULL)
+			continue;
 		PRINT_DBG("CPU%d information:\n", i);
 		topo_print_wayca_cpu(p_topo->cpus[i]);
 	}
 
 	PRINT_DBG("n_clusters: %lu\n", p_topo->n_clusters);
 	for (i = 0; i < p_topo->n_clusters; i++) {
+		if (p_topo->ccls[i] == NULL)
+			continue;
 		PRINT_DBG("Cluster %d information:\n", i);
 		topo_print_wayca_cluster(p_topo->setsize, p_topo->ccls[i]);
 	}
@@ -541,6 +586,8 @@ void topo_print(void)
 	PRINT_DBG("n_nodes: %lu\n", p_topo->n_nodes);
 	PRINT_DBG("\tNode count in node_map: %d\n", CPU_COUNT_S(CPU_ALLOC_SIZE(p_topo->n_cpus), p_topo->node_map));
 	for (i = 0; i < p_topo->n_nodes; i++) {
+		if (p_topo->nodes[i] == NULL)
+			continue;
 		PRINT_DBG("NODE%d information:\n", i);
 		topo_print_wayca_node(p_topo->setsize, p_topo->nodes[i], p_topo->n_nodes);
 	}
@@ -558,10 +605,14 @@ void topo_free(void)
 	int i;
 
 	CPU_FREE(p_topo->cpu_map);
+	for (i = 0; i < p_topo->n_cpus; i++)
+		free(p_topo->cpus[i]);
 	free(p_topo->cpus);
 
-	for (i = 0; i < p_topo->n_clusters; i++)
+	for (i = 0; i < p_topo->n_clusters; i++) {
 		CPU_FREE(p_topo->ccls[i]->cpu_map);
+		free(p_topo->cpus[i]);
+	}
 	free(p_topo->ccls);
 
 	CPU_FREE(p_topo->node_map);
@@ -570,15 +621,18 @@ void topo_free(void)
 		CPU_FREE(p_topo->nodes[i]->cluster_map);
 		free(p_topo->nodes[i]->distance);
 		free(p_topo->nodes[i]->p_meminfo);
+		free(p_topo->nodes[i]);
 	}
 	free(p_topo->nodes);
 
 	for (i = 0; i < p_topo->n_packages; i++) {
 		CPU_FREE(p_topo->packages[i]->cpu_map);
 		CPU_FREE(p_topo->packages[i]->numa_map);
+		free(p_topo->packages[i]);
 	}
 	free(p_topo->packages);
 
+	memset(p_topo, 0, sizeof(struct wayca_topo));
 	return;
 }
 
@@ -612,7 +666,7 @@ int cores_in_total(void)
 
 int nodes_in_package(void)
 {
-	if (topo.n_packages < 1 && topo.nodes[0]->n_cpus != 0)
+	if (topo.n_packages < 1)
 		return -1;	/* not initialized */
 	return topo.packages[0]->n_cpus / topo.nodes[0]->n_cpus;
 }
