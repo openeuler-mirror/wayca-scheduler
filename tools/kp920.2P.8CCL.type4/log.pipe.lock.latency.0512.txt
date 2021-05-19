@@ -1,0 +1,112 @@
+LMBENCH_SCHED='CUSTOM_SPREAD 1 0'
+./lat_pipe -W 1 -N 20
+Pipe latency: 5.6780 microseconds
+LMBENCH_SCHED='CUSTOM_SPREAD 1 4'
+./lat_pipe -W 1 -N 20
+Pipe latency: 7.6400 microseconds
+LMBENCH_SCHED='CUSTOM_SPREAD 1 8'
+./lat_pipe -W 1 -N 20
+Pipe latency: 7.3072 microseconds
+LMBENCH_SCHED='CUSTOM_SPREAD 1 12'
+./lat_pipe -W 1 -N 20
+Pipe latency: 7.6134 microseconds
+LMBENCH_SCHED='CUSTOM_SPREAD 1 16'
+./lat_pipe -W 1 -N 20
+Pipe latency: 7.6378 microseconds
+LMBENCH_SCHED='CUSTOM_SPREAD 1 20'
+./lat_pipe -W 1 -N 20
+Pipe latency: 7.8969 microseconds
+LMBENCH_SCHED='CUSTOM_SPREAD 1 24'
+./lat_pipe -W 1 -N 20
+Pipe latency: 7.7665 microseconds
+LMBENCH_SCHED='CUSTOM_SPREAD 1 28'
+./lat_pipe -W 1 -N 20
+Pipe latency: 7.8113 microseconds
+LMBENCH_SCHED='CUSTOM_SPREAD 1 0'
+./lat_pipe -W 1 -N 20
+Pipe latency: 5.6756 microseconds
+LMBENCH_SCHED='CUSTOM_SPREAD 1 32'
+./lat_pipe -W 1 -N 20
+Pipe latency: 8.5074 microseconds
+LMBENCH_SCHED='CUSTOM_SPREAD 1 64'
+./lat_pipe -W 1 -N 20
+Pipe latency: 12.7542 microseconds
+LMBENCH_SCHED='CUSTOM_SPREAD 1 96'
+./lat_pipe -W 1 -N 20
+Pipe latency: 13.7429 microseconds
+numactl --physcpubind=0,1,2,3,4,5,6,7 ./lock_test -t 8 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   11.624080
+numactl --physcpubind=0,1,3,4,6,7,9,10 ./lock_test -t 8 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   14.902034
+numactl --physcpubind=0,2,4,6,8,10,12,14 ./lock_test -t 8 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   17.181149
+numactl --physcpubind=0,2,5,7,10,12,15,17 ./lock_test -t 8 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   19.759157
+numactl --physcpubind=0,3,6,9,12,15,18,21 ./lock_test -t 8 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   19.394685
+numactl --physcpubind=0,3,7,10,14,17,21,24 ./lock_test -t 8 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   23.033524
+numactl --physcpubind=0,4,8,12,16,20,24,28 ./lock_test -t 8 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   27.454113
+numactl --physcpubind=0,2,4,6,32,34,36,38 ./lock_test -t 8 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   18.916166
+numactl --physcpubind=0,2,4,6,64,66,68,70 ./lock_test -t 8 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   30.273620
+numactl --physcpubind=0,2,4,6,96,98,100,102 ./lock_test -t 8 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   30.189230
+numactl --physcpubind=0,2,32,34,64,66,96,98 ./lock_test -t 8 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   33.018194
+numactl --physcpubind=0,1,2,3,4,5,6,7 ./lock_test -t 8 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   22.461157
+numactl --physcpubind=0,1,3,4,6,7,9,10 ./lock_test -t 8 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   25.283212
+numactl --physcpubind=0,2,4,6,8,10,12,14 ./lock_test -t 8 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   26.716011
+numactl --physcpubind=0,2,5,7,10,12,15,17 ./lock_test -t 8 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   30.185245
+numactl --physcpubind=0,3,6,9,12,15,18,21 ./lock_test -t 8 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   31.644530
+numactl --physcpubind=0,3,7,10,14,17,21,24 ./lock_test -t 8 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   30.359109
+numactl --physcpubind=0,4,8,12,16,20,24,28 ./lock_test -t 8 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   36.141211
+numactl --physcpubind=0,2,4,6,32,34,36,38 ./lock_test -t 8 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   34.065447
+numactl --physcpubind=0,2,4,6,64,66,68,70 ./lock_test -t 8 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   52.516281
+numactl --physcpubind=0,2,4,6,96,98,100,102 ./lock_test -t 8 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   63.525161
+numactl --physcpubind=0,2,32,34,64,66,96,98 ./lock_test -t 8 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   83.495500
+numactl --physcpubind=0,1,2,3 ./lock_test -t 4 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):    8.101946
+numactl --physcpubind=0,2,4,6 ./lock_test -t 4 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):    8.860017
+numactl --physcpubind=0,3,6,9 ./lock_test -t 4 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   15.115708
+numactl --physcpubind=0,4,8,12 ./lock_test -t 4 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   17.601163
+numactl --physcpubind=0,2,32,34 ./lock_test -t 4 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   12.197723
+numactl --physcpubind=0,2,64,66 ./lock_test -t 4 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   11.845142
+numactl --physcpubind=0,2,96,98 ./lock_test -t 4 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   18.401005
+numactl --physcpubind=0,32,64,96 ./lock_test -t 4 -n 1000000 -m 100 -l 3
+Function pass time (in seconds):   28.602507
+numactl --physcpubind=0,1,2,3 ./lock_test -t 4 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   11.532848
+numactl --physcpubind=0,2,4,6 ./lock_test -t 4 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   21.711636
+numactl --physcpubind=0,3,6,9 ./lock_test -t 4 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   22.431064
+numactl --physcpubind=0,4,8,12 ./lock_test -t 4 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   25.787608
+numactl --physcpubind=0,2,32,34 ./lock_test -t 4 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   24.686289
+numactl --physcpubind=0,2,64,66 ./lock_test -t 4 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   23.554603
+numactl --physcpubind=0,2,96,98 ./lock_test -t 4 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   33.598441
+numactl --physcpubind=0,32,64,96 ./lock_test -t 4 -n 1000000 -m 100 -l 4
+Function pass time (in seconds):   49.198824

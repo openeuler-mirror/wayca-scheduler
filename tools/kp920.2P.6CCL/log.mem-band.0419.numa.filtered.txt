@@ -1,0 +1,792 @@
+numactl --physcpubind=0 --membind=0 /usr/lib/lmbench/bin/stream -P 1 -M 1024M -N 5
+STREAM copy latency: 1.28 nanoseconds
+STREAM copy bandwidth: 12461.97 MB/sec
+STREAM scale latency: 1.32 nanoseconds
+STREAM scale bandwidth: 12135.65 MB/sec
+STREAM add latency: 2.41 nanoseconds
+STREAM add bandwidth: 9947.06 MB/sec
+STREAM triad latency: 2.39 nanoseconds
+STREAM triad bandwidth: 10057.06 MB/sec
+numactl --physcpubind=0 --membind=1 /usr/lib/lmbench/bin/stream -P 1 -M 1024M -N 5
+STREAM copy latency: 1.41 nanoseconds
+STREAM copy bandwidth: 11385.56 MB/sec
+STREAM scale latency: 1.43 nanoseconds
+STREAM scale bandwidth: 11172.39 MB/sec
+STREAM add latency: 2.71 nanoseconds
+STREAM add bandwidth: 8871.18 MB/sec
+STREAM triad latency: 1.72 nanoseconds
+STREAM triad bandwidth: 13969.22 MB/sec
+numactl --physcpubind=0 --membind=2 /usr/lib/lmbench/bin/stream -P 1 -M 1024M -N 5
+STREAM copy latency: 1.86 nanoseconds
+STREAM copy bandwidth: 8599.33 MB/sec
+STREAM scale latency: 2.04 nanoseconds
+STREAM scale bandwidth: 7831.35 MB/sec
+STREAM add latency: 5.62 nanoseconds
+STREAM add bandwidth: 4269.12 MB/sec
+STREAM triad latency: 3.00 nanoseconds
+STREAM triad bandwidth: 8009.20 MB/sec
+numactl --physcpubind=0 --membind=3 /usr/lib/lmbench/bin/stream -P 1 -M 1024M -N 5
+STREAM copy latency: 2.13 nanoseconds
+STREAM copy bandwidth: 7526.64 MB/sec
+STREAM scale latency: 2.28 nanoseconds
+STREAM scale bandwidth: 7020.43 MB/sec
+STREAM add latency: 6.11 nanoseconds
+STREAM add bandwidth: 3924.83 MB/sec
+STREAM triad latency: 3.31 nanoseconds
+STREAM triad bandwidth: 7258.29 MB/sec
+numactl --physcpubind=0-3 --membind=0 /usr/lib/lmbench/bin/stream -P 4 -M 1024M -N 5
+STREAM copy latency: 2.08 nanoseconds
+STREAM copy bandwidth: 30734.88 MB/sec
+STREAM scale latency: 2.09 nanoseconds
+STREAM scale bandwidth: 30569.41 MB/sec
+STREAM add latency: 4.05 nanoseconds
+STREAM add bandwidth: 23717.44 MB/sec
+STREAM triad latency: 3.64 nanoseconds
+STREAM triad bandwidth: 26379.43 MB/sec
+numactl --physcpubind=0-3 --membind=1 /usr/lib/lmbench/bin/stream -P 4 -M 1024M -N 5
+STREAM copy latency: 1.92 nanoseconds
+STREAM copy bandwidth: 33300.91 MB/sec
+STREAM scale latency: 1.94 nanoseconds
+STREAM scale bandwidth: 33041.98 MB/sec
+STREAM add latency: 4.13 nanoseconds
+STREAM add bandwidth: 23253.19 MB/sec
+STREAM triad latency: 3.31 nanoseconds
+STREAM triad bandwidth: 29022.04 MB/sec
+numactl --physcpubind=0-3 --membind=2 /usr/lib/lmbench/bin/stream -P 4 -M 1024M -N 5
+STREAM copy latency: 2.59 nanoseconds
+STREAM copy bandwidth: 24667.37 MB/sec
+STREAM scale latency: 2.69 nanoseconds
+STREAM scale bandwidth: 23829.92 MB/sec
+STREAM add latency: 7.07 nanoseconds
+STREAM add bandwidth: 13579.34 MB/sec
+STREAM triad latency: 4.44 nanoseconds
+STREAM triad bandwidth: 21626.12 MB/sec
+numactl --physcpubind=0-3 --membind=3 /usr/lib/lmbench/bin/stream -P 4 -M 1024M -N 5
+STREAM copy latency: 2.69 nanoseconds
+STREAM copy bandwidth: 23757.18 MB/sec
+STREAM scale latency: 2.77 nanoseconds
+STREAM scale bandwidth: 23069.39 MB/sec
+STREAM add latency: 7.53 nanoseconds
+STREAM add bandwidth: 12756.12 MB/sec
+STREAM triad latency: 4.58 nanoseconds
+STREAM triad bandwidth: 20947.29 MB/sec
+numactl --physcpubind=0-1,4-5 --membind=0 /usr/lib/lmbench/bin/stream -P 4 -M 1024M -N 5
+STREAM copy latency: 1.64 nanoseconds
+STREAM copy bandwidth: 39117.64 MB/sec
+STREAM scale latency: 1.65 nanoseconds
+STREAM scale bandwidth: 38738.35 MB/sec
+STREAM add latency: 3.10 nanoseconds
+STREAM add bandwidth: 30997.61 MB/sec
+STREAM triad latency: 3.24 nanoseconds
+STREAM triad bandwidth: 29630.72 MB/sec
+numactl --physcpubind=0-1,4-5 --membind=1 /usr/lib/lmbench/bin/stream -P 4 -M 1024M -N 5
+STREAM copy latency: 1.74 nanoseconds
+STREAM copy bandwidth: 36760.05 MB/sec
+STREAM scale latency: 1.76 nanoseconds
+STREAM scale bandwidth: 36392.90 MB/sec
+STREAM add latency: 3.37 nanoseconds
+STREAM add bandwidth: 28514.12 MB/sec
+STREAM triad latency: 2.20 nanoseconds
+STREAM triad bandwidth: 43714.81 MB/sec
+numactl --physcpubind=0-1,4-5 --membind=2 /usr/lib/lmbench/bin/stream -P 4 -M 1024M -N 5
+STREAM copy latency: 2.07 nanoseconds
+STREAM copy bandwidth: 30849.60 MB/sec
+STREAM scale latency: 2.26 nanoseconds
+STREAM scale bandwidth: 28274.92 MB/sec
+STREAM add latency: 6.47 nanoseconds
+STREAM add bandwidth: 14828.09 MB/sec
+STREAM triad latency: 3.34 nanoseconds
+STREAM triad bandwidth: 28726.30 MB/sec
+numactl --physcpubind=0-1,4-5 --membind=3 /usr/lib/lmbench/bin/stream -P 4 -M 1024M -N 5
+STREAM copy latency: 2.23 nanoseconds
+STREAM copy bandwidth: 28687.97 MB/sec
+STREAM scale latency: 2.33 nanoseconds
+STREAM scale bandwidth: 27485.02 MB/sec
+STREAM add latency: 6.96 nanoseconds
+STREAM add bandwidth: 13802.54 MB/sec
+STREAM triad latency: 3.55 nanoseconds
+STREAM triad bandwidth: 27030.50 MB/sec
+numactl --physcpubind=0-1,4,8 --membind=0 /usr/lib/lmbench/bin/stream -P 4 -M 1024M -N 5
+STREAM copy latency: 1.60 nanoseconds
+STREAM copy bandwidth: 39946.86 MB/sec
+STREAM scale latency: 1.62 nanoseconds
+STREAM scale bandwidth: 39539.92 MB/sec
+STREAM add latency: 2.98 nanoseconds
+STREAM add bandwidth: 32176.16 MB/sec
+STREAM triad latency: 2.82 nanoseconds
+STREAM triad bandwidth: 34040.29 MB/sec
+numactl --physcpubind=0-1,4,8 --membind=1 /usr/lib/lmbench/bin/stream -P 4 -M 1024M -N 5
+STREAM copy latency: 1.75 nanoseconds
+STREAM copy bandwidth: 36660.31 MB/sec
+STREAM scale latency: 1.76 nanoseconds
+STREAM scale bandwidth: 36314.53 MB/sec
+STREAM add latency: 3.33 nanoseconds
+STREAM add bandwidth: 28868.88 MB/sec
+STREAM triad latency: 2.23 nanoseconds
+STREAM triad bandwidth: 43051.26 MB/sec
+numactl --physcpubind=0-1,4,8 --membind=2 /usr/lib/lmbench/bin/stream -P 4 -M 1024M -N 5
+STREAM copy latency: 2.05 nanoseconds
+STREAM copy bandwidth: 31233.92 MB/sec
+STREAM scale latency: 2.20 nanoseconds
+STREAM scale bandwidth: 29098.95 MB/sec
+STREAM add latency: 6.31 nanoseconds
+STREAM add bandwidth: 15209.41 MB/sec
+STREAM triad latency: 3.29 nanoseconds
+STREAM triad bandwidth: 29173.40 MB/sec
+numactl --physcpubind=0-1,4,8 --membind=3 /usr/lib/lmbench/bin/stream -P 4 -M 1024M -N 5
+STREAM copy latency: 2.22 nanoseconds
+STREAM copy bandwidth: 28881.27 MB/sec
+STREAM scale latency: 2.38 nanoseconds
+STREAM scale bandwidth: 26931.49 MB/sec
+STREAM add latency: 6.80 nanoseconds
+STREAM add bandwidth: 14124.30 MB/sec
+STREAM triad latency: 6.92 nanoseconds
+STREAM triad bandwidth: 13868.57 MB/sec
+numactl --physcpubind=0,4,8,12 --membind=0 /usr/lib/lmbench/bin/stream -P 4 -M 1024M -N 5
+STREAM copy latency: 1.57 nanoseconds
+STREAM copy bandwidth: 40843.23 MB/sec
+STREAM scale latency: 1.59 nanoseconds
+STREAM scale bandwidth: 40351.20 MB/sec
+STREAM add latency: 2.87 nanoseconds
+STREAM add bandwidth: 33415.57 MB/sec
+STREAM triad latency: 2.74 nanoseconds
+STREAM triad bandwidth: 35093.76 MB/sec
+numactl --physcpubind=0,4,8,12 --membind=1 /usr/lib/lmbench/bin/stream -P 4 -M 1024M -N 5
+STREAM copy latency: 1.71 nanoseconds
+STREAM copy bandwidth: 37494.83 MB/sec
+STREAM scale latency: 1.72 nanoseconds
+STREAM scale bandwidth: 37161.18 MB/sec
+STREAM add latency: 3.23 nanoseconds
+STREAM add bandwidth: 29745.32 MB/sec
+STREAM triad latency: 2.14 nanoseconds
+STREAM triad bandwidth: 44783.72 MB/sec
+numactl --physcpubind=0,4,8,12 --membind=2 /usr/lib/lmbench/bin/stream -P 4 -M 1024M -N 5
+STREAM copy latency: 2.03 nanoseconds
+STREAM copy bandwidth: 31545.85 MB/sec
+STREAM scale latency: 2.18 nanoseconds
+STREAM scale bandwidth: 29394.27 MB/sec
+STREAM add latency: 6.23 nanoseconds
+STREAM add bandwidth: 15412.55 MB/sec
+STREAM triad latency: 3.24 nanoseconds
+STREAM triad bandwidth: 29595.03 MB/sec
+numactl --physcpubind=0,4,8,12 --membind=3 /usr/lib/lmbench/bin/stream -P 4 -M 1024M -N 5
+STREAM copy latency: 2.20 nanoseconds
+STREAM copy bandwidth: 29130.56 MB/sec
+STREAM scale latency: 2.37 nanoseconds
+STREAM scale bandwidth: 27002.91 MB/sec
+STREAM add latency: 6.71 nanoseconds
+STREAM add bandwidth: 14315.30 MB/sec
+STREAM triad latency: 6.84 nanoseconds
+STREAM triad bandwidth: 14032.38 MB/sec
+numactl --physcpubind=0-5 --membind=0 /usr/lib/lmbench/bin/stream -P 6 -M 1024M -N 5
+STREAM copy latency: 2.44 nanoseconds
+STREAM copy bandwidth: 39341.55 MB/sec
+STREAM scale latency: 2.45 nanoseconds
+STREAM scale bandwidth: 39255.84 MB/sec
+STREAM add latency: 4.46 nanoseconds
+STREAM add bandwidth: 32306.30 MB/sec
+STREAM triad latency: 4.09 nanoseconds
+STREAM triad bandwidth: 35226.75 MB/sec
+numactl --physcpubind=0-5 --membind=1 /usr/lib/lmbench/bin/stream -P 6 -M 1024M -N 5
+STREAM copy latency: 2.10 nanoseconds
+STREAM copy bandwidth: 45697.30 MB/sec
+STREAM scale latency: 2.10 nanoseconds
+STREAM scale bandwidth: 45737.14 MB/sec
+STREAM add latency: 4.37 nanoseconds
+STREAM add bandwidth: 32955.46 MB/sec
+STREAM triad latency: 3.59 nanoseconds
+STREAM triad bandwidth: 40093.26 MB/sec
+numactl --physcpubind=0-5 --membind=2 /usr/lib/lmbench/bin/stream -P 6 -M 1024M -N 5
+STREAM copy latency: 2.82 nanoseconds
+STREAM copy bandwidth: 34077.63 MB/sec
+STREAM scale latency: 2.90 nanoseconds
+STREAM scale bandwidth: 33134.62 MB/sec
+STREAM add latency: 7.09 nanoseconds
+STREAM add bandwidth: 20312.46 MB/sec
+STREAM triad latency: 4.64 nanoseconds
+STREAM triad bandwidth: 31005.05 MB/sec
+numactl --physcpubind=0-5 --membind=3 /usr/lib/lmbench/bin/stream -P 6 -M 1024M -N 5
+STREAM copy latency: 2.92 nanoseconds
+STREAM copy bandwidth: 32872.80 MB/sec
+STREAM scale latency: 2.99 nanoseconds
+STREAM scale bandwidth: 32149.19 MB/sec
+STREAM add latency: 7.48 nanoseconds
+STREAM add bandwidth: 19241.65 MB/sec
+STREAM triad latency: 4.76 nanoseconds
+STREAM triad bandwidth: 30281.21 MB/sec
+numactl --physcpubind=0-1,4-5,8-9 --membind=0 /usr/lib/lmbench/bin/stream -P 6 -M 1024M -N 5
+STREAM copy latency: 2.08 nanoseconds
+STREAM copy bandwidth: 46203.87 MB/sec
+STREAM scale latency: 2.10 nanoseconds
+STREAM scale bandwidth: 45697.77 MB/sec
+STREAM add latency: 3.42 nanoseconds
+STREAM add bandwidth: 42076.95 MB/sec
+STREAM triad latency: 3.25 nanoseconds
+STREAM triad bandwidth: 44297.11 MB/sec
+numactl --physcpubind=0-1,4-5,8-9 --membind=1 /usr/lib/lmbench/bin/stream -P 6 -M 1024M -N 5
+STREAM copy latency: 2.04 nanoseconds
+STREAM copy bandwidth: 47045.41 MB/sec
+STREAM scale latency: 2.07 nanoseconds
+STREAM scale bandwidth: 46328.49 MB/sec
+STREAM add latency: 3.72 nanoseconds
+STREAM add bandwidth: 38756.70 MB/sec
+STREAM triad latency: 2.72 nanoseconds
+STREAM triad bandwidth: 52952.46 MB/sec
+numactl --physcpubind=0-1,4-5,8-9 --membind=2 /usr/lib/lmbench/bin/stream -P 6 -M 1024M -N 5
+STREAM copy latency: 2.21 nanoseconds
+STREAM copy bandwidth: 43529.80 MB/sec
+STREAM scale latency: 2.38 nanoseconds
+STREAM scale bandwidth: 40328.71 MB/sec
+STREAM add latency: 6.60 nanoseconds
+STREAM add bandwidth: 21814.87 MB/sec
+STREAM triad latency: 3.52 nanoseconds
+STREAM triad bandwidth: 40851.10 MB/sec
+numactl --physcpubind=0-1,4-5,8-9 --membind=3 /usr/lib/lmbench/bin/stream -P 6 -M 1024M -N 5
+STREAM copy latency: 2.40 nanoseconds
+STREAM copy bandwidth: 40022.51 MB/sec
+STREAM scale latency: 2.51 nanoseconds
+STREAM scale bandwidth: 38191.69 MB/sec
+STREAM add latency: 7.03 nanoseconds
+STREAM add bandwidth: 20486.79 MB/sec
+STREAM triad latency: 3.74 nanoseconds
+STREAM triad bandwidth: 38488.01 MB/sec
+numactl --physcpubind=0-1,4-5,8,12 --membind=0 /usr/lib/lmbench/bin/stream -P 6 -M 1024M -N 5
+STREAM copy latency: 2.08 nanoseconds
+STREAM copy bandwidth: 46104.40 MB/sec
+STREAM scale latency: 2.10 nanoseconds
+STREAM scale bandwidth: 45652.77 MB/sec
+STREAM add latency: 3.42 nanoseconds
+STREAM add bandwidth: 42131.48 MB/sec
+STREAM triad latency: 3.26 nanoseconds
+STREAM triad bandwidth: 44221.19 MB/sec
+numactl --physcpubind=0-1,4-5,8,12 --membind=1 /usr/lib/lmbench/bin/stream -P 6 -M 1024M -N 5
+STREAM copy latency: 2.04 nanoseconds
+STREAM copy bandwidth: 47101.00 MB/sec
+STREAM scale latency: 2.05 nanoseconds
+STREAM scale bandwidth: 46715.61 MB/sec
+STREAM add latency: 3.68 nanoseconds
+STREAM add bandwidth: 39106.97 MB/sec
+STREAM triad latency: 2.65 nanoseconds
+STREAM triad bandwidth: 54385.83 MB/sec
+numactl --physcpubind=0-1,4-5,8,12 --membind=2 /usr/lib/lmbench/bin/stream -P 6 -M 1024M -N 5
+STREAM copy latency: 2.20 nanoseconds
+STREAM copy bandwidth: 43609.15 MB/sec
+STREAM scale latency: 2.31 nanoseconds
+STREAM scale bandwidth: 41556.54 MB/sec
+STREAM add latency: 6.51 nanoseconds
+STREAM add bandwidth: 22132.44 MB/sec
+STREAM triad latency: 3.52 nanoseconds
+STREAM triad bandwidth: 40946.73 MB/sec
+numactl --physcpubind=0-1,4-5,8,12 --membind=3 /usr/lib/lmbench/bin/stream -P 6 -M 1024M -N 5
+STREAM copy latency: 2.39 nanoseconds
+STREAM copy bandwidth: 40107.78 MB/sec
+STREAM scale latency: 2.47 nanoseconds
+STREAM scale bandwidth: 38940.95 MB/sec
+STREAM add latency: 6.93 nanoseconds
+STREAM add bandwidth: 20787.74 MB/sec
+STREAM triad latency: 7.13 nanoseconds
+STREAM triad bandwidth: 20204.01 MB/sec
+numactl --physcpubind=0-1,4,8,12,16 --membind=0 /usr/lib/lmbench/bin/stream -P 6 -M 1024M -N 5
+STREAM copy latency: 2.01 nanoseconds
+STREAM copy bandwidth: 47651.09 MB/sec
+STREAM scale latency: 2.04 nanoseconds
+STREAM scale bandwidth: 47109.61 MB/sec
+STREAM add latency: 3.23 nanoseconds
+STREAM add bandwidth: 44650.74 MB/sec
+STREAM triad latency: 3.13 nanoseconds
+STREAM triad bandwidth: 45977.94 MB/sec
+numactl --physcpubind=0-1,4,8,12,16 --membind=1 /usr/lib/lmbench/bin/stream -P 6 -M 1024M -N 5
+STREAM copy latency: 2.04 nanoseconds
+STREAM copy bandwidth: 47088.77 MB/sec
+STREAM scale latency: 2.05 nanoseconds
+STREAM scale bandwidth: 46719.97 MB/sec
+STREAM add latency: 3.63 nanoseconds
+STREAM add bandwidth: 39637.23 MB/sec
+STREAM triad latency: 2.73 nanoseconds
+STREAM triad bandwidth: 52694.37 MB/sec
+numactl --physcpubind=0-1,4,8,12,16 --membind=2 /usr/lib/lmbench/bin/stream -P 6 -M 1024M -N 5
+STREAM copy latency: 2.19 nanoseconds
+STREAM copy bandwidth: 43897.70 MB/sec
+STREAM scale latency: 2.35 nanoseconds
+STREAM scale bandwidth: 40870.20 MB/sec
+STREAM add latency: 6.41 nanoseconds
+STREAM add bandwidth: 22470.84 MB/sec
+STREAM triad latency: 3.45 nanoseconds
+STREAM triad bandwidth: 41689.53 MB/sec
+numactl --physcpubind=0-1,4,8,12,16 --membind=3 /usr/lib/lmbench/bin/stream -P 6 -M 1024M -N 5
+STREAM copy latency: 2.39 nanoseconds
+STREAM copy bandwidth: 40226.92 MB/sec
+STREAM scale latency: 2.51 nanoseconds
+STREAM scale bandwidth: 38304.36 MB/sec
+STREAM add latency: 6.84 nanoseconds
+STREAM add bandwidth: 21039.64 MB/sec
+STREAM triad latency: 3.69 nanoseconds
+STREAM triad bandwidth: 39006.06 MB/sec
+numactl --physcpubind=0,4,8,12,16,20 --membind=0 /usr/lib/lmbench/bin/stream -P 6 -M 1024M -N 5
+STREAM copy latency: 2.02 nanoseconds
+STREAM copy bandwidth: 47575.44 MB/sec
+STREAM scale latency: 2.04 nanoseconds
+STREAM scale bandwidth: 47017.68 MB/sec
+STREAM add latency: 3.35 nanoseconds
+STREAM add bandwidth: 42981.51 MB/sec
+STREAM triad latency: 3.15 nanoseconds
+STREAM triad bandwidth: 45727.55 MB/sec
+numactl --physcpubind=0,4,8,12,16,20 --membind=1 /usr/lib/lmbench/bin/stream -P 6 -M 1024M -N 5
+STREAM copy latency: 2.01 nanoseconds
+STREAM copy bandwidth: 47747.63 MB/sec
+STREAM scale latency: 2.03 nanoseconds
+STREAM scale bandwidth: 47388.27 MB/sec
+STREAM add latency: 3.57 nanoseconds
+STREAM add bandwidth: 40357.36 MB/sec
+STREAM triad latency: 2.63 nanoseconds
+STREAM triad bandwidth: 54662.44 MB/sec
+numactl --physcpubind=0,4,8,12,16,20 --membind=2 /usr/lib/lmbench/bin/stream -P 6 -M 1024M -N 5
+STREAM copy latency: 2.19 nanoseconds
+STREAM copy bandwidth: 43894.99 MB/sec
+STREAM scale latency: 2.35 nanoseconds
+STREAM scale bandwidth: 40857.24 MB/sec
+STREAM add latency: 6.35 nanoseconds
+STREAM add bandwidth: 22669.76 MB/sec
+STREAM triad latency: 3.45 nanoseconds
+STREAM triad bandwidth: 41727.01 MB/sec
+numactl --physcpubind=0,4,8,12,16,20 --membind=3 /usr/lib/lmbench/bin/stream -P 6 -M 1024M -N 5
+STREAM copy latency: 2.38 nanoseconds
+STREAM copy bandwidth: 40262.85 MB/sec
+STREAM scale latency: 2.50 nanoseconds
+STREAM scale bandwidth: 38350.69 MB/sec
+STREAM add latency: 6.76 nanoseconds
+STREAM add bandwidth: 21293.92 MB/sec
+STREAM triad latency: 3.69 nanoseconds
+STREAM triad bandwidth: 39033.84 MB/sec
+numactl --physcpubind=0-7 --membind=0 /usr/lib/lmbench/bin/stream -P 8 -M 1024M -N 5
+STREAM copy latency: 2.74 nanoseconds
+STREAM copy bandwidth: 46717.00 MB/sec
+STREAM scale latency: 2.74 nanoseconds
+STREAM scale bandwidth: 46694.34 MB/sec
+STREAM add latency: 4.71 nanoseconds
+STREAM add bandwidth: 40754.01 MB/sec
+STREAM triad latency: 4.39 nanoseconds
+STREAM triad bandwidth: 43765.52 MB/sec
+numactl --physcpubind=0-7 --membind=1 /usr/lib/lmbench/bin/stream -P 8 -M 1024M -N 5
+STREAM copy latency: 2.30 nanoseconds
+STREAM copy bandwidth: 55588.59 MB/sec
+STREAM scale latency: 2.31 nanoseconds
+STREAM scale bandwidth: 55420.85 MB/sec
+STREAM add latency: 4.57 nanoseconds
+STREAM add bandwidth: 42016.91 MB/sec
+STREAM triad latency: 4.70 nanoseconds
+STREAM triad bandwidth: 40821.61 MB/sec
+numactl --physcpubind=0-7 --membind=2 /usr/lib/lmbench/bin/stream -P 8 -M 1024M -N 5
+STREAM copy latency: 2.99 nanoseconds
+STREAM copy bandwidth: 42739.82 MB/sec
+STREAM scale latency: 3.06 nanoseconds
+STREAM scale bandwidth: 41767.87 MB/sec
+STREAM add latency: 7.36 nanoseconds
+STREAM add bandwidth: 26073.17 MB/sec
+STREAM triad latency: 4.87 nanoseconds
+STREAM triad bandwidth: 39448.03 MB/sec
+numactl --physcpubind=0-7 --membind=3 /usr/lib/lmbench/bin/stream -P 8 -M 1024M -N 5
+STREAM copy latency: 3.12 nanoseconds
+STREAM copy bandwidth: 40977.75 MB/sec
+STREAM scale latency: 3.18 nanoseconds
+STREAM scale bandwidth: 40221.82 MB/sec
+STREAM add latency: 7.73 nanoseconds
+STREAM add bandwidth: 24843.93 MB/sec
+STREAM triad latency: 5.00 nanoseconds
+STREAM triad bandwidth: 38429.53 MB/sec
+numactl --physcpubind=0-2,4-5,8-10 --membind=0 /usr/lib/lmbench/bin/stream -P 8 -M 1024M -N 5
+STREAM copy latency: 2.64 nanoseconds
+STREAM copy bandwidth: 48510.64 MB/sec
+STREAM scale latency: 2.65 nanoseconds
+STREAM scale bandwidth: 48341.65 MB/sec
+STREAM add latency: 4.38 nanoseconds
+STREAM add bandwidth: 43825.70 MB/sec
+STREAM triad latency: 4.42 nanoseconds
+STREAM triad bandwidth: 43434.38 MB/sec
+numactl --physcpubind=0-2,4-5,8-10 --membind=1 /usr/lib/lmbench/bin/stream -P 8 -M 1024M -N 5
+STREAM copy latency: 2.31 nanoseconds
+STREAM copy bandwidth: 55469.92 MB/sec
+STREAM scale latency: 2.53 nanoseconds
+STREAM scale bandwidth: 50533.00 MB/sec
+STREAM add latency: 4.40 nanoseconds
+STREAM add bandwidth: 43668.83 MB/sec
+STREAM triad latency: 3.60 nanoseconds
+STREAM triad bandwidth: 53262.11 MB/sec
+numactl --physcpubind=0-2,4-5,8-10 --membind=2 /usr/lib/lmbench/bin/stream -P 8 -M 1024M -N 5
+STREAM copy latency: 2.67 nanoseconds
+STREAM copy bandwidth: 48009.16 MB/sec
+STREAM scale latency: 2.75 nanoseconds
+STREAM scale bandwidth: 46617.37 MB/sec
+STREAM add latency: 6.92 nanoseconds
+STREAM add bandwidth: 27744.73 MB/sec
+STREAM triad latency: 4.32 nanoseconds
+STREAM triad bandwidth: 44487.44 MB/sec
+numactl --physcpubind=0-2,4-5,8-10 --membind=3 /usr/lib/lmbench/bin/stream -P 8 -M 1024M -N 5
+STREAM copy latency: 2.79 nanoseconds
+STREAM copy bandwidth: 45875.68 MB/sec
+STREAM scale latency: 2.87 nanoseconds
+STREAM scale bandwidth: 44587.61 MB/sec
+STREAM add latency: 7.28 nanoseconds
+STREAM add bandwidth: 26369.69 MB/sec
+STREAM triad latency: 4.50 nanoseconds
+STREAM triad bandwidth: 42638.93 MB/sec
+numactl --physcpubind=0-1,4-5,8-9,12-13 --membind=0 /usr/lib/lmbench/bin/stream -P 8 -M 1024M -N 5
+STREAM copy latency: 2.54 nanoseconds
+STREAM copy bandwidth: 50446.58 MB/sec
+STREAM scale latency: 2.56 nanoseconds
+STREAM scale bandwidth: 50069.04 MB/sec
+STREAM add latency: 4.07 nanoseconds
+STREAM add bandwidth: 47202.81 MB/sec
+STREAM triad latency: 3.86 nanoseconds
+STREAM triad bandwidth: 49738.37 MB/sec
+numactl --physcpubind=0-1,4-5,8-9,12-13 --membind=1 /usr/lib/lmbench/bin/stream -P 8 -M 1024M -N 5
+STREAM copy latency: 2.39 nanoseconds
+STREAM copy bandwidth: 53546.84 MB/sec
+STREAM scale latency: 2.41 nanoseconds
+STREAM scale bandwidth: 53055.01 MB/sec
+STREAM add latency: 4.09 nanoseconds
+STREAM add bandwidth: 46980.41 MB/sec
+STREAM triad latency: 3.23 nanoseconds
+STREAM triad bandwidth: 59399.73 MB/sec
+numactl --physcpubind=0-1,4-5,8-9,12-13 --membind=2 /usr/lib/lmbench/bin/stream -P 8 -M 1024M -N 5
+STREAM copy latency: 2.54 nanoseconds
+STREAM copy bandwidth: 50489.58 MB/sec
+STREAM scale latency: 2.59 nanoseconds
+STREAM scale bandwidth: 49427.78 MB/sec
+STREAM add latency: 6.80 nanoseconds
+STREAM add bandwidth: 28249.74 MB/sec
+STREAM triad latency: 6.93 nanoseconds
+STREAM triad bandwidth: 27723.30 MB/sec
+numactl --physcpubind=0-1,4-5,8-9,12-13 --membind=3 /usr/lib/lmbench/bin/stream -P 8 -M 1024M -N 5
+STREAM copy latency: 2.68 nanoseconds
+STREAM copy bandwidth: 47732.25 MB/sec
+STREAM scale latency: 2.72 nanoseconds
+STREAM scale bandwidth: 46974.69 MB/sec
+STREAM add latency: 7.17 nanoseconds
+STREAM add bandwidth: 26771.72 MB/sec
+STREAM triad latency: 4.06 nanoseconds
+STREAM triad bandwidth: 47262.07 MB/sec
+numactl --physcpubind=0-1,4,8-9,12,16-17 --membind=0 /usr/lib/lmbench/bin/stream -P 8 -M 1024M -N 5
+STREAM copy latency: 2.53 nanoseconds
+STREAM copy bandwidth: 50564.23 MB/sec
+STREAM scale latency: 2.55 nanoseconds
+STREAM scale bandwidth: 50239.95 MB/sec
+STREAM add latency: 4.05 nanoseconds
+STREAM add bandwidth: 47395.61 MB/sec
+STREAM triad latency: 3.83 nanoseconds
+STREAM triad bandwidth: 50069.40 MB/sec
+numactl --physcpubind=0-1,4,8-9,12,16-17 --membind=1 /usr/lib/lmbench/bin/stream -P 8 -M 1024M -N 5
+STREAM copy latency: 2.53 nanoseconds
+STREAM copy bandwidth: 50515.57 MB/sec
+STREAM scale latency: 2.53 nanoseconds
+STREAM scale bandwidth: 50521.56 MB/sec
+STREAM add latency: 4.32 nanoseconds
+STREAM add bandwidth: 44422.59 MB/sec
+STREAM triad latency: 3.48 nanoseconds
+STREAM triad bandwidth: 55186.05 MB/sec
+numactl --physcpubind=0-1,4,8-9,12,16-17 --membind=2 /usr/lib/lmbench/bin/stream -P 8 -M 1024M -N 5
+STREAM copy latency: 2.50 nanoseconds
+STREAM copy bandwidth: 51193.86 MB/sec
+STREAM scale latency: 2.58 nanoseconds
+STREAM scale bandwidth: 49616.42 MB/sec
+STREAM add latency: 6.71 nanoseconds
+STREAM add bandwidth: 28619.99 MB/sec
+STREAM triad latency: 3.80 nanoseconds
+STREAM triad bandwidth: 50536.86 MB/sec
+numactl --physcpubind=0-1,4,8-9,12,16-17 --membind=3 /usr/lib/lmbench/bin/stream -P 8 -M 1024M -N 5
+STREAM copy latency: 2.67 nanoseconds
+STREAM copy bandwidth: 47863.92 MB/sec
+STREAM scale latency: 2.76 nanoseconds
+STREAM scale bandwidth: 46391.75 MB/sec
+STREAM add latency: 7.07 nanoseconds
+STREAM add bandwidth: 27141.15 MB/sec
+STREAM triad latency: 4.06 nanoseconds
+STREAM triad bandwidth: 47292.02 MB/sec
+numactl --physcpubind=0-1,4,8,12-13,16,20 --membind=0 /usr/lib/lmbench/bin/stream -P 8 -M 1024M -N 5
+STREAM copy latency: 2.52 nanoseconds
+STREAM copy bandwidth: 50706.48 MB/sec
+STREAM scale latency: 2.55 nanoseconds
+STREAM scale bandwidth: 50262.70 MB/sec
+STREAM add latency: 4.01 nanoseconds
+STREAM add bandwidth: 47859.61 MB/sec
+STREAM triad latency: 3.85 nanoseconds
+STREAM triad bandwidth: 49890.59 MB/sec
+numactl --physcpubind=0-1,4,8,12-13,16,20 --membind=1 /usr/lib/lmbench/bin/stream -P 8 -M 1024M -N 5
+STREAM copy latency: 2.39 nanoseconds
+STREAM copy bandwidth: 53593.08 MB/sec
+STREAM scale latency: 2.39 nanoseconds
+STREAM scale bandwidth: 53657.88 MB/sec
+STREAM add latency: 4.08 nanoseconds
+STREAM add bandwidth: 47001.34 MB/sec
+STREAM triad latency: 3.25 nanoseconds
+STREAM triad bandwidth: 58998.32 MB/sec
+numactl --physcpubind=0-1,4,8,12-13,16,20 --membind=2 /usr/lib/lmbench/bin/stream -P 8 -M 1024M -N 5
+STREAM copy latency: 2.53 nanoseconds
+STREAM copy bandwidth: 50511.74 MB/sec
+STREAM scale latency: 2.60 nanoseconds
+STREAM scale bandwidth: 49259.78 MB/sec
+STREAM add latency: 6.67 nanoseconds
+STREAM add bandwidth: 28765.64 MB/sec
+STREAM triad latency: 3.81 nanoseconds
+STREAM triad bandwidth: 50442.87 MB/sec
+numactl --physcpubind=0-1,4,8,12-13,16,20 --membind=3 /usr/lib/lmbench/bin/stream -P 8 -M 1024M -N 5
+STREAM copy latency: 2.68 nanoseconds
+STREAM copy bandwidth: 47696.16 MB/sec
+STREAM scale latency: 2.73 nanoseconds
+STREAM scale bandwidth: 46850.94 MB/sec
+STREAM add latency: 7.05 nanoseconds
+STREAM add bandwidth: 27221.06 MB/sec
+STREAM triad latency: 4.06 nanoseconds
+STREAM triad bandwidth: 47261.59 MB/sec
+numactl --physcpubind=0-11 --membind=0 /usr/lib/lmbench/bin/stream -P 12 -M 1024M -N 5
+STREAM copy latency: 3.36 nanoseconds
+STREAM copy bandwidth: 57091.46 MB/sec
+STREAM scale latency: 3.37 nanoseconds
+STREAM scale bandwidth: 56946.63 MB/sec
+STREAM add latency: 5.60 nanoseconds
+STREAM add bandwidth: 51445.59 MB/sec
+STREAM triad latency: 5.65 nanoseconds
+STREAM triad bandwidth: 50977.63 MB/sec
+numactl --physcpubind=0-11 --membind=1 /usr/lib/lmbench/bin/stream -P 12 -M 1024M -N 5
+STREAM copy latency: 3.12 nanoseconds
+STREAM copy bandwidth: 61629.96 MB/sec
+STREAM scale latency: 3.12 nanoseconds
+STREAM scale bandwidth: 61549.99 MB/sec
+STREAM add latency: 5.49 nanoseconds
+STREAM add bandwidth: 52457.22 MB/sec
+STREAM triad latency: 4.84 nanoseconds
+STREAM triad bandwidth: 59516.28 MB/sec
+numactl --physcpubind=0-11 --membind=2 /usr/lib/lmbench/bin/stream -P 12 -M 1024M -N 5
+STREAM copy latency: 3.75 nanoseconds
+STREAM copy bandwidth: 51214.90 MB/sec
+STREAM scale latency: 3.78 nanoseconds
+STREAM scale bandwidth: 50842.34 MB/sec
+STREAM add latency: 7.84 nanoseconds
+STREAM add bandwidth: 36745.92 MB/sec
+STREAM triad latency: 5.56 nanoseconds
+STREAM triad bandwidth: 51763.00 MB/sec
+numactl --physcpubind=0-11 --membind=3 /usr/lib/lmbench/bin/stream -P 12 -M 1024M -N 5
+STREAM copy latency: 3.78 nanoseconds
+STREAM copy bandwidth: 50748.84 MB/sec
+STREAM scale latency: 3.82 nanoseconds
+STREAM scale bandwidth: 50276.01 MB/sec
+STREAM add latency: 5.75 nanoseconds
+STREAM add bandwidth: 50103.00 MB/sec
+STREAM triad latency: 5.77 nanoseconds
+STREAM triad bandwidth: 49934.17 MB/sec
+numactl --physcpubind=0-2,4-6,8-10,12-14 --membind=0 /usr/lib/lmbench/bin/stream -P 12 -M 1024M -N 5
+STREAM copy latency: 3.24 nanoseconds
+STREAM copy bandwidth: 59189.49 MB/sec
+STREAM scale latency: 3.26 nanoseconds
+STREAM scale bandwidth: 58931.13 MB/sec
+STREAM add latency: 5.24 nanoseconds
+STREAM add bandwidth: 54922.34 MB/sec
+STREAM triad latency: 4.88 nanoseconds
+STREAM triad bandwidth: 59052.76 MB/sec
+numactl --physcpubind=0-2,4-6,8-10,12-14 --membind=1 /usr/lib/lmbench/bin/stream -P 12 -M 1024M -N 5
+STREAM copy latency: 3.01 nanoseconds
+STREAM copy bandwidth: 63801.85 MB/sec
+STREAM scale latency: 3.02 nanoseconds
+STREAM scale bandwidth: 63581.02 MB/sec
+STREAM add latency: 5.20 nanoseconds
+STREAM add bandwidth: 55370.25 MB/sec
+STREAM triad latency: 4.54 nanoseconds
+STREAM triad bandwidth: 63413.65 MB/sec
+numactl --physcpubind=0-2,4-6,8-10,12-14 --membind=2 /usr/lib/lmbench/bin/stream -P 12 -M 1024M -N 5
+STREAM copy latency: 3.68 nanoseconds
+STREAM copy bandwidth: 52240.80 MB/sec
+STREAM scale latency: 3.69 nanoseconds
+STREAM scale bandwidth: 52090.09 MB/sec
+STREAM add latency: 7.54 nanoseconds
+STREAM add bandwidth: 38209.22 MB/sec
+STREAM triad latency: 7.69 nanoseconds
+STREAM triad bandwidth: 37464.56 MB/sec
+numactl --physcpubind=0-2,4-6,8-10,12-14 --membind=3 /usr/lib/lmbench/bin/stream -P 12 -M 1024M -N 5
+STREAM copy latency: 3.64 nanoseconds
+STREAM copy bandwidth: 52740.81 MB/sec
+STREAM scale latency: 3.65 nanoseconds
+STREAM scale bandwidth: 52643.51 MB/sec
+STREAM add latency: 7.84 nanoseconds
+STREAM add bandwidth: 36731.77 MB/sec
+STREAM triad latency: 5.27 nanoseconds
+STREAM triad bandwidth: 54659.42 MB/sec
+numactl --physcpubind=0-1,4-6,8-9,12-14,16-17 --membind=0 /usr/lib/lmbench/bin/stream -P 12 -M 1024M -N 5
+STREAM copy latency: 3.24 nanoseconds
+STREAM copy bandwidth: 59229.22 MB/sec
+STREAM scale latency: 3.26 nanoseconds
+STREAM scale bandwidth: 58897.26 MB/sec
+STREAM add latency: 5.22 nanoseconds
+STREAM add bandwidth: 55152.38 MB/sec
+STREAM triad latency: 5.23 nanoseconds
+STREAM triad bandwidth: 55055.41 MB/sec
+numactl --physcpubind=0-1,4-6,8-9,12-14,16-17 --membind=1 /usr/lib/lmbench/bin/stream -P 12 -M 1024M -N 5
+STREAM copy latency: 3.05 nanoseconds
+STREAM copy bandwidth: 62924.07 MB/sec
+STREAM scale latency: 3.01 nanoseconds
+STREAM scale bandwidth: 63744.96 MB/sec
+STREAM add latency: 5.15 nanoseconds
+STREAM add bandwidth: 55958.92 MB/sec
+STREAM triad latency: 4.53 nanoseconds
+STREAM triad bandwidth: 63575.73 MB/sec
+numactl --physcpubind=0-1,4-6,8-9,12-14,16-17 --membind=2 /usr/lib/lmbench/bin/stream -P 12 -M 1024M -N 5
+STREAM copy latency: 3.54 nanoseconds
+STREAM copy bandwidth: 54205.87 MB/sec
+STREAM scale latency: 3.55 nanoseconds
+STREAM scale bandwidth: 54054.05 MB/sec
+STREAM add latency: 7.44 nanoseconds
+STREAM add bandwidth: 38686.10 MB/sec
+STREAM triad latency: 5.21 nanoseconds
+STREAM triad bandwidth: 55316.62 MB/sec
+numactl --physcpubind=0-1,4-6,8-9,12-14,16-17 --membind=3 /usr/lib/lmbench/bin/stream -P 12 -M 1024M -N 5
+STREAM copy latency: 3.52 nanoseconds
+STREAM copy bandwidth: 54568.43 MB/sec
+STREAM scale latency: 3.54 nanoseconds
+STREAM scale bandwidth: 54244.80 MB/sec
+STREAM add latency: 7.75 nanoseconds
+STREAM add bandwidth: 37145.05 MB/sec
+STREAM triad latency: 5.37 nanoseconds
+STREAM triad bandwidth: 53638.42 MB/sec
+numactl --physcpubind=0-1,4-5,8-9,12-13,16-17,20-21 --membind=0 /usr/lib/lmbench/bin/stream -P 12 -M 1024M -N 5
+STREAM copy latency: 3.23 nanoseconds
+STREAM copy bandwidth: 59431.93 MB/sec
+STREAM scale latency: 3.25 nanoseconds
+STREAM scale bandwidth: 59114.95 MB/sec
+STREAM add latency: 5.17 nanoseconds
+STREAM add bandwidth: 55691.09 MB/sec
+STREAM triad latency: 5.21 nanoseconds
+STREAM triad bandwidth: 55331.16 MB/sec
+numactl --physcpubind=0-1,4-5,8-9,12-13,16-17,20-21 --membind=1 /usr/lib/lmbench/bin/stream -P 12 -M 1024M -N 5
+STREAM copy latency: 2.92 nanoseconds
+STREAM copy bandwidth: 65718.06 MB/sec
+STREAM scale latency: 2.93 nanoseconds
+STREAM scale bandwidth: 65446.01 MB/sec
+STREAM add latency: 5.15 nanoseconds
+STREAM add bandwidth: 55896.38 MB/sec
+STREAM triad latency: 4.45 nanoseconds
+STREAM triad bandwidth: 64653.40 MB/sec
+numactl --physcpubind=0-1,4-5,8-9,12-13,16-17,20-21 --membind=2 /usr/lib/lmbench/bin/stream -P 12 -M 1024M -N 5
+STREAM copy latency: 3.29 nanoseconds
+STREAM copy bandwidth: 58312.47 MB/sec
+STREAM scale latency: 3.30 nanoseconds
+STREAM scale bandwidth: 58130.62 MB/sec
+STREAM add latency: 7.38 nanoseconds
+STREAM add bandwidth: 39018.10 MB/sec
+STREAM triad latency: 4.57 nanoseconds
+STREAM triad bandwidth: 63025.16 MB/sec
+numactl --physcpubind=0-1,4-5,8-9,12-13,16-17,20-21 --membind=3 /usr/lib/lmbench/bin/stream -P 12 -M 1024M -N 5
+STREAM copy latency: 3.34 nanoseconds
+STREAM copy bandwidth: 57524.97 MB/sec
+STREAM scale latency: 3.35 nanoseconds
+STREAM scale bandwidth: 57287.91 MB/sec
+STREAM add latency: 7.69 nanoseconds
+STREAM add bandwidth: 37456.28 MB/sec
+STREAM triad latency: 4.78 nanoseconds
+STREAM triad bandwidth: 60305.80 MB/sec
+numactl --physcpubind=0-15 --membind=0 /usr/lib/lmbench/bin/stream -P 16 -M 1024M -N 5
+STREAM copy latency: 3.96 nanoseconds
+STREAM copy bandwidth: 64720.27 MB/sec
+STREAM scale latency: 3.97 nanoseconds
+STREAM scale bandwidth: 64531.90 MB/sec
+STREAM add latency: 6.27 nanoseconds
+STREAM add bandwidth: 61203.66 MB/sec
+STREAM triad latency: 5.89 nanoseconds
+STREAM triad bandwidth: 65148.65 MB/sec
+numactl --physcpubind=0-15 --membind=1 /usr/lib/lmbench/bin/stream -P 16 -M 1024M -N 5
+STREAM copy latency: 3.97 nanoseconds
+STREAM copy bandwidth: 64548.19 MB/sec
+STREAM scale latency: 3.97 nanoseconds
+STREAM scale bandwidth: 64441.29 MB/sec
+STREAM add latency: 6.40 nanoseconds
+STREAM add bandwidth: 59990.24 MB/sec
+STREAM triad latency: 5.97 nanoseconds
+STREAM triad bandwidth: 64309.92 MB/sec
+numactl --physcpubind=0-15 --membind=2 /usr/lib/lmbench/bin/stream -P 16 -M 1024M -N 5
+STREAM copy latency: 4.97 nanoseconds
+STREAM copy bandwidth: 51474.74 MB/sec
+STREAM scale latency: 4.99 nanoseconds
+STREAM scale bandwidth: 51318.51 MB/sec
+STREAM add latency: 8.55 nanoseconds
+STREAM add bandwidth: 44917.73 MB/sec
+STREAM triad latency: 6.64 nanoseconds
+STREAM triad bandwidth: 57858.75 MB/sec
+numactl --physcpubind=0-15 --membind=3 /usr/lib/lmbench/bin/stream -P 16 -M 1024M -N 5
+STREAM copy latency: 4.94 nanoseconds
+STREAM copy bandwidth: 51793.62 MB/sec
+STREAM scale latency: 4.95 nanoseconds
+STREAM scale bandwidth: 51680.27 MB/sec
+STREAM add latency: 8.87 nanoseconds
+STREAM add bandwidth: 43283.03 MB/sec
+STREAM triad latency: 6.77 nanoseconds
+STREAM triad bandwidth: 56724.51 MB/sec
+numactl --physcpubind=0-2,4-6,8-10,12-14,16-19 --membind=0 /usr/lib/lmbench/bin/stream -P 16 -M 1024M -N 5
+STREAM copy latency: 3.89 nanoseconds
+STREAM copy bandwidth: 65863.03 MB/sec
+STREAM scale latency: 3.91 nanoseconds
+STREAM scale bandwidth: 65489.89 MB/sec
+STREAM add latency: 6.15 nanoseconds
+STREAM add bandwidth: 62413.81 MB/sec
+STREAM triad latency: 6.18 nanoseconds
+STREAM triad bandwidth: 62109.91 MB/sec
+numactl --physcpubind=0-2,4-6,8-10,12-14,16-19 --membind=1 /usr/lib/lmbench/bin/stream -P 16 -M 1024M -N 5
+STREAM copy latency: 3.66 nanoseconds
+STREAM copy bandwidth: 69958.13 MB/sec
+STREAM scale latency: 3.67 nanoseconds
+STREAM scale bandwidth: 69842.30 MB/sec
+STREAM add latency: 6.43 nanoseconds
+STREAM add bandwidth: 59741.52 MB/sec
+STREAM triad latency: 6.45 nanoseconds
+STREAM triad bandwidth: 59507.66 MB/sec
+numactl --physcpubind=0-2,4-6,8-10,12-14,16-19 --membind=2 /usr/lib/lmbench/bin/stream -P 16 -M 1024M -N 5
+STREAM copy latency: 4.42 nanoseconds
+STREAM copy bandwidth: 57899.93 MB/sec
+STREAM scale latency: 4.35 nanoseconds
+STREAM scale bandwidth: 58821.84 MB/sec
+STREAM add latency: 8.27 nanoseconds
+STREAM add bandwidth: 46435.37 MB/sec
+STREAM triad latency: 6.55 nanoseconds
+STREAM triad bandwidth: 58667.29 MB/sec
+numactl --physcpubind=0-2,4-6,8-10,12-14,16-19 --membind=3 /usr/lib/lmbench/bin/stream -P 16 -M 1024M -N 5
+STREAM copy latency: 4.37 nanoseconds
+STREAM copy bandwidth: 58564.89 MB/sec
+STREAM scale latency: 4.32 nanoseconds
+STREAM scale bandwidth: 59254.35 MB/sec
+STREAM add latency: 8.59 nanoseconds
+STREAM add bandwidth: 44679.57 MB/sec
+STREAM triad latency: 6.48 nanoseconds
+STREAM triad bandwidth: 59214.12 MB/sec
+numactl --physcpubind=0-2,4-5,8-10,12-14,16-17,20-22 --membind=0 /usr/lib/lmbench/bin/stream -P 16 -M 1024M -N 5
+STREAM copy latency: 3.92 nanoseconds
+STREAM copy bandwidth: 65280.78 MB/sec
+STREAM scale latency: 3.94 nanoseconds
+STREAM scale bandwidth: 64965.92 MB/sec
+STREAM add latency: 6.18 nanoseconds
+STREAM add bandwidth: 62159.59 MB/sec
+STREAM triad latency: 5.81 nanoseconds
+STREAM triad bandwidth: 66065.23 MB/sec
+numactl --physcpubind=0-2,4-5,8-10,12-14,16-17,20-22 --membind=1 /usr/lib/lmbench/bin/stream -P 16 -M 1024M -N 5
+STREAM copy latency: 3.87 nanoseconds
+STREAM copy bandwidth: 66064.72 MB/sec
+STREAM scale latency: 3.88 nanoseconds
+STREAM scale bandwidth: 66047.49 MB/sec
+STREAM add latency: 6.39 nanoseconds
+STREAM add bandwidth: 60127.27 MB/sec
+STREAM triad latency: 6.06 nanoseconds
+STREAM triad bandwidth: 63325.34 MB/sec
+numactl --physcpubind=0-2,4-5,8-10,12-14,16-17,20-22 --membind=2 /usr/lib/lmbench/bin/stream -P 16 -M 1024M -N 5
+STREAM copy latency: 4.30 nanoseconds
+STREAM copy bandwidth: 59497.88 MB/sec
+STREAM scale latency: 4.27 nanoseconds
+STREAM scale bandwidth: 59995.04 MB/sec
+STREAM add latency: 8.30 nanoseconds
+STREAM add bandwidth: 46273.01 MB/sec
+STREAM triad latency: 6.08 nanoseconds
+STREAM triad bandwidth: 63188.39 MB/sec
+numactl --physcpubind=0-2,4-5,8-10,12-14,16-17,20-22 --membind=3 /usr/lib/lmbench/bin/stream -P 16 -M 1024M -N 5
+STREAM copy latency: 4.27 nanoseconds
+STREAM copy bandwidth: 59920.79 MB/sec
+STREAM scale latency: 4.25 nanoseconds
+STREAM scale bandwidth: 60283.06 MB/sec
+STREAM add latency: 8.64 nanoseconds
+STREAM add bandwidth: 44434.74 MB/sec
+STREAM triad latency: 6.17 nanoseconds
+STREAM triad bandwidth: 62195.19 MB/sec
