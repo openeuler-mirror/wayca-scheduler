@@ -43,7 +43,7 @@ struct wayca_node {
 };
 
 struct wayca_meminfo {
-	int total_avail_mb;	/* total available memory in MegaBytes */
+	unsigned long total_avail_kB;	/* total available memory in kiloBytes */
 };
 
 struct wayca_package {

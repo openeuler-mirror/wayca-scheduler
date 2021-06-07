@@ -105,6 +105,60 @@ static int topo_path_read_multi_s32(const char *base, const char *filename, size
 	return ret;
 }
 
+/* topo_path_parse_meminfo - parse 'meminfo'
+ *  - filename: usually, this is 'meminfo'
+ *  - p_meminfo: a pre-allocated space to store parsing results
+ *
+ * return -1 on error, 0 on success */
+static int topo_path_parse_meminfo(const char *base, const char *filename, struct wayca_meminfo *p_meminfo)
+{
+	int dir_fd;
+	int fd;
+	FILE *f;
+	char buf[BUFSIZ];		/* BUFSIZ defined in GCC, 8kbytes */
+	char *ptr;
+	int ret = -1;
+
+	dir_fd = open(base, O_RDONLY|O_CLOEXEC);
+	if (dir_fd == -1) return -1;
+
+	fd = openat(dir_fd, filename, O_RDONLY);
+	if (fd == -1) {
+		close(dir_fd);
+		return -1;
+	}
+
+	f = fdopen(fd, "r");
+	if (f == NULL) {
+		close(fd);
+		close(dir_fd);
+		return -1;
+	}
+
+	/* the real work */
+	while (fgets(buf, sizeof(buf), f) != NULL) {
+		/* search the string */
+		if ((ptr = strstr(buf, "MemTotal:")) == NULL)	/* not found */
+			continue;
+		/* read in kB */
+		/* Note: format here is copied from [kernel]/drivers/base/node.c */
+		if (sscanf(ptr, "%*s %8lu", &p_meminfo->total_avail_kB) != 1)
+			break;	/* failed to parse*/
+		ret = 0;
+		break;  /* on success, break early */
+	}
+
+	/* close */
+	fclose(f);
+	close(fd);
+	close(dir_fd);
+
+	/* return */
+	return ret;
+}
+
+
+
 /* Note: cpuset_nbits(), nextnumber(), nexttoken(), cpulist_parse() are referenced
  *       from https://github.com/karelzak/util-linux
  */
@@ -422,12 +476,24 @@ static int topo_read_node_topology(int node_index, struct wayca_topo *p_topo)
 	if (!distance_array)
 		return -ENOMEM;
 	/* read node's distance */
-	if (topo_path_read_multi_s32(path_buffer, "distance", p_topo->n_nodes, distance_array) != 0)
+	if (topo_path_read_multi_s32(path_buffer, "distance", p_topo->n_nodes, distance_array) != 0) {
+		free(distance_array);
 		return -1; 	/* failed */
+	}
 	/* assign */
 	p_topo->nodes[node_index]->distance = distance_array;
 
-	/* TODO: read meminfo */
+	/* read meminfo */
+	/* allocate a struct */
+	struct wayca_meminfo *meminfo_tmp = (struct wayca_meminfo *)calloc(1, sizeof(struct wayca_meminfo));
+	if (!meminfo_tmp)
+		return -ENOMEM;
+	if (topo_path_parse_meminfo(path_buffer, "meminfo", meminfo_tmp) != 0) {
+		free(meminfo_tmp);
+		return -1; 	/* failed */
+	}
+	/* assign */
+	p_topo->nodes[node_index]->p_meminfo = meminfo_tmp;
 
 	return 0;
 }
@@ -539,13 +605,13 @@ void topo_print_wayca_node(size_t setsize, struct wayca_node *p_node, size_t dis
 	PRINT_DBG("node index: %d\n", p_node->node_idx);
 	PRINT_DBG("n_cpus: %lu\n", p_node->n_cpus);
 	PRINT_DBG("\tCpu count in this node's cpu_map: %d\n", CPU_COUNT_S(setsize, p_node->cpu_map));
+	PRINT_DBG("total memory (in kB): %8lu\n", p_node->p_meminfo->total_avail_kB);
 	PRINT_DBG("distance: ");
 	for (int i = 0; i < distance_size; i++)
 		PRINT_DBG("%d\t", p_node->distance[i]);
 	PRINT_DBG("\n");
 	/* TODO: fill up the following */
 	PRINT_DBG("pointer of cluster_map: 0x%p EXPECTED (nil)\n", p_node->cluster_map);
-	PRINT_DBG("pointer of p_meminfo: 0x%p EXPECTED (nil)\n", p_node->p_meminfo);
 }
 
 void topo_print_wayca_cpu(struct wayca_cpu *p_cpu)
