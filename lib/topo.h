@@ -24,6 +24,9 @@ struct wayca_cpu {
 	struct wayca_cluster	*p_cluster;	/* in which cluster */
 	struct wayca_node	*p_numa_node;	/* in which Numa node */
 	struct wayca_package	*p_package;	/* in which Package */
+	cpu_set_t *core_cpus_map;		/* SMT - simultaneous multi-threading siblings; CPUs within the same core
+						 *   (deprecated name: "thread_siblings_list"
+						 */
 };
 
 struct wayca_cluster {

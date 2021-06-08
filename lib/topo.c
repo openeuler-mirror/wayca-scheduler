@@ -422,7 +422,7 @@ read_package_info:
 		if (!p_temp)
 			return -1;	/* no enough memory */
 		p_topo->packages = p_temp;
-		/* allocate a new wayca_cluster struct, and link it to p_topo->ccls */
+		/* allocate a new wayca_ package struct, and link it to p_topo->ccls */
 		p_topo->packages[i] = (struct wayca_package *)calloc(1, sizeof(struct wayca_package));	/* with calloc, allocated memory is set to zero */
 		if (!p_topo->packages[i])
 			return -1;	/* no enough memory */
@@ -441,6 +441,16 @@ read_package_info:
 	}
 	/* link this package back to current CPU */
 	p_topo->cpus[cpu_index]->p_package = p_topo->packages[i];
+
+	/* read core_cpus_list, (SMT: simultaneous multi-threading) */
+	p_topo->cpus[cpu_index]->core_cpus_map = CPU_ALLOC(p_topo->kernel_max_cpus);
+	if (!p_topo->cpus[cpu_index]->core_cpus_map)
+		return -1;			/* no enough memory */
+	/* read "core_cpus_list" */
+	if (topo_path_read_cpulist(path_buffer, "core_cpus_list",
+				   p_topo->cpus[cpu_index]->core_cpus_map,
+				   p_topo->kernel_max_cpus) != 0)
+		return -1;	/* failed */
 
 	return 0;	/* on success */
 }
@@ -614,9 +624,11 @@ void topo_print_wayca_node(size_t setsize, struct wayca_node *p_node, size_t dis
 	PRINT_DBG("pointer of cluster_map: 0x%p EXPECTED (nil)\n", p_node->cluster_map);
 }
 
-void topo_print_wayca_cpu(struct wayca_cpu *p_cpu)
+void topo_print_wayca_cpu(size_t setsize, struct wayca_cpu *p_cpu)
 {
 	PRINT_DBG("core_id: %d\n", p_cpu->core_id);
+	PRINT_DBG("\tCPU count in this core / SMT factor: %d\n",
+				CPU_COUNT_S(setsize, p_cpu->core_cpus_map));
 	if (p_cpu->p_cluster != NULL)
 		PRINT_DBG("belongs to cluster_id: \t%08x\n", p_cpu->p_cluster->cluster_id);
 	PRINT_DBG("belongs to node: \t%d\n", p_cpu->p_numa_node->node_idx);
@@ -637,7 +649,7 @@ void topo_print(void)
 		if (p_topo->cpus[i] == NULL)
 			continue;
 		PRINT_DBG("CPU%d information:\n", i);
-		topo_print_wayca_cpu(p_topo->cpus[i]);
+		topo_print_wayca_cpu(p_topo->setsize, p_topo->cpus[i]);
 	}
 
 	PRINT_DBG("n_clusters: %lu\n", p_topo->n_clusters);
@@ -671,8 +683,10 @@ void topo_free(void)
 	int i;
 
 	CPU_FREE(p_topo->cpu_map);
-	for (i = 0; i < p_topo->n_cpus; i++)
+	for (i = 0; i < p_topo->n_cpus; i++) {
+		CPU_FREE(p_topo->cpus[i]->core_cpus_map);
 		free(p_topo->cpus[i]);
+	}
 	free(p_topo->cpus);
 
 	for (i = 0; i < p_topo->n_clusters; i++) {
@@ -868,3 +882,47 @@ int pipe_latency_NUMA[4] = {
 	/* Same NUMA | Neighbor | Remote | Remote *
 	 * diff CCLs |  NUMAs   | NUMA0  | NUMA1  */
 };
+
+
+/* TODO: for recursively searching the directories for PCI devices' and finding 'numa_node' */
+
+#if 0
+void printdir(char *dir, int depth)
+{
+    DIR *dp;
+    struct dirent *entry;
+    struct stat statbuf;
+    if((dp = opendir(dir)) == NULL) {
+        fprintf(stderr,"cannot open directory: %s\n", dir);
+        return;
+    }
+    chdir(dir);
+    while((entry = readdir(dp)) != NULL) {
+        lstat(entry->d_name,&statbuf);
+        if(S_ISDIR(statbuf.st_mode)) {
+            /* Found a directory, but ignore . and .. */
+            if(strcmp(".",entry->d_name) == 0 ||
+                strcmp("..",entry->d_name) == 0)
+                continue;
+            /* TODO: insert PCI device information retrieving code here. And insert
+	     *     - insert PCI node creation code
+	     */
+            printf("%*s%s/\n",depth,"",entry->d_name);
+            /* Recurse at a new indent level */
+            printdir(entry->d_name,depth+4);
+        }
+        else printf("%*s%s\n",depth,"",entry->d_name);
+    }
+    chdir("..");
+    closedir(dp);
+}
+
+int main()
+{
+    printf("Directory scan of /home:\n");
+    printdir("/home",0);
+    printf("done.\n");
+    exit(0);
+}
+
+#endif
