@@ -294,7 +294,7 @@ static int topo_read_cpu_topology(int cpu_index, struct wayca_topo *p_topo)
 	char *endptr;
 	char path_buffer[PATH_LEN_MAX];
 
-	int cluster_id, ppkg_id;
+	int core_id, cluster_id, ppkg_id;
 	int i;
 
 	/* allocate a new struct wayca_cpu */
@@ -302,7 +302,7 @@ static int topo_read_cpu_topology(int cpu_index, struct wayca_topo *p_topo)
 	if (!p_topo->cpus[cpu_index]) {
 		return -1;	/* no enough memory */
 	}
-	p_topo->cpus[cpu_index]->core_id = cpu_index;
+	p_topo->cpus[cpu_index]->cpu_id = cpu_index;
 
 	sprintf(path_buffer, "%s/cpu%d", CPU_FNAME, cpu_index);
 
@@ -363,6 +363,11 @@ static int topo_read_cpu_topology(int cpu_index, struct wayca_topo *p_topo)
 
 	/* move the base to "cpu%d/topology" */
 	sprintf(path_buffer, "%s/cpu%d/topology", CPU_FNAME, cpu_index);
+
+	/* read "core_id" */
+	if (topo_path_read_s32(path_buffer, "core_id", &core_id) != 0)	/* on failure */
+		p_topo->cpus[cpu_index]->core_id = -1;
+	p_topo->cpus[cpu_index]->core_id = core_id;	/* on success */
 
 	/* read "cluster_id" */
 	if (topo_path_read_s32(path_buffer, "cluster_id", &cluster_id) != 0) {	/* on failure */
@@ -626,6 +631,7 @@ void topo_print_wayca_node(size_t setsize, struct wayca_node *p_node, size_t dis
 
 void topo_print_wayca_cpu(size_t setsize, struct wayca_cpu *p_cpu)
 {
+	PRINT_DBG("cpu_id: %d\n", p_cpu->cpu_id);
 	PRINT_DBG("core_id: %d\n", p_cpu->core_id);
 	PRINT_DBG("\tCPU count in this core / SMT factor: %d\n",
 				CPU_COUNT_S(setsize, p_cpu->core_cpus_map));

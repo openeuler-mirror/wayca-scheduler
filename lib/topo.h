@@ -20,6 +20,7 @@
 #define PRINT_ERROR	printf
 
 struct wayca_cpu {
+	int cpu_id;
 	int core_id;
 	struct wayca_cluster	*p_cluster;	/* in which cluster */
 	struct wayca_node	*p_numa_node;	/* in which Numa node */
