@@ -20,10 +20,14 @@
 #define PRINT_ERROR	printf
 
 struct wayca_cpu {
+	int cpu_id;
 	int core_id;
 	struct wayca_cluster	*p_cluster;	/* in which cluster */
 	struct wayca_node	*p_numa_node;	/* in which Numa node */
 	struct wayca_package	*p_package;	/* in which Package */
+	cpu_set_t *core_cpus_map;		/* SMT - simultaneous multi-threading siblings; CPUs within the same core
+						 *   (deprecated name: "thread_siblings_list"
+						 */
 };
 
 struct wayca_cluster {
@@ -43,7 +47,7 @@ struct wayca_node {
 };
 
 struct wayca_meminfo {
-	int total_avail_mb;	/* total available memory in MegaBytes */
+	unsigned long total_avail_kB;	/* total available memory in kiloBytes */
 };
 
 struct wayca_package {
