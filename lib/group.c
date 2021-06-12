@@ -365,6 +365,7 @@ int wayca_group_init(struct wayca_group *group)
 	group->roll_over_cnts = 0;
 
 	CPU_ZERO(&group->used);
+	pthread_mutex_init(&group->mutex, NULL);
 
 	/* Init the group attribute, threads will compact in CCL and bind per-CPU */
 	group->attribute = (WT_GF_CCL | WT_GF_COMPACT | WT_GF_PERCPU);

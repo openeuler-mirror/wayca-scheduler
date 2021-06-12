@@ -44,12 +44,6 @@ struct wayca_thread {
 	bool start;
 };
 
-/**
- * TBD:
- * 	The group may add/delete threads simutaneously,
- * 	so a lock for the group is necessary to avoid race
- * 	conditions.
- */
 struct wayca_group {
 	/* Wayca group id which is identity to this group */
 	wayca_group_t id;
@@ -77,6 +71,8 @@ struct wayca_group {
 	cpu_set_t total;
 	/* The attribute specify the arrangement strategy of this group */
 	wayca_group_attr_t attribute;
+	/* The mutex to protect this data structure */
+	pthread_mutex_t mutex;
 
 	/* Stride for arranging the threads */
 	int stride;
