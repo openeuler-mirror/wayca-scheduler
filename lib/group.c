@@ -251,25 +251,20 @@ int wayca_group_request_resource_from_father(struct wayca_group *group, cpu_set_
 	int cnts = CPU_COUNT(cpuset);
 	struct wayca_group *father;
 	cpu_set_t available_set;
-	size_t target_pos = 0;
 
 	assert(group->father != NULL);
 	assert(!CPU_EQUAL(&group->used, &group->total));
 
-	/*
-	 * Assume the father group's resource is always set to fixed.
-	 */
-	assert(group->father->attribute & WT_GF_FIXED);
 	father = group->father;
 
-	if (cnts <= 0)
+	if (cnts <= 0 || cnts > father->nr_cpus_per_topo)
 		return -1;
 
 	/**
 	 * Always assign complete topology region of CPU to the child,
 	 * according to the father's topology level.
 	 */
-	cnts = ((cnts + father->nr_cpus_per_topo - 1) / father->nr_cpus_per_topo) * father->nr_cpus_per_topo;
+	cnts = div_round_up(cnts, father->nr_cpus_per_topo);
 
 	CPU_ZERO(cpuset);
 
@@ -277,24 +272,9 @@ int wayca_group_request_resource_from_father(struct wayca_group *group, cpu_set_
 	CPU_XOR(&available_set, &available_set, &father->used);
 	CPU_AND(&available_set, &available_set, &father->total);
 
-	while (target_pos < cpuset_find_last_set(&father->total) &&
-	       !CPU_ISSET(target_pos, &available_set))
-		target_pos += father->nr_cpus_per_topo;
-
-	while (cnts) {
-		if (CPU_EQUAL(&father->used, &father->total)) {
-			father->roll_over_cnts++;
-			CPU_ZERO(&father->used);
-			target_pos = father->roll_over_cnts % father->nr_cpus_per_topo;
-		}
-
-		while (CPU_ISSET(target_pos, &father->used))
-			target_pos++;
-
-		CPU_SET(target_pos, &father->used);
-		CPU_SET(target_pos, cpuset);
-		cnts--;
-	}
+	find_idlest_set(father, &available_set);
+	CPU_OR(&father->used, &father->used, &available_set);
+	CPU_OR(cpuset, cpuset, &available_set);
 
 	if (CPU_EQUAL(&father->used, &father->total)) {
 		father->roll_over_cnts++;
@@ -489,10 +469,10 @@ int wayca_group_assign_thread_resource(struct wayca_group *group, struct wayca_t
 	}
 
 	/**
-	 * When no cores remains in the group, and the resource of the group is
-	 * fixed, increase the group->roll_over_cnts and clear the group->used.
+	 * When no cores remains in the group, increase the group->roll_over_cnts
+	 * and clear the group->used.
 	 */
-	if ((group->attribute & WT_GF_FIXED) && CPU_EQUAL(&group->used, &group->total)) {
+	if (CPU_EQUAL(&group->used, &group->total)) {
 		CPU_ZERO(&group->used);
 		group->roll_over_cnts++;
 	}
@@ -502,23 +482,6 @@ int wayca_group_assign_thread_resource(struct wayca_group *group, struct wayca_t
 
 int wayca_group_add_thread(struct wayca_group *group, struct wayca_thread *thread)
 {
-	cpu_set_t available_set;
-	size_t available_cnt;
-
-	memset(&available_set, -1, sizeof(cpu_set_t));
-	CPU_XOR(&available_set, &available_set, &group->used);
-	CPU_AND(&available_set, &available_set, &group->total);
-	available_cnt = CPU_COUNT(&available_set);
-
-	/**
-	 * TBD:
-	 * 	If there is no availabe CPU and the policy of the
-	 * 	group is not fixed, we first require resources
-	 * 	from the parent group.
-	 */
-	if (!available_cnt && (group->attribute & WT_GF_FIXED))
-		;
-
 	group->nr_threads++;
 	group_thread_add_to_tail(group, thread);
 

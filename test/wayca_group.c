@@ -14,7 +14,7 @@ int group_num = 11;
 int group_elem_num = 11;
 
 wayca_group_t all, *perCcl;
-wayca_group_attr_t all_attr = WT_GF_FIXED, perCcl_attr = WT_GF_FIXED;
+wayca_group_attr_t all_attr, perCcl_attr;
 wayca_thread_t **threads;
 pid_t **threads_pid;
 
@@ -114,10 +114,6 @@ void readEnv(void)
 	p = getenv("WAYCA_TEST_THREAD_COMPACT");
 	if (p)
 		perCcl_attr |= WT_GF_COMPACT;
-
-	p = getenv("WAYCA_TEST_GROUP_FIXED");
-	if (p)
-		perCcl_attr |= WT_GF_FIXED;
 }
 
 int main()

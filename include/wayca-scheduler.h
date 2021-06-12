@@ -67,7 +67,6 @@ typedef unsigned long long	wayca_group_attr_t;
 #define WT_GF_ALL	1024		/* Each thread/group doesn't have an affinity hint */
 #define WT_GF_PERCPU	0x10000		/* Each thread will bind to the CPU */
 #define WT_GF_COMPACT	0x100000	/* The threads in this group will be compact */
-#define WT_GF_FIXED	0x400000	/* The size of the group is Fixed. */
 
 int wayca_thread_group_set_attr(wayca_group_t group, wayca_group_attr_t *attr);
 int wayca_thread_group_get_attr(wayca_group_t group, wayca_group_attr_t *attr);

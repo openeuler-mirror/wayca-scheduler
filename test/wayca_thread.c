@@ -18,7 +18,6 @@ bool has_env = false;
 wayca_group_attr_t topo = 0;
 wayca_group_attr_t method = WT_GF_PERCPU;
 wayca_group_attr_t relation = 0;
-wayca_group_attr_t fixed = WT_GF_FIXED;
 
 void *thread_func(void *private)
 {
@@ -90,7 +89,7 @@ int main(int argc, char *argv[])
 	sleep(5);
 
 	if (has_env) {
-		group_attr = topo | method | relation | WT_GF_FIXED;
+		group_attr = topo | method | relation;
 		wayca_thread_group_set_attr(group, &group_attr);
 
 		for (int index = 0; index < created; index++)
@@ -110,7 +109,7 @@ int main(int argc, char *argv[])
 			// relation = WT_GF_COMPACT;
 
 			printf("Topo: %lld Method: %lld Relation: %lld\n", topo, method, relation);
-			group_attr = topo | method | relation | WT_GF_FIXED;
+			group_attr = topo | method | relation;
 
 			wayca_thread_group_set_attr(group, &group_attr);
 			for (int index = 0; index < created; index++)
