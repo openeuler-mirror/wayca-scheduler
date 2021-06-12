@@ -36,4 +36,7 @@ int thread_bind_cpulist(pid_t pid, char *s);
 int process_bind_cpumask(pid_t pid, cpu_set_t *cpumask, size_t maxCpus);
 int thread_bind_cpumask(pid_t pid, cpu_set_t *cpumask, size_t maxCpus);
 
+#define div_round_up(x, y)	\
+	((x + y - 1) / y)
+
 #endif

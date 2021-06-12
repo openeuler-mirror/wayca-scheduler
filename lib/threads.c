@@ -242,15 +242,18 @@ int thread_bind_cpumask(pid_t pid, cpu_set_t *cpumask, size_t maxCpus)
  * TBD:
  *	Lock is necessary for protecting these two public arrays. 
  */
-#define DEFAULT_WAYCA_THREAD_NUM	100
+#define DEFAULT_WAYCA_THREAD_NUM	65536
 static struct wayca_thread **wayca_threads_array;
 static int wayca_threads_array_size;
 
-#define DEFAULT_WAYCA_GROUP_NUM		10
+#define DEFAULT_WAYCA_GROUP_NUM		256
 static struct wayca_group **wayca_groups_array;
 static int wayca_groups_array_size;
 
 cpu_set_t total_cpu_set;
+
+long long *wayca_cpu_loads;
+pthread_mutex_t wayca_cpu_loads_mutex;
 
 __attribute__((constructor)) void wayca_thread_init(void)
 {
@@ -261,6 +264,10 @@ __attribute__((constructor)) void wayca_thread_init(void)
 	total_cpu_cnt = cores_in_total();
 	for (int cpu = 0; cpu < total_cpu_cnt; cpu++)
 		CPU_SET(cpu, &total_cpu_set);
+
+	wayca_cpu_loads = malloc(total_cpu_cnt * sizeof(long long));
+	memset(wayca_cpu_loads, 0, sizeof(long long) * total_cpu_cnt);
+	pthread_mutex_init(&wayca_cpu_loads_mutex, NULL);
 
 	p = secure_getenv("WAYCA_THREADS_NUMBER");
 	if (p)
@@ -285,6 +292,9 @@ __attribute__((constructor)) void wayca_thread_init(void)
 
 __attribute__((destructor)) void wayca_thread_exit(void)
 {
+	free(wayca_cpu_loads);
+	pthread_mutex_destroy(&wayca_cpu_loads_mutex);
+
 	free(wayca_threads_array);
 	free(wayca_groups_array);
 }
@@ -330,9 +340,20 @@ struct wayca_group *id_to_wayca_group(wayca_group_t id)
 void *wayca_thread_start_routine(void *private)
 {
 	struct wayca_thread *thread = private;
+	cpu_set_t cpuset;
 
 	thread->pid = thread_sched_gettid();
 
+	sched_getaffinity(thread->pid, sizeof(cpu_set_t), &cpuset);
+	CPU_ZERO(&thread->cur_set);
+	CPU_ZERO(&thread->allowed_set);
+
+	CPU_OR(&thread->cur_set, &thread->cur_set, &cpuset);
+	CPU_OR(&thread->allowed_set, &thread->allowed_set, &cpuset);
+
+	wayca_thread_update_load(thread, true);
+
+	thread->start = true;
 	return thread->start_routine(thread->arg);
 }
 
@@ -389,6 +410,7 @@ int wayca_thread_create(wayca_thread_t *wthread, pthread_attr_t *attr,
 	wt_p->group = NULL;
 	wt_p->start_routine = start_routine;
 	wt_p->arg = arg;
+	wt_p->start = false;
 	pthread_ptr = &wt_p->thread;
 
 	retval = pthread_create(pthread_ptr, attr,
@@ -398,6 +420,9 @@ int wayca_thread_create(wayca_thread_t *wthread, pthread_attr_t *attr,
 		wayca_threads_array[id] = NULL;
 		return retval;
 	}
+
+	while (!wt_p->start)
+		;
 
 	*wthread = wt_p->id;
 	return 0;
@@ -415,7 +440,10 @@ int wayca_thread_join(wayca_thread_t id, void **retval)
 
 	ret = pthread_join(thread->thread, retval);
 
-	wayca_thread_detach_group(id, thread->group->id);
+	if (thread->group)
+		wayca_thread_detach_group(id, thread->group->id);
+	
+	wayca_thread_update_load(thread, false);
 
 	/* Set the element to NULL, then this id can be resued by others */
 	wayca_threads_array[id] = NULL;
@@ -508,10 +536,12 @@ int wayca_thread_attach_group(wayca_thread_t wthread, wayca_group_t group)
 	wt_p = id_to_wayca_thread(wthread);
 	wg_p = id_to_wayca_group(group);
 
+	wayca_thread_update_load(wt_p, false);
+
 	if (wayca_group_add_thread(wg_p, wt_p))
 		return -1;
 
-	return thread_sched_setaffinity(wt_p->pid, sizeof(cpu_set_t), &wt_p->cur_set);
+	return wayca_group_rearrange_thread(wg_p, wt_p);
 }
 
 int wayca_thread_detach_group(wayca_thread_t wthread, wayca_group_t group)
@@ -586,4 +616,15 @@ int wayca_group_get_cpuset(wayca_group_t group, cpu_set_t *cpuset)
 	CPU_OR(cpuset, cpuset, &wg_p->total);
 
 	return 0;
+}
+
+pthread_t wayca_thread_get_pthtread(wayca_thread_t wthread)
+{
+	struct wayca_thread *thread;
+
+	if (!is_thread_id_valid(wthread))
+		return -1; /* Invalid id */
+
+	thread = id_to_wayca_thread(wthread);
+	return thread->thread;
 }

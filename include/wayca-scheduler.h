@@ -83,4 +83,6 @@ int wayca_group_detach_group(wayca_group_t group, wayca_group_t father);
 int wayca_thread_get_cpuset(wayca_thread_t wthread, cpu_set_t *cpuset);
 int wayca_group_get_cpuset(wayca_group_t group, cpu_set_t *cpuset);
 
+pthread_t wayca_thread_get_pthtread(wayca_thread_t wthread);
+
 #endif

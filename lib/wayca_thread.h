@@ -16,6 +16,9 @@
 
 /* CPU set of all the cpus in the system */
 extern cpu_set_t total_cpu_set;
+/* Load Array of each cpu, length is cores_in_total() */
+extern long long *wayca_cpu_loads;
+extern pthread_mutex_t wayca_cpu_loads_mutex;
 
 struct wayca_thread {
 	/* Wayca thread id which is identity to this thread */
@@ -37,6 +40,8 @@ struct wayca_thread {
 	void *(*start_routine)(void *);
 	/* The args for the routine */
 	void *arg;
+	/* Is the routine started ? */
+	bool start;
 };
 
 /**
@@ -87,18 +92,27 @@ struct wayca_group {
 
 /* Do the initialization work for a new create group */
 int wayca_group_init(struct wayca_group *group);
+
 /* Arrange the resource of the group according to the attribute */
 int wayca_group_arrange(struct wayca_group *group);
+
 /* Add the thread to the group, arrange the resource for it */
 int wayca_group_add_thread(struct wayca_group *group, struct wayca_thread *thread);
+
 /* Delete one thread from the group. */
 int wayca_group_delete_thread(struct wayca_group *group, struct wayca_thread *thread);
+
 /* Rearrange the resource assigned to the thread as the attribute of thread has been changed */
 int wayca_group_rearrange_thread(struct wayca_group *group, struct wayca_thread *thread);
+
 /* Rearrange all the group threads' resources as the attribute of the group has been changed */
 int wayca_group_rearrange_group(struct wayca_group *group);
+
 int wayca_group_add_group(struct wayca_group *group, struct wayca_group *father);
+
 int wayca_group_delete_group(struct wayca_group *group, struct wayca_group *father);
+
+void wayca_thread_update_load(struct wayca_thread *thread, bool add);
 
 static inline int cpuset_find_first_unset(cpu_set_t *cpusetp)
 {
@@ -128,6 +142,20 @@ static inline int cpuset_find_last_set(cpu_set_t *cpusetp)
 		pos--;
 
 	return pos >= 0 ? pos : -1;
+}
+
+static inline int cpuset_find_next_set(cpu_set_t *cpusetp, int begin)
+{
+	int pos = begin + 1;
+
+	while (pos <= cpuset_find_last_set(cpusetp)) {
+		if (CPU_ISSET(pos, cpusetp))
+			return pos;
+
+		pos++;
+	}
+
+	return -1;
 }
 
 #endif	/* _WAYCA_THREAD_H */
