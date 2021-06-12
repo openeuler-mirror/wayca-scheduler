@@ -4,7 +4,7 @@
 #define _GNU_SOURCE
 #include <sched.h>
 
-static const char *wayca_scheduler_socket_path = "/etc/wayca-scheduler/wayca.socket";
+extern char *wayca_scheduler_socket_path;
 
 /* default configurations */
 #define MAX_MANAGED_MAPS	100

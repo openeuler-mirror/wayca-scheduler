@@ -238,6 +238,8 @@ int thread_bind_cpumask(pid_t pid, cpu_set_t *cpumask, size_t maxCpus)
 	return process_sched_setaffinity(pid, maxCpus, cpumask);
 }
 
+char *wayca_scheduler_socket_path = "/etc/wayca-scheduler/wayca.socket";
+
 /*
  * TBD:
  *	Lock is necessary for protecting these two public arrays. 

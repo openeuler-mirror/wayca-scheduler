@@ -46,7 +46,7 @@ void show_thread_affinity(int created)
 
 		printf("index %d pid %d: ", index, pid);
 		for (int j = 0; j < (system_cpu_nr + __NCPUBITS - 1) / __NCPUBITS; j++)
-			printf("0x%016llx,", cpuset.__bits[j]);
+			printf("%#016lx,", cpuset.__bits[j]);
 		printf("\b \n");
 	}
 }
@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
 			relation = 0;
 			// relation = WT_GF_COMPACT;
 
-			printf("Topo: %d Method: %d Relation: %d\n", topo, method, relation);
+			printf("Topo: %lld Method: %lld Relation: %lld\n", topo, method, relation);
 			group_attr = topo | method | relation | WT_GF_FIXED;
 
 			wayca_group_set_attr(group, &group_attr);

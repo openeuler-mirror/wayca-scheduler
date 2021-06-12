@@ -375,6 +375,6 @@ int main(int argc, char **argv)
 
 	unlink(SOCKET_PATH);
 	free(config_file_path);
-	free(wayca_scheduler_socket_path);
+
 	return 0;
 }
