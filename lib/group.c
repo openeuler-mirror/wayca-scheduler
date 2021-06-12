@@ -613,7 +613,7 @@ int wayca_group_delete_group(struct wayca_group *group, struct wayca_group *fath
 		CPU_OR(&father->used, &father->used, &father->total);
 	}
 
-	CPU_XOR(&father->used, &father->used, &father->total);
+	CPU_XOR(&father->used, &father->used, &group->total);
 
 	group_group_delete_group(group, father);
 	father->nr_groups--;
