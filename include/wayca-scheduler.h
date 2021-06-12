@@ -44,8 +44,6 @@ int wayca_managed_threadpool_create(int id, int num, pthread_t *thread[],
 typedef unsigned long long	wayca_thread_t;
 typedef unsigned long long	wayca_thread_attr_t;
 /* Flags for wayca thread attributes */
-#define WT_TF_PERCPU		0x1
-#define WT_TF_FREE		0x2
 #define WT_TF_WAYCA_MANAGEABLE	0x10000
 
 int wayca_thread_set_attr(wayca_thread_t wthread, wayca_thread_attr_t *attr);
@@ -58,19 +56,17 @@ typedef unsigned long long	wayca_group_t;
 typedef unsigned long long	wayca_group_attr_t;
 /**
  * Flags for wayca group attributes
- * Bit[0:15]: Group thread accepted topology
+ * Bit[0:15]: The accepted topology of the thread/group in this group
  * Bit[16:19]: Group thread's binding style
  * Bit[20:32]: Group thread's relationship
  */
-#define WT_GF_CPU	1		/* Each thread accepts per-CPU affinity */
-#define WT_GF_CCL	4		/* Each thread accepts per-CCL affinity */
-#define WT_GF_NUMA	32		/* Each thread accepts per-NUMA affinity */
-#define WT_GF_PACKAGE	64		/* Each thread accepts per-Package affinity */
-#define WT_GF_ALL	1024		/* Each thread doesn't have an affinity hint */
-#define WT_GF_PERCPU	0x10000		/* Each thread will bind to the cpu */
-// #define WT_GF_FREE	0x20000		/* Each thread will schedule in the affinity range */
+#define WT_GF_CPU	1		/* Each thread/group accepts per-CPU affinity */
+#define WT_GF_CCL	4		/* Each thread/group accepts per-CCL affinity */
+#define WT_GF_NUMA	32		/* Each thread/group accepts per-NUMA affinity */
+#define WT_GF_PACKAGE	64		/* Each thread/group accepts per-Package affinity */
+#define WT_GF_ALL	1024		/* Each thread/group doesn't have an affinity hint */
+#define WT_GF_PERCPU	0x10000		/* Each thread will bind to the CPU */
 #define WT_GF_COMPACT	0x100000	/* The threads in this group will be compact */
-// #define WT_GF_SPAN	0x200000	/* The threads in this group will span */
 #define WT_GF_FIXED	0x400000	/* The size of the group is Fixed. */
 
 int wayca_thread_group_set_attr(wayca_group_t group, wayca_group_attr_t *attr);
