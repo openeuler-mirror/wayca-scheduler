@@ -90,7 +90,7 @@ void find_idlest_set(struct wayca_group *group, cpu_set_t *cpuset)
 
 /**
  * Find the first topology set in the @cpuset, which is not set
- * completely.
+ * completely. Return the id of the first CPU in the found set.
  */
 int find_incomplete_set(struct wayca_group *group, cpu_set_t *cpuset)
 {
@@ -108,7 +108,9 @@ int find_incomplete_set(struct wayca_group *group, cpu_set_t *cpuset)
 			CPU_SET(pos + i, &tset);
 
 		CPU_AND(&tset, &tset, cpuset);
-		if (CPU_COUNT(&tset) != stride)
+
+		/* An empty set is not an incomplete set. */
+		if (CPU_COUNT(&tset) != stride && CPU_COUNT(&tset) != 0)
 			return pos;
 
 		pos += stride;
@@ -419,7 +421,7 @@ int wayca_group_assign_thread_resource(struct wayca_group *group, struct wayca_t
 	 * 
 	 * Else find the idlest core in the idlest set and place the thread.
 	 */
-	if ((CPU_COUNT(&available_set) % group->stride) && group->attribute & WT_GF_COMPACT) {
+	if ((CPU_COUNT(&available_set) % group->nr_cpus_per_topo) && group->attribute & WT_GF_COMPACT) {
 		int anchor = find_incomplete_set(group, &available_set);
 		target_pos = anchor;
 		/* iterate the available cpu set and find a proper cpu */
