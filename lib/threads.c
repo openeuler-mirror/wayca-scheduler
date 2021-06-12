@@ -240,16 +240,14 @@ int thread_bind_cpumask(pid_t pid, cpu_set_t *cpumask, size_t maxCpus)
 
 char *wayca_scheduler_socket_path = "/etc/wayca-scheduler/wayca.socket";
 
-/*
- * TBD:
- *	Lock is necessary for protecting these two public arrays. 
- */
 #define DEFAULT_WAYCA_THREAD_NUM	65536
 static struct wayca_thread **wayca_threads_array;
+static pthread_mutex_t wayca_threads_array_mutex;
 static int wayca_threads_array_size;
 
 #define DEFAULT_WAYCA_GROUP_NUM		256
 static struct wayca_group **wayca_groups_array;
+static pthread_mutex_t wayca_groups_array_mutex;
 static int wayca_groups_array_size;
 
 cpu_set_t total_cpu_set;
@@ -280,6 +278,7 @@ __attribute__((constructor)) void wayca_thread_init(void)
 	wayca_threads_array = malloc(num * sizeof(struct wayca_thread *));
 	memset(wayca_threads_array, 0, num * sizeof(struct wayca_thread *));
 	wayca_threads_array_size = num;
+	pthread_mutex_init(&wayca_threads_array_mutex, NULL);
 
 	p = secure_getenv("WAYCA_GROUP_NUMBERS");
 	if (p)
@@ -290,6 +289,7 @@ __attribute__((constructor)) void wayca_thread_init(void)
 	wayca_groups_array = malloc(num * sizeof(struct wayca_group *));
 	memset(wayca_groups_array, 0, num * sizeof(struct wayca_group *));
 	wayca_groups_array_size = num;
+	pthread_mutex_init(&wayca_groups_array_mutex, NULL);
 }
 
 __attribute__((destructor)) void wayca_thread_exit(void)
@@ -298,10 +298,16 @@ __attribute__((destructor)) void wayca_thread_exit(void)
 	pthread_mutex_destroy(&wayca_cpu_loads_mutex);
 
 	free(wayca_threads_array);
+	pthread_mutex_destroy(&wayca_threads_array_mutex);
+
 	free(wayca_groups_array);
+	pthread_mutex_destroy(&wayca_groups_array_mutex);
 }
 
-int find_free_thread_id()
+/**
+ * The caller should have hold the @wayca_threads_array_mutex lock.
+ */
+int find_free_thread_id_locked()
 {
 	for (wayca_thread_t i = 0; i < wayca_threads_array_size; i++)
 		if (!wayca_threads_array[i])
@@ -310,7 +316,10 @@ int find_free_thread_id()
 	return -1;
 }
 
-int find_free_group_id()
+/**
+ * The caller should have hold the @wayca_groups_array_mutex lock.
+ */
+int find_free_group_id_locked()
 {
 	for (wayca_group_t i = 0; i < wayca_groups_array_size; i++)
 		if (!wayca_groups_array[i])
@@ -388,26 +397,49 @@ int wayca_thread_get_attr(wayca_thread_t wthread, wayca_thread_attr_t *attr)
 	return 0; 
 }
 
+struct wayca_thread *wayca_thread_alloc()
+{
+	wayca_thread_t id;
+
+	pthread_mutex_lock(&wayca_threads_array_mutex);
+	id = find_free_thread_id_locked();
+	if (id == -1)
+		goto err;
+
+	wayca_threads_array[id] = malloc(sizeof(struct wayca_thread));
+	if (!wayca_threads_array[id])
+		goto err;
+
+	pthread_mutex_unlock(&wayca_threads_array_mutex);
+
+	memset(wayca_threads_array[id], 0, sizeof(struct wayca_thread));
+	wayca_threads_array[id]->id = id;
+
+	return wayca_threads_array[id];
+err:
+	pthread_mutex_unlock(&wayca_threads_array_mutex);
+	return NULL;
+}
+
+void wayca_thread_free(struct wayca_thread *thread)
+{
+	pthread_mutex_lock(&wayca_threads_array_mutex);
+	wayca_threads_array[thread->id] = NULL;
+	free(thread);
+	pthread_mutex_unlock(&wayca_threads_array_mutex);
+}
+
 int wayca_thread_create(wayca_thread_t *wthread, pthread_attr_t *attr,
 			void *(*start_routine)(void *), void *arg)
 {
 	struct wayca_thread *wt_p;
 	pthread_t *pthread_ptr;
-	wayca_thread_t id;
 	int retval;
 
-	id = find_free_thread_id();
-	if (id == -1)
-		return id;
-
-	wayca_threads_array[id] = malloc(sizeof(struct wayca_thread));
-	if (!wayca_threads_array[id])
+	wt_p = wayca_thread_alloc();
+	if (!wt_p)
 		return -1;
 
-	wt_p = wayca_threads_array[id];
-	memset(wt_p, 0, sizeof(struct wayca_thread));
-
-	wt_p->id = id;
 	wt_p->siblings = NULL;
 	wt_p->group = NULL;
 	wt_p->start_routine = start_routine;
@@ -418,8 +450,7 @@ int wayca_thread_create(wayca_thread_t *wthread, pthread_attr_t *attr,
 	retval = pthread_create(pthread_ptr, attr,
 				wayca_thread_start_routine, wt_p);
 	if (retval < 0) {
-		free(wt_p);
-		wayca_threads_array[id] = NULL;
+		wayca_thread_free(wt_p);
 		return retval;
 	}
 
@@ -447,9 +478,7 @@ int wayca_thread_join(wayca_thread_t id, void **retval)
 	
 	wayca_thread_update_load(thread, false);
 
-	/* Set the element to NULL, then this id can be resued by others */
-	wayca_threads_array[id] = NULL;
-	free(thread);
+	wayca_thread_free(thread);
 
 	return ret;
 }
@@ -480,29 +509,50 @@ int wayca_thread_group_get_attr(wayca_group_t group, wayca_group_attr_t *attr)
 	return 0;
 }
 
-int wayca_thread_group_create(wayca_group_t *group)
+struct wayca_group *wayca_group_alloc()
 {
-	struct wayca_group *wg_p;
 	wayca_group_t id;
 
-	id = find_free_group_id();
+	pthread_mutex_lock(&wayca_groups_array_mutex);
+	id = find_free_group_id_locked();
 	if (id == -1)
-		return id;
+		goto err;
 
 	wayca_groups_array[id] = malloc(sizeof(struct wayca_group));
 	if (!wayca_groups_array[id])
-		return -1;
+		goto err;
 
-	wg_p = wayca_groups_array[id];
-	memset(wg_p, 0, sizeof(struct wayca_group));
+	pthread_mutex_unlock(&wayca_groups_array_mutex);
+
+	memset(wayca_groups_array[id], 0, sizeof(struct wayca_group));
+	wayca_groups_array[id]->id = id;
+
+	return wayca_groups_array[id];
+err:
+	pthread_mutex_unlock(&wayca_groups_array_mutex);
+	return NULL;
+}
+
+void wayca_group_free(struct wayca_group *group)
+{
+	pthread_mutex_lock(&wayca_groups_array_mutex);
+	wayca_groups_array[group->id] = NULL;
+	free(group);
+	pthread_mutex_unlock(&wayca_groups_array_mutex);
+}
+
+int wayca_thread_group_create(wayca_group_t *group)
+{
+	struct wayca_group *wg_p;
+
+	wg_p = wayca_group_alloc();
+	if (!wg_p)
+		return -1;
 
 	if (wayca_group_init(wg_p)) {
-		wayca_groups_array[id] = NULL;
-		free(wg_p);
+		wayca_group_free(wg_p);
 		return -1;
 	}
-
-	wg_p->id = id;
 
 	*group = wg_p->id;
 	return 0;
@@ -521,8 +571,7 @@ int wayca_thread_group_destroy(wayca_group_t group)
 	if (wg_p->nr_threads)
 		return -1;
 
-	wayca_groups_array[wg_p->id] = NULL;
-	free(wg_p);
+	wayca_group_free(wg_p);
 
 	return 0;
 }

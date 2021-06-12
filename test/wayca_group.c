@@ -88,14 +88,14 @@ int main()
 
 	group_attr = WT_GF_NUMA | WT_GF_FIXED;
 
-	wayca_group_create(&all);
-	wayca_group_set_attr(all, &group_attr);
+	wayca_thread_group_create(&all);
+	wayca_thread_group_set_attr(all, &group_attr);
 
 	group_attr = WT_GF_CCL | WT_GF_FIXED;
 
 	for (i = 0; i < group_num; i++) {
-		wayca_group_create(&perCcl[i]);
-		wayca_group_set_attr(perCcl[i], &group_attr);
+		wayca_thread_group_create(&perCcl[i]);
+		wayca_thread_group_set_attr(perCcl[i], &group_attr);
 
 		for (j = 0; j < group_elem_num; j++) {
 			global_info[i][j] = (struct wayca_thread_info) {
@@ -124,7 +124,7 @@ int main()
 		}
 
 		wayca_group_detach_group(perCcl[i], all);
-		wayca_group_destroy(perCcl[i]);
+		wayca_thread_group_destroy(perCcl[i]);
 	}
 
 	for (i = 0; i < group_num; i++) {
