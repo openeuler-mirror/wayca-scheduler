@@ -1,25 +1,55 @@
 #!/bin/bash
 
-DataFile=./test.log
+DataFile=./wayca_group_test.log
 
-for i in $(seq 2 2 10)
+echo "" > $DataFile
+
+group_num=(1 4 5 8)
+thread_num=(1 4 32)
+topo_level=(CPU CCL NUMA PACKAGE)
+
+for groups in ${group_num[@]}
 do
-	export WAYCA_TEST_GROUPS=$i
-	export WAYCA_TEST_GROUP_ELEMS=$i
+	export WAYCA_TEST_GROUPS=$groups
 
-	file=$DataFile
-	echo "${i} * ${i}, 10000*10000*1" >> $file
+	for group_topo in ${topo_level[@]}
+	do
+		export WAYCA_TEST_GROUP_TOPO_LEVEL=$group_topo
 
-	./wayca_group &>>$file
-done
+		for threads in ${thread_num[@]}
+		do
+			export WAYCA_TEST_GROUP_ELEMS=$threads
 
-for i in $(seq 3 2 11)
-do
-	export WAYCA_TEST_GROUPS=$i
-	export WAYCA_TEST_GROUP_ELEMS=$i
+			for thread_topo in ${topo_level[@]}
+			do
+				export WAYCA_TEST_THREAD_TOPO_LEVEL=$thread_topo
 
-	file=$DataFile
-	echo "${i} * ${i}, 10000*10000*1" >> $file
+				echo "=====Group number: ${groups} Group Topo: ${group_topo}  Thread number: ${threads} Thread Topo: ${thread_topo}=====" >> $DataFile
 
-	./wayca_group &>>$file
+				echo "Free Scatter" >> $DataFile
+				./wayca_group &>>$DataFile
+				printf "result is %d \n" $? >>$DataFile
+
+				export WAYCA_TEST_THREAD_BIND_PERCPU=1
+				echo "PerCpu Scatter" >> $DataFile
+				./wayca_group &>>$DataFile
+				printf "result is %d \n" $? >>$DataFile
+				unset WAYCA_TEST_THREAD_BIND_PERCPU
+
+				export WAYCA_TEST_THREAD_COMPACT=1
+				echo "Free Compact" >> $DataFile
+				./wayca_group &>>$DataFile
+				printf "result is %d \n" $? >>$DataFile
+				unset WAYCA_TEST_THREAD_COMPACT
+
+				export WAYCA_TEST_THREAD_BIND_PERCPU=1
+				export WAYCA_TEST_THREAD_COMPACT=1
+				echo "PerCpu Compact" >> $DataFile
+				./wayca_group &>>$DataFile
+				printf "result is %d \n" $? >>$DataFile
+				unset WAYCA_TEST_THREAD_BIND_PERCPU
+				unset WAYCA_TEST_THREAD_COMPACT
+			done
+		done
+	done
 done

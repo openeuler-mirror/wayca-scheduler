@@ -1,8 +1,10 @@
 #define _GNU_SOURCE
+#include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <sched.h>
 #include <stdbool.h>
+#include <string.h>
 #include <syscall.h>
 #include <unistd.h>
 
@@ -12,6 +14,7 @@ int group_num = 11;
 int group_elem_num = 11;
 
 wayca_group_t all, *perCcl;
+wayca_group_attr_t all_attr = WT_GF_FIXED, perCcl_attr = WT_GF_FIXED;
 wayca_thread_t **threads;
 pid_t **threads_pid;
 
@@ -30,17 +33,19 @@ void show_thread_affinity()
 {
 	cpu_set_t cpuset;
 
-	for (int i = 0; i < group_num; i++)
+	for (int i = 0; i < group_num; i++) {
 		for (int j = 0; j < group_elem_num; j++) {
 			pid_t pid = threads_pid[i][j];
 
 			// sched_getaffinity(pid, sizeof(cpuset), &cpuset);
 			wayca_thread_get_cpuset(threads[i][j], &cpuset);
 
-			printf("group %d thread %d pid %d: ", i, j, pid);
+			printf("group %d thread %d pid %d:\t", i, j, pid);
 			for (int b = 0; b < (system_cpu_nr + __NCPUBITS - 1) / __NCPUBITS; b++)
-				printf("0x%016lx,", cpuset.__bits[b]);
+				printf("0x%08lx,0x%08lx,", cpuset.__bits[b] & 0xffffffff, cpuset.__bits[b] >> 32);
 			printf("\b \n");
+		}
+		printf("\n");
 	}
 }
 
@@ -59,10 +64,12 @@ void *thread_func(void *private)
 	return NULL;
 }
 
-int main()
+const char *topo_level[] = {
+	"CPU", "CCL", "NUMA", "PACKAGE",
+};
+
+void readEnv(void)
 {
-	wayca_group_attr_t group_attr;
-	int i, j;
 	char *p;
 
 	p = getenv("WAYCA_TEST_GROUPS");
@@ -72,44 +79,113 @@ int main()
 	if (p)
 		group_elem_num = atoi(p);
 
+	p = getenv("WAYCA_TEST_GROUP_TOPO_LEVEL");
+	if (!p)
+		all_attr |= WT_GF_NUMA;
+	else if (!strcmp(p, topo_level[0]))
+		all_attr |= WT_GF_CPU;
+	else if (!strcmp(p, topo_level[1]))
+		all_attr |= WT_GF_CCL;
+	else if (!strcmp(p, topo_level[2]))
+		all_attr |= WT_GF_NUMA;
+	else if (!strcmp(p, topo_level[3]))
+		all_attr |= WT_GF_PACKAGE;
+	else
+		all_attr |= WT_GF_NUMA;
+
+	p = getenv("WAYCA_TEST_THREAD_TOPO_LEVEL");
+	if (!p)
+		perCcl_attr |= WT_GF_CCL;
+	else if (!strcmp(p, topo_level[0]))
+		perCcl_attr |= WT_GF_CPU;
+	else if (!strcmp(p, topo_level[1]))
+		perCcl_attr |= WT_GF_CCL;
+	else if (!strcmp(p, topo_level[2]))
+		perCcl_attr |= WT_GF_NUMA;
+	else if (!strcmp(p, topo_level[3]))
+		perCcl_attr |= WT_GF_PACKAGE;
+	else
+		perCcl_attr |= WT_GF_CCL;
+	
+	p = getenv("WAYCA_TEST_THREAD_BIND_PERCPU");
+	if (p)
+		perCcl_attr |= WT_GF_PERCPU;
+
+	p = getenv("WAYCA_TEST_THREAD_COMPACT");
+	if (p)
+		perCcl_attr |= WT_GF_COMPACT;
+
+	p = getenv("WAYCA_TEST_GROUP_FIXED");
+	if (p)
+		perCcl_attr |= WT_GF_FIXED;
+}
+
+int main()
+{
+	wayca_group_attr_t group_attr;
+	int i, j, group_created, group_elem_created, ret = 0;
+
+	readEnv();
+
 	perCcl = malloc(group_num * sizeof(wayca_group_t));
 	threads = malloc(group_num * sizeof(wayca_thread_t *));
 	threads_pid = malloc(group_num * sizeof(pid_t *));
 	global_info = malloc(group_num * sizeof(struct wayca_thread_info *));
 
+	if (!perCcl || !threads || !threads_pid || !global_info)
+		return -ENOMEM;
+
 	for (i = 0; i < group_num; i++) {
 		threads[i] = malloc(group_elem_num * sizeof(wayca_thread_t));
 		threads_pid[i] = malloc(group_elem_num * sizeof(pid_t));
 		global_info[i] = malloc(group_elem_num * sizeof(struct wayca_thread_info));
-	}
 
+		if (!threads[i] || !threads_pid[i] || !global_info[i]) {
+			ret = -ENOMEM;
+			group_num = i;
+			goto err_wayca_info;
+		}
+	}
 
 	system_cpu_nr = cores_in_total();
 
-	group_attr = WT_GF_NUMA | WT_GF_FIXED;
+	group_attr = all_attr;
 
-	wayca_thread_group_create(&all);
-	wayca_thread_group_set_attr(all, &group_attr);
+	ret = wayca_thread_group_create(&all);
+	if (ret)
+		goto err_wayca_info;
 
-	group_attr = WT_GF_CCL | WT_GF_FIXED;
+	ret = wayca_thread_group_set_attr(all, &group_attr);
+	if (ret)
+		goto err_wayca_info;
 
-	for (i = 0; i < group_num; i++) {
-		wayca_thread_group_create(&perCcl[i]);
-		wayca_thread_group_set_attr(perCcl[i], &group_attr);
+	group_attr = perCcl_attr;
 
-		for (j = 0; j < group_elem_num; j++) {
-			global_info[i][j] = (struct wayca_thread_info) {
-				.wgroup = i,
-				.wthread = j,
+	for (group_created = 0; group_created < group_num; group_created++) {
+		wayca_thread_group_create(&perCcl[group_created]);
+		wayca_thread_group_set_attr(perCcl[group_created], &group_attr);
+
+		for (group_elem_created = 0; group_elem_created < group_elem_num; group_elem_created++)
+		{
+			global_info[group_created][group_elem_created] = (struct wayca_thread_info) {
+				.wgroup = group_created,
+				.wthread = group_elem_created,
 			};
-			wayca_thread_create(&threads[i][j], NULL, thread_func, &global_info[i][j]);
+			ret = wayca_thread_create(&threads[group_created][group_elem_created],
+						  NULL, thread_func,
+						  &global_info[group_created][group_elem_created]);
+			if (ret)
+				goto err_wayca_threads;
 
-			sleep(0.5);
-
-			wayca_thread_attach_group(threads[i][j], perCcl[i]);
+			ret = wayca_thread_attach_group(threads[group_created][group_elem_created],
+							perCcl[group_created]);
+			if (ret)
+				goto err_wayca_threads;
 		}
 
-		wayca_group_attach_group(perCcl[i], all);
+		ret = wayca_group_attach_group(perCcl[group_created], all);
+		if (ret)
+			goto err_wayca_threads;
 	}
 
 	sleep(5);
@@ -117,8 +193,9 @@ int main()
 
 	quit = true;
 
-	for (i = 0; i < group_num; i++) {
-		for (j = 0; j < group_elem_num; j++) {
+err_wayca_threads:
+	for (i = 0; i < group_created; i++) {
+		for (j = 0; j < group_elem_created; j++) {
 			wayca_thread_detach_group(threads[i][j], perCcl[i]);
 			wayca_thread_join(threads[i][j], NULL);
 		}
@@ -127,6 +204,7 @@ int main()
 		wayca_thread_group_destroy(perCcl[i]);
 	}
 
+err_wayca_info:
 	for (i = 0; i < group_num; i++) {
 		free(threads[i]);
 		free(threads_pid[i]);
