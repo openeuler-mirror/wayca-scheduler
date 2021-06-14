@@ -1,6 +1,6 @@
 #Todo: move to autoconf + automake
 tools = wayca-deployer wayca-deployd wayca-irqdump wayca-irqdeploy wayca-taskdeploy
-tests = wayca_group wayca_thread wayca_topo
+tests = wayca_sc_group wayca_thread wayca_topo
 
 all: $(tools) $(tests)
 wayca-deployd: libwaycadeployer.so.1.0 deployd.c
@@ -18,8 +18,8 @@ libwaycadeployer.so.1.0: lib/threads.o lib/managed_threads.o lib/irq.o lib/mem.o
 	-ln -s libwaycadeployer.so.1.0 libwaycadeployer.so
 	-ln -s libwaycadeployer.so.1.0 libwaycadeployer.so.1
 # test stubs
-wayca_group: libwaycadeployer.so.1.0 test/wayca_group.c
-	$(CC) $(CFLAGS) test/wayca_group.c -L. -lwaycadeployer -I./include -o test/$@
+wayca_sc_group: libwaycadeployer.so.1.0 test/wayca_sc_group.c
+	$(CC) $(CFLAGS) test/wayca_sc_group.c -L. -lwaycadeployer -I./include -o test/$@
 wayca_thread: libwaycadeployer.so.1.0 test/wayca_thread.c
 	$(CC) $(CFLAGS) test/wayca_thread.c -L. -lwaycadeployer -I./include -o test/$@
 wayca_topo: libwaycadeployer.so.1.0 test/wayca_topo.c

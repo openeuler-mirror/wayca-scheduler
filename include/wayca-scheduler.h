@@ -52,10 +52,10 @@ int wayca_thread_get_attr(wayca_thread_t wthread, wayca_thread_attr_t *attr);
 int wayca_thread_create(wayca_thread_t *wthread, pthread_attr_t *attr, void *(*start_routine)(void *), void *arg);
 int wayca_thread_join(wayca_thread_t wthread, void **retval);
 
-typedef unsigned long long	wayca_group_t;
-typedef unsigned long long	wayca_group_attr_t;
+typedef unsigned long long	wayca_sc_group_t;
+typedef unsigned long long	wayca_sc_group_attr_t;
 /**
- * Flags for wayca group attributes
+ * Flags for wayca sc group attributes
  * Bit[0:15]: The accepted topology of the thread/group in this group
  * Bit[16:19]: Group thread's binding style
  * Bit[20:32]: Group thread's relationship
@@ -68,19 +68,19 @@ typedef unsigned long long	wayca_group_attr_t;
 #define WT_GF_PERCPU	0x10000		/* Each thread will bind to the CPU */
 #define WT_GF_COMPACT	0x100000	/* The threads in this group will be compact */
 
-int wayca_thread_group_set_attr(wayca_group_t group, wayca_group_attr_t *attr);
-int wayca_thread_group_get_attr(wayca_group_t group, wayca_group_attr_t *attr);
+int wayca_sc_group_set_attr(wayca_sc_group_t group, wayca_sc_group_attr_t *attr);
+int wayca_sc_group_get_attr(wayca_sc_group_t group, wayca_sc_group_attr_t *attr);
 
-int wayca_thread_group_create(wayca_group_t* group);
-int wayca_thread_group_destroy(wayca_group_t group);
-int wayca_thread_attach_group(wayca_thread_t wthread, wayca_group_t group);
-int wayca_thread_detach_group(wayca_thread_t wthread, wayca_group_t group);
-int wayca_group_attach_group(wayca_group_t group, wayca_group_t father);
-int wayca_group_detach_group(wayca_group_t group, wayca_group_t father);
+int wayca_sc_group_create(wayca_sc_group_t* group);
+int wayca_sc_group_destroy(wayca_sc_group_t group);
+int wayca_thread_attach_group(wayca_thread_t wthread, wayca_sc_group_t group);
+int wayca_thread_detach_group(wayca_thread_t wthread, wayca_sc_group_t group);
+int wayca_sc_group_attach_group(wayca_sc_group_t group, wayca_sc_group_t father);
+int wayca_sc_group_detach_group(wayca_sc_group_t group, wayca_sc_group_t father);
 
 /* For debug purpose */
 int wayca_thread_get_cpuset(wayca_thread_t wthread, cpu_set_t *cpuset);
-int wayca_group_get_cpuset(wayca_group_t group, cpu_set_t *cpuset);
+int wayca_sc_group_get_cpuset(wayca_sc_group_t group, cpu_set_t *cpuset);
 
 pthread_t wayca_thread_get_pthtread(wayca_thread_t wthread);
 

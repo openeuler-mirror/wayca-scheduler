@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DataFile=./wayca_group_test.log
+DataFile=./wayca_sc_group_test.log
 
 echo "" > $DataFile
 
@@ -27,25 +27,25 @@ do
 				echo "=====Group number: ${groups} Group Topo: ${group_topo}  Thread number: ${threads} Thread Topo: ${thread_topo}=====" >> $DataFile
 
 				echo "Free Scatter" >> $DataFile
-				./wayca_group &>>$DataFile
+				./wayca_sc_group &>>$DataFile
 				printf "result is %d \n" $? >>$DataFile
 
 				export WAYCA_TEST_THREAD_BIND_PERCPU=1
 				echo "PerCpu Scatter" >> $DataFile
-				./wayca_group &>>$DataFile
+				./wayca_sc_group &>>$DataFile
 				printf "result is %d \n" $? >>$DataFile
 				unset WAYCA_TEST_THREAD_BIND_PERCPU
 
 				export WAYCA_TEST_THREAD_COMPACT=1
 				echo "Free Compact" >> $DataFile
-				./wayca_group &>>$DataFile
+				./wayca_sc_group &>>$DataFile
 				printf "result is %d \n" $? >>$DataFile
 				unset WAYCA_TEST_THREAD_COMPACT
 
 				export WAYCA_TEST_THREAD_BIND_PERCPU=1
 				export WAYCA_TEST_THREAD_COMPACT=1
 				echo "PerCpu Compact" >> $DataFile
-				./wayca_group &>>$DataFile
+				./wayca_sc_group &>>$DataFile
 				printf "result is %d \n" $? >>$DataFile
 				unset WAYCA_TEST_THREAD_BIND_PERCPU
 				unset WAYCA_TEST_THREAD_COMPACT

@@ -13,8 +13,8 @@
 int group_num = 11;
 int group_elem_num = 11;
 
-wayca_group_t all, *perCcl;
-wayca_group_attr_t all_attr, perCcl_attr;
+wayca_sc_group_t all, *perCcl;
+wayca_sc_group_attr_t all_attr, perCcl_attr;
 wayca_thread_t **threads;
 pid_t **threads_pid;
 
@@ -22,7 +22,7 @@ int system_cpu_nr;
 
 struct wayca_thread_info {
 	wayca_thread_t wthread;
-	wayca_group_t wgroup;
+	wayca_sc_group_t wgroup;
 };
 
 struct wayca_thread_info **global_info;
@@ -118,12 +118,12 @@ void readEnv(void)
 
 int main()
 {
-	wayca_group_attr_t group_attr;
 	int i, j, group_created, group_elem_created, ret = 0;
+	wayca_sc_group_attr_t group_attr;
 
 	readEnv();
 
-	perCcl = malloc(group_num * sizeof(wayca_group_t));
+	perCcl = malloc(group_num * sizeof(wayca_sc_group_t));
 	threads = malloc(group_num * sizeof(wayca_thread_t *));
 	threads_pid = malloc(group_num * sizeof(pid_t *));
 	global_info = malloc(group_num * sizeof(struct wayca_thread_info *));
@@ -147,19 +147,19 @@ int main()
 
 	group_attr = all_attr;
 
-	ret = wayca_thread_group_create(&all);
+	ret = wayca_sc_group_create(&all);
 	if (ret)
 		goto err_wayca_info;
 
-	ret = wayca_thread_group_set_attr(all, &group_attr);
+	ret = wayca_sc_group_set_attr(all, &group_attr);
 	if (ret)
 		goto err_wayca_info;
 
 	group_attr = perCcl_attr;
 
 	for (group_created = 0; group_created < group_num; group_created++) {
-		wayca_thread_group_create(&perCcl[group_created]);
-		wayca_thread_group_set_attr(perCcl[group_created], &group_attr);
+		wayca_sc_group_create(&perCcl[group_created]);
+		wayca_sc_group_set_attr(perCcl[group_created], &group_attr);
 
 		for (group_elem_created = 0; group_elem_created < group_elem_num; group_elem_created++)
 		{
@@ -179,7 +179,7 @@ int main()
 				goto err_wayca_threads;
 		}
 
-		ret = wayca_group_attach_group(perCcl[group_created], all);
+		ret = wayca_sc_group_attach_group(perCcl[group_created], all);
 		if (ret)
 			goto err_wayca_threads;
 	}
@@ -196,8 +196,8 @@ err_wayca_threads:
 			wayca_thread_join(threads[i][j], NULL);
 		}
 
-		wayca_group_detach_group(perCcl[i], all);
-		wayca_thread_group_destroy(perCcl[i]);
+		wayca_sc_group_detach_group(perCcl[i], all);
+		wayca_sc_group_destroy(perCcl[i]);
 	}
 
 err_wayca_info:

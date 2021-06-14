@@ -246,7 +246,7 @@ static pthread_mutex_t wayca_threads_array_mutex;
 static int wayca_threads_array_size;
 
 #define DEFAULT_WAYCA_GROUP_NUM		256
-static struct wayca_group **wayca_groups_array;
+static struct wayca_sc_group **wayca_groups_array;
 static pthread_mutex_t wayca_groups_array_mutex;
 static int wayca_groups_array_size;
 
@@ -286,8 +286,8 @@ __attribute__((constructor)) void wayca_thread_init(void)
 	else
 		num = DEFAULT_WAYCA_GROUP_NUM;
 
-	wayca_groups_array = malloc(num * sizeof(struct wayca_group *));
-	memset(wayca_groups_array, 0, num * sizeof(struct wayca_group *));
+	wayca_groups_array = malloc(num * sizeof(struct wayca_sc_group *));
+	memset(wayca_groups_array, 0, num * sizeof(struct wayca_sc_group *));
 	wayca_groups_array_size = num;
 	pthread_mutex_init(&wayca_groups_array_mutex, NULL);
 }
@@ -321,7 +321,7 @@ int find_free_thread_id_locked()
  */
 int find_free_group_id_locked()
 {
-	for (wayca_group_t i = 0; i < wayca_groups_array_size; i++)
+	for (wayca_sc_group_t i = 0; i < wayca_groups_array_size; i++)
 		if (!wayca_groups_array[i])
 			return i;
 
@@ -333,7 +333,7 @@ bool is_thread_id_valid(wayca_thread_t id)
 	return wayca_threads_array[id] != NULL;
 }
 
-bool is_group_id_valid(wayca_group_t id)
+bool is_group_id_valid(wayca_sc_group_t id)
 {
 	return wayca_groups_array[id] != NULL;
 }
@@ -343,7 +343,7 @@ struct wayca_thread *id_to_wayca_thread(wayca_thread_t id)
 	return wayca_threads_array[id];
 }
 
-struct wayca_group *id_to_wayca_group(wayca_group_t id)
+struct wayca_sc_group *id_to_wayca_group(wayca_sc_group_t id)
 {
 	return wayca_groups_array[id];
 }
@@ -483,9 +483,9 @@ int wayca_thread_join(wayca_thread_t id, void **retval)
 	return ret;
 }
 
-int wayca_thread_group_set_attr(wayca_group_t group, wayca_group_attr_t *attr)
+int wayca_sc_group_set_attr(wayca_sc_group_t group, wayca_sc_group_attr_t *attr)
 {
-	struct wayca_group *wg_p;
+	struct wayca_sc_group *wg_p;
 	int ret;
 
 	if (!is_group_id_valid(group))
@@ -502,9 +502,9 @@ int wayca_thread_group_set_attr(wayca_group_t group, wayca_group_attr_t *attr)
 	return ret;
 }
 
-int wayca_thread_group_get_attr(wayca_group_t group, wayca_group_attr_t *attr)
+int wayca_sc_group_get_attr(wayca_sc_group_t group, wayca_sc_group_attr_t *attr)
 {
-	struct wayca_group *wg_p;
+	struct wayca_sc_group *wg_p;
 
 	if (!is_group_id_valid(group))
 		return -1;
@@ -518,22 +518,22 @@ int wayca_thread_group_get_attr(wayca_group_t group, wayca_group_attr_t *attr)
 	return 0;
 }
 
-struct wayca_group *wayca_group_alloc()
+struct wayca_sc_group *wayca_group_alloc()
 {
-	wayca_group_t id;
+	wayca_sc_group_t id;
 
 	pthread_mutex_lock(&wayca_groups_array_mutex);
 	id = find_free_group_id_locked();
 	if (id == -1)
 		goto err;
 
-	wayca_groups_array[id] = malloc(sizeof(struct wayca_group));
+	wayca_groups_array[id] = malloc(sizeof(struct wayca_sc_group));
 	if (!wayca_groups_array[id])
 		goto err;
 
 	pthread_mutex_unlock(&wayca_groups_array_mutex);
 
-	memset(wayca_groups_array[id], 0, sizeof(struct wayca_group));
+	memset(wayca_groups_array[id], 0, sizeof(struct wayca_sc_group));
 	wayca_groups_array[id]->id = id;
 
 	return wayca_groups_array[id];
@@ -542,7 +542,7 @@ err:
 	return NULL;
 }
 
-void wayca_group_free(struct wayca_group *group)
+void wayca_group_free(struct wayca_sc_group *group)
 {
 	pthread_mutex_lock(&wayca_groups_array_mutex);
 	wayca_groups_array[group->id] = NULL;
@@ -550,9 +550,9 @@ void wayca_group_free(struct wayca_group *group)
 	pthread_mutex_unlock(&wayca_groups_array_mutex);
 }
 
-int wayca_thread_group_create(wayca_group_t *group)
+int wayca_sc_group_create(wayca_sc_group_t *group)
 {
-	struct wayca_group *wg_p;
+	struct wayca_sc_group *wg_p;
 
 	wg_p = wayca_group_alloc();
 	if (!wg_p)
@@ -567,9 +567,9 @@ int wayca_thread_group_create(wayca_group_t *group)
 	return 0;
 }
 
-int wayca_thread_group_destroy(wayca_group_t group)
+int wayca_sc_group_destroy(wayca_sc_group_t group)
 {
-	struct wayca_group *wg_p;
+	struct wayca_sc_group *wg_p;
 
 	if (!is_group_id_valid(group))
 		return -1;
@@ -585,10 +585,10 @@ int wayca_thread_group_destroy(wayca_group_t group)
 	return 0;
 }
 
-int wayca_thread_attach_group(wayca_thread_t wthread, wayca_group_t group)
+int wayca_thread_attach_group(wayca_thread_t wthread, wayca_sc_group_t group)
 {
 	struct wayca_thread *wt_p;
-	struct wayca_group *wg_p;
+	struct wayca_sc_group *wg_p;
 	int ret;
 
 	if (!is_thread_id_valid(wthread) || !is_group_id_valid(group))
@@ -609,10 +609,10 @@ int wayca_thread_attach_group(wayca_thread_t wthread, wayca_group_t group)
 	return ret;
 }
 
-int wayca_thread_detach_group(wayca_thread_t wthread, wayca_group_t group)
+int wayca_thread_detach_group(wayca_thread_t wthread, wayca_sc_group_t group)
 {
 	struct wayca_thread *wt_p;
-	struct wayca_group *wg_p;
+	struct wayca_sc_group *wg_p;
 	int ret;
 
 	if (!is_thread_id_valid(wthread) || !is_group_id_valid(group))
@@ -628,9 +628,9 @@ int wayca_thread_detach_group(wayca_thread_t wthread, wayca_group_t group)
 	return ret;
 }
 
-int wayca_group_attach_group(wayca_group_t group, wayca_group_t father)
+int wayca_sc_group_attach_group(wayca_sc_group_t group, wayca_sc_group_t father)
 {
-	struct wayca_group *wg_p, *father_p;
+	struct wayca_sc_group *wg_p, *father_p;
 	int ret;
 
 	if (!is_group_id_valid(group) || !is_group_id_valid(father))
@@ -652,9 +652,9 @@ int wayca_group_attach_group(wayca_group_t group, wayca_group_t father)
 	return ret;
 }
 
-int wayca_group_detach_group(wayca_group_t group, wayca_group_t father)
+int wayca_sc_group_detach_group(wayca_sc_group_t group, wayca_sc_group_t father)
 {
-	struct wayca_group *wg_p, *father_p;
+	struct wayca_sc_group *wg_p, *father_p;
 	int ret;
 
 	if (!is_group_id_valid(group) || !is_group_id_valid(father))
@@ -687,9 +687,9 @@ int wayca_thread_get_cpuset(wayca_thread_t wthread, cpu_set_t *cpuset)
 	return 0;
 }
 
-int wayca_group_get_cpuset(wayca_group_t group, cpu_set_t *cpuset)
+int wayca_sc_group_get_cpuset(wayca_sc_group_t group, cpu_set_t *cpuset)
 {
-	struct wayca_group *wg_p;
+	struct wayca_sc_group *wg_p;
 
 	if (!is_group_id_valid(group))
 		return -1;

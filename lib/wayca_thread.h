@@ -32,7 +32,7 @@ struct wayca_thread {
 	/* Siblings of this wayca thread in the same group, NULL terminated */
 	struct wayca_thread *siblings;
 	/* Wayca group this thread directly belongs to */
-	struct wayca_group *group;
+	struct wayca_sc_group *group;
 
 	/* Internal pthread_t for this thread */
 	pthread_t thread;
@@ -44,19 +44,19 @@ struct wayca_thread {
 	bool start;
 };
 
-struct wayca_group {
+struct wayca_sc_group {
 	/* Wayca group id which is identity to this group */
-	wayca_group_t id;
+	wayca_sc_group_t id;
 	/* The threads list in this group */
 	struct wayca_thread *threads;
 	/* The number of the threads in this group */
 	int nr_threads;
 	/* The sibling groups, NULL terminated */
-	struct wayca_group *siblings;
+	struct wayca_sc_group *siblings;
 	/* The father of this group, NULL means the toppest level */
-	struct wayca_group *father;
+	struct wayca_sc_group *father;
 	/* The groups in this group */
-	struct wayca_group *groups;
+	struct wayca_sc_group *groups;
 	/* The number of the groups in this group */
 	int nr_groups;
 	/**
@@ -70,7 +70,7 @@ struct wayca_group {
 	 */
 	cpu_set_t total;
 	/* The attribute specify the arrangement strategy of this group */
-	wayca_group_attr_t attribute;
+	wayca_sc_group_attr_t attribute;
 	/* The mutex to protect this data structure */
 	pthread_mutex_t mutex;
 
@@ -87,26 +87,26 @@ struct wayca_group {
 	for (thread = group->threads; thread != NULL; thread = thread->siblings)
 
 /* Do the initialization work for a new create group */
-int wayca_group_init(struct wayca_group *group);
+int wayca_group_init(struct wayca_sc_group *group);
 
 /* Arrange the resource of the group according to the attribute */
-int wayca_group_arrange(struct wayca_group *group);
+int wayca_group_arrange(struct wayca_sc_group *group);
 
 /* Add the thread to the group, arrange the resource for it */
-int wayca_group_add_thread(struct wayca_group *group, struct wayca_thread *thread);
+int wayca_group_add_thread(struct wayca_sc_group *group, struct wayca_thread *thread);
 
 /* Delete one thread from the group. */
-int wayca_group_delete_thread(struct wayca_group *group, struct wayca_thread *thread);
+int wayca_group_delete_thread(struct wayca_sc_group *group, struct wayca_thread *thread);
 
 /* Rearrange the resource assigned to the thread as the attribute of thread has been changed */
-int wayca_group_rearrange_thread(struct wayca_group *group, struct wayca_thread *thread);
+int wayca_group_rearrange_thread(struct wayca_sc_group *group, struct wayca_thread *thread);
 
 /* Rearrange all the group threads' resources as the attribute of the group has been changed */
-int wayca_group_rearrange_group(struct wayca_group *group);
+int wayca_group_rearrange_group(struct wayca_sc_group *group);
 
-int wayca_group_add_group(struct wayca_group *group, struct wayca_group *father);
+int wayca_group_add_group(struct wayca_sc_group *group, struct wayca_sc_group *father);
 
-int wayca_group_delete_group(struct wayca_group *group, struct wayca_group *father);
+int wayca_group_delete_group(struct wayca_sc_group *group, struct wayca_sc_group *father);
 
 void wayca_thread_update_load(struct wayca_thread *thread, bool add);
 

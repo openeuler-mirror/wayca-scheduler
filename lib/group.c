@@ -55,7 +55,7 @@ int find_idlest_core(cpu_set_t *cpuset)
  * Find the idlest set in the @cpuset, and return the found set
  * by @cpuset. The @cpuset must not be an empty set.
  */
-void find_idlest_set(struct wayca_group *group, cpu_set_t *cpuset)
+void find_idlest_set(struct wayca_sc_group *group, cpu_set_t *cpuset)
 {
 	int stride, pos, idlest_pos, i;
 	long long load = INT_MAX, tload;
@@ -92,7 +92,7 @@ void find_idlest_set(struct wayca_group *group, cpu_set_t *cpuset)
  * Find the first topology set in the @cpuset, which is not set
  * completely. Return the id of the first CPU in the found set.
  */
-int find_incomplete_set(struct wayca_group *group, cpu_set_t *cpuset)
+int find_incomplete_set(struct wayca_sc_group *group, cpu_set_t *cpuset)
 {
 	int stride, pos;
 
@@ -119,7 +119,7 @@ int find_incomplete_set(struct wayca_group *group, cpu_set_t *cpuset)
 	return -1;
 }
 
-bool is_thread_in_group(struct wayca_group *group, struct wayca_thread *thread)
+bool is_thread_in_group(struct wayca_sc_group *group, struct wayca_thread *thread)
 {
 	struct wayca_thread *member = group->threads;
 
@@ -133,9 +133,9 @@ bool is_thread_in_group(struct wayca_group *group, struct wayca_thread *thread)
 	return false;
 }
 
-bool is_group_in_father(struct wayca_group *group, struct wayca_group *father)
+bool is_group_in_father(struct wayca_sc_group *group, struct wayca_sc_group *father)
 {
-	struct wayca_group *member = father->groups;
+	struct wayca_sc_group *member = father->groups;
 
 	while (member) {
 		if (member == group)
@@ -147,7 +147,7 @@ bool is_group_in_father(struct wayca_group *group, struct wayca_group *father)
 	return false;
 }
 
-void group_thread_add_to_tail(struct wayca_group *group, struct wayca_thread *thread)
+void group_thread_add_to_tail(struct wayca_sc_group *group, struct wayca_thread *thread)
 {
 	struct wayca_thread *tail = group->threads;
 
@@ -165,9 +165,9 @@ void group_thread_add_to_tail(struct wayca_group *group, struct wayca_thread *th
 	tail->siblings = thread;
 }
 
-void group_group_add_to_tail(struct wayca_group *group, struct wayca_group *father)
+void group_group_add_to_tail(struct wayca_sc_group *group, struct wayca_sc_group *father)
 {
-	struct wayca_group *tail = father->groups;
+	struct wayca_sc_group *tail = father->groups;
 
 	assert(group->siblings == NULL);
 
@@ -182,7 +182,7 @@ void group_group_add_to_tail(struct wayca_group *group, struct wayca_group *fath
 	tail->siblings = group;
 }
 
-void group_thread_delete_thread(struct wayca_group *group, struct wayca_thread *thread)
+void group_thread_delete_thread(struct wayca_sc_group *group, struct wayca_thread *thread)
 {
 	struct wayca_thread *member = group->threads, *next;
 
@@ -210,9 +210,9 @@ void group_thread_delete_thread(struct wayca_group *group, struct wayca_thread *
 	}
 }
 
-void group_group_delete_group(struct wayca_group *group, struct wayca_group *father)
+void group_group_delete_group(struct wayca_sc_group *group, struct wayca_sc_group *father)
 {
-	struct wayca_group *member = father->groups, *next;
+	struct wayca_sc_group *member = father->groups, *next;
 
 	if (member == group) {
 		father->groups = group->siblings;
@@ -246,10 +246,10 @@ void group_group_delete_group(struct wayca_group *group, struct wayca_group *fat
  *
  * Returns 0 if requirement satified. Otherwise an error.
  */
-int wayca_group_request_resource_from_father(struct wayca_group *group, cpu_set_t *cpuset)
+int wayca_group_request_resource_from_father(struct wayca_sc_group *group, cpu_set_t *cpuset)
 {
 	int cnts = CPU_COUNT(cpuset);
-	struct wayca_group *father;
+	struct wayca_sc_group *father;
 	cpu_set_t available_set;
 
 	assert(group->father != NULL);
@@ -296,7 +296,7 @@ int wayca_group_request_resource_from_father(struct wayca_group *group, cpu_set_
  * If the group->threads is NULL, which means this is an empty group, then
  * assign the minimum cpus to the group according to the group's attribute.
  */
-int wayca_group_request_resource(struct wayca_group *group)
+int wayca_group_request_resource(struct wayca_sc_group *group)
 {
 	int nr_threads = group->nr_threads ? group->nr_threads : 4;
 	cpu_set_t required_cpuset;
@@ -332,7 +332,7 @@ int wayca_group_request_resource(struct wayca_group *group)
 	return 0;
 }
 
-int wayca_group_init(struct wayca_group *group)
+int wayca_group_init(struct wayca_sc_group *group)
 {
 	/* Init with no members */
 	group->threads = NULL;
@@ -353,7 +353,7 @@ int wayca_group_init(struct wayca_group *group)
 	return wayca_group_arrange(group);
 }
 
-int wayca_group_arrange(struct wayca_group *group)
+int wayca_group_arrange(struct wayca_sc_group *group)
 {
 	/* Arrange the parameters according to the attribute */
 	switch (group->attribute & 0xffff) {
@@ -386,7 +386,7 @@ int wayca_group_arrange(struct wayca_group *group)
 	return wayca_group_request_resource(group);
 }
 
-int wayca_group_assign_thread_resource(struct wayca_group *group, struct wayca_thread *thread)
+int wayca_group_assign_thread_resource(struct wayca_sc_group *group, struct wayca_thread *thread)
 {
 	cpu_set_t available_set;
 	size_t target_pos = 0;
@@ -480,7 +480,7 @@ int wayca_group_assign_thread_resource(struct wayca_group *group, struct wayca_t
 	return 0;
 }
 
-int wayca_group_add_thread(struct wayca_group *group, struct wayca_thread *thread)
+int wayca_group_add_thread(struct wayca_sc_group *group, struct wayca_thread *thread)
 {
 	group->nr_threads++;
 	group_thread_add_to_tail(group, thread);
@@ -492,7 +492,7 @@ int wayca_group_add_thread(struct wayca_group *group, struct wayca_thread *threa
 	return 0;
 }
 
-int wayca_group_delete_thread(struct wayca_group *group, struct wayca_thread *thread)
+int wayca_group_delete_thread(struct wayca_sc_group *group, struct wayca_thread *thread)
 {
 	if (!is_thread_in_group(group, thread))
 		return -1;
@@ -513,7 +513,7 @@ int wayca_group_delete_thread(struct wayca_group *group, struct wayca_thread *th
 	return 0;
 }
 
-int wayca_group_rearrange_thread(struct wayca_group *group, struct wayca_thread *thread)
+int wayca_group_rearrange_thread(struct wayca_sc_group *group, struct wayca_thread *thread)
 {
 	thread_sched_setaffinity(thread->pid, sizeof(cpu_set_t), &thread->cur_set);
 
@@ -522,7 +522,7 @@ int wayca_group_rearrange_thread(struct wayca_group *group, struct wayca_thread 
 	return 0;
 }
 
-int wayca_group_rearrange_group(struct wayca_group *group)
+int wayca_group_rearrange_group(struct wayca_sc_group *group)
 {
 	struct wayca_thread *thread;
 
@@ -541,7 +541,7 @@ int wayca_group_rearrange_group(struct wayca_group *group)
 	return 0;
 }
 
-int wayca_group_add_group(struct wayca_group *group, struct wayca_group *father)
+int wayca_group_add_group(struct wayca_sc_group *group, struct wayca_sc_group *father)
 {
 	if (is_group_in_father(group, father))
 		return 0;
@@ -565,7 +565,7 @@ int wayca_group_add_group(struct wayca_group *group, struct wayca_group *father)
 	return 0;
 }
 
-int wayca_group_delete_group(struct wayca_group *group, struct wayca_group *father)
+int wayca_group_delete_group(struct wayca_sc_group *group, struct wayca_sc_group *father)
 {
 	if (!is_group_in_father(group, father))
 		return -1;
