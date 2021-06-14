@@ -21,6 +21,8 @@ extern char *wayca_scheduler_socket_path;
 #define TASK_SET  CPU_SET
 #define TASK_ISSET CPU_ISSET
 
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+
 struct task_cpu_map
 {
 	task_set_t tasks;

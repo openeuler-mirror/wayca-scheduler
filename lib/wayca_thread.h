@@ -6,6 +6,7 @@
 #include <syscall.h>
 #include <wayca-scheduler.h>
 #include "common.h"
+#include "bitmap.h"
 
 #define thread_sched_setaffinity(pid, size, cpuset) \
   syscall(__NR_sched_setaffinity, (pid_t)pid, (size_t)size, (void *)cpuset)
@@ -112,46 +113,37 @@ void wayca_thread_update_load(struct wayca_thread *thread, bool add);
 
 static inline int cpuset_find_first_unset(cpu_set_t *cpusetp)
 {
-	int pos = 0;
+	int pos;
 
-	while (pos < cores_in_total() && CPU_ISSET(pos, cpusetp))
-		pos++;
+	pos = find_first_zero_bit((unsigned long *)cpusetp, CPU_SETSIZE);
 
-	return pos >= cores_in_total() ? -1 : pos;
+	return pos == CPU_SETSIZE ? -1 : pos;
 }
 
 static inline int cpuset_find_first_set(cpu_set_t *cpusetp)
 {
-	int pos = 0;
+	int pos;
 
-	while (pos < cores_in_total() && !CPU_ISSET(pos, cpusetp))
-		pos++;
+	pos = find_first_bit((unsigned long *)cpusetp, CPU_SETSIZE);
 
-	return pos >= cores_in_total() ? -1 : pos;
+	return pos == CPU_SETSIZE ? -1 : pos;
 }
 
 static inline int cpuset_find_last_set(cpu_set_t *cpusetp)
 {
-	int pos = cores_in_total() - 1;
+	int pos;
 
-	while (pos >= 0 && !CPU_ISSET(pos, cpusetp))
-		pos--;
+	pos = find_last_bit((unsigned long *)cpusetp, CPU_SETSIZE);
 
-	return pos >= 0 ? pos : -1;
+	return pos == CPU_SETSIZE ? -1 : pos;
 }
 
 static inline int cpuset_find_next_set(cpu_set_t *cpusetp, int begin)
 {
-	int pos = begin + 1;
+	int pos;
 
-	while (pos <= cpuset_find_last_set(cpusetp)) {
-		if (CPU_ISSET(pos, cpusetp))
-			return pos;
+	pos = find_next_bit((unsigned long *)cpusetp, CPU_SETSIZE, begin + 1);
 
-		pos++;
-	}
-
-	return -1;
+	return pos == CPU_SETSIZE ? -1 : pos;
 }
-
 #endif	/* _WAYCA_THREAD_H */
