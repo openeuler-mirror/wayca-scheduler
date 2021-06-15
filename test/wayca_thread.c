@@ -10,15 +10,14 @@
 
 #define TEST_THREADS	10
 wayca_thread_t threads[TEST_THREADS] = { 0 };
-wayca_group_t group = 0;
+wayca_sc_group_t group = 0;
 pid_t threads_pid[TEST_THREADS];
 int system_cpu_nr = CPU_SETSIZE;
 
 bool has_env = false;
-wayca_group_attr_t topo = 0;
-wayca_group_attr_t method = WT_GF_PERCPU;
-wayca_group_attr_t relation = 0;
-wayca_group_attr_t fixed = WT_GF_FIXED;
+wayca_sc_group_attr_t topo = 0;
+wayca_sc_group_attr_t method = WT_GF_PERCPU;
+wayca_sc_group_attr_t relation = 0;
 
 void *thread_func(void *private)
 {
@@ -46,12 +45,12 @@ void show_thread_affinity(int created)
 
 		printf("index %d pid %d: ", index, pid);
 		for (int j = 0; j < (system_cpu_nr + __NCPUBITS - 1) / __NCPUBITS; j++)
-			printf("0x%016llx,", cpuset.__bits[j]);
+			printf("%#016lx,", cpuset.__bits[j]);
 		printf("\b \n");
 	}
 }
 
-static wayca_group_attr_t topo_attrs[] = {
+static wayca_sc_group_attr_t topo_attrs[] = {
 	WT_GF_CPU,
 	WT_GF_CCL,
 	WT_GF_NUMA,
@@ -72,12 +71,12 @@ void read_environ()
 int main(int argc, char *argv[])
 {
 	int ret, created;
-	wayca_group_attr_t group_attr = 0;
+	wayca_sc_group_attr_t group_attr = 0;
 
 	system_cpu_nr = cores_in_total();
 	read_environ();
 
-	ret = wayca_thread_group_create(&group);
+	ret = wayca_sc_group_create(&group);
 	if (ret)
 		return -1;
 
@@ -90,8 +89,8 @@ int main(int argc, char *argv[])
 	sleep(5);
 
 	if (has_env) {
-		group_attr = topo | method | relation | WT_GF_FIXED;
-		wayca_thread_group_set_attr(group, &group_attr);
+		group_attr = topo | method | relation;
+		wayca_sc_group_set_attr(group, &group_attr);
 
 		for (int index = 0; index < created; index++)
 			wayca_thread_attach_group(threads[index], group);
@@ -102,17 +101,17 @@ int main(int argc, char *argv[])
 			wayca_thread_detach_group(threads[index], group);
 	}
 	else
-		for (int i = 0; i < sizeof(topo_attrs) / sizeof(wayca_group_attr_t); i++)
+		for (int i = 0; i < sizeof(topo_attrs) / sizeof(wayca_sc_group_attr_t); i++)
 		{
 			topo = topo_attrs[i];
 			method = WT_GF_PERCPU;
 			relation = 0;
 			// relation = WT_GF_COMPACT;
 
-			printf("Topo: %d Method: %d Relation: %d\n", topo, method, relation);
-			group_attr = topo | method | relation | WT_GF_FIXED;
+			printf("Topo: %lld Method: %lld Relation: %lld\n", topo, method, relation);
+			group_attr = topo | method | relation;
 
-			wayca_thread_group_set_attr(group, &group_attr);
+			wayca_sc_group_set_attr(group, &group_attr);
 			for (int index = 0; index < created; index++)
 				wayca_thread_attach_group(threads[index], group);
 

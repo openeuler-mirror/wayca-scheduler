@@ -4,7 +4,7 @@
 #define _GNU_SOURCE
 #include <sched.h>
 
-static const char *wayca_scheduler_socket_path = "/etc/wayca-scheduler/wayca.socket";
+extern char *wayca_scheduler_socket_path;
 
 /* default configurations */
 #define MAX_MANAGED_MAPS	100
@@ -20,6 +20,8 @@ static const char *wayca_scheduler_socket_path = "/etc/wayca-scheduler/wayca.soc
 #define TASK_ZERO CPU_ZERO
 #define TASK_SET  CPU_SET
 #define TASK_ISSET CPU_ISSET
+
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 struct task_cpu_map
 {
