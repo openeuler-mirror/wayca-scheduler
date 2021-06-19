@@ -15,9 +15,28 @@
 #define CPU_FNAME 	"/sys/devices/system/cpu"	/* no ending '/' in the filename */
 #define DEFAULT_KERNEL_MAX 	(2048)
 #define PATH_LEN_MAX		(4096)		/* maximum length of file pathname */ 
+#define MAX_FD_RETRIES		(5)		/* maximum retries when reading from an open file */
+#define USLEEP_DELAY_250MS	(250000)	/* 250ms */
 
 #define PRINT_DBG	printf
 #define PRINT_ERROR	printf
+
+#define WAYCA_CACHE_STRING_LEN	(256)
+struct wayca_cache {
+	int id;
+	int level;
+	char type[WAYCA_CACHE_STRING_LEN];
+	char allocation_policy[WAYCA_CACHE_STRING_LEN];
+	char write_policy[WAYCA_CACHE_STRING_LEN];
+	char cache_size[WAYCA_CACHE_STRING_LEN];
+
+	unsigned int	ways_of_associativity;
+	unsigned int	physical_line_partition;
+	unsigned int	number_of_sets;
+	unsigned int	coherency_line_size;
+
+	cpu_set_t *shared_cpu_map;
+};
 
 struct wayca_cpu {
 	int cpu_id;
@@ -28,6 +47,8 @@ struct wayca_cpu {
 	cpu_set_t *core_cpus_map;		/* SMT - simultaneous multi-threading siblings; CPUs within the same core
 						 *   (deprecated name: "thread_siblings_list"
 						 */
+	size_t n_caches;			/* number of caches */
+	struct wayca_cache	*p_caches;	/* a matrix with n_caches entries */
 };
 
 struct wayca_cluster {

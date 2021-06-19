@@ -22,6 +22,65 @@ WAYCA_SC_INIT_PRIO(topo_init, TOPO);
 WAYCA_SC_FINI_PRIO(topo_free, TOPO);
 static struct wayca_topo topo;
 
+/* topo_path_read_buffer - read from filename into buf, maximum 'count' in size
+ * return:
+ *   -1 on error
+ *   0 or more: total number of bytes read
+ */
+static int topo_path_read_buffer(const char *base, const char *filename,
+				 char *buf, size_t count)
+{
+	int dir_fd;
+	int fd;
+	FILE *f;
+	int ret, c, tries = 0;
+
+	dir_fd = open(base, O_RDONLY|O_CLOEXEC);
+	if (dir_fd == -1) return -1;
+
+	fd = openat(dir_fd, filename, O_RDONLY);
+	if (fd == -1) {
+		close(dir_fd);
+		return -1;
+	}
+
+	f = fdopen(fd, "r");
+	if (f == NULL) {
+		close(fd);
+		close(dir_fd);
+		return -1;
+	}
+
+	/* read into buf */
+	memset(buf, 0, count);
+	while (count > 0) {
+		ret = read(fd, buf, count);
+		if (ret < 0) {
+			if ((errno == EAGAIN || errno == EINTR)
+					&& (tries++ < MAX_FD_RETRIES)) {
+				usleep(USLEEP_DELAY_250MS);
+				continue;
+			}
+			c = c ? c : -1;
+			break;			/* failure */
+		}
+		if (ret == 0)
+			break;			/* success */
+		tries = 0;
+		count -= ret;
+		buf += ret;
+		c += ret;
+	}
+
+	/* close */
+	fclose(f);
+	close(fd);
+	close(dir_fd);
+
+	/* return */
+	return c;
+}
+
 /* return negative on error, 0 on success */
 static int topo_path_read_s32(const char *base, const char *filename, int *result)
 {
@@ -478,6 +537,104 @@ read_package_info:
 		return ret;
 	}
 
+	/* read caches information */
+	size_t n_caches = 0;
+	struct wayca_cache *p_caches;
+	int type_len, real_len;
+	char size_string[WAYCA_CACHE_STRING_LEN];
+
+	/* count the number of caches exists */
+	do {
+		/* move the base to "cpu%d/cache/index%zu" */
+		sprintf(path_buffer, "%s/cpu%d/cache/index%zu", CPU_FNAME, cpu_index, n_caches);
+		/* check access */
+		if (access(path_buffer, F_OK) != 0) /* doesn't exist */
+			break;
+		n_caches ++;
+	} while (1);
+	p_topo->cpus[cpu_index]->n_caches = n_caches;
+
+	if (n_caches == 0) {
+		PRINT_DBG("no cache exists for CPU %d", cpu_index);
+		return 0;	/* return early */
+	}
+
+	/* allocate wayca_cache matrix */
+	p_topo->cpus[cpu_index]->p_caches = (struct wayca_cache *)calloc(n_caches,
+						sizeof(struct wayca_cache));
+	if (!p_topo->cpus[cpu_index]->p_caches)
+		return -1;	/* no enough memory */
+
+	p_caches = p_topo->cpus[cpu_index]->p_caches;
+
+	for (i = 0; i < n_caches; i++) {
+		/* move the base to "cpu%d/cache/index%zu" */
+		sprintf(path_buffer, "%s/cpu%d/cache/index%zu", CPU_FNAME, cpu_index, i);
+
+		/* read cache: id, level, type */
+		if (topo_path_read_s32(path_buffer, "id", &p_caches[i].id) != 0)
+			p_caches[i].id = -1;	/* on failure */
+		if (topo_path_read_s32(path_buffer, "level", &p_caches[i].level) != 0)
+			p_caches[i].level = -1;	/* on failure */
+		type_len = topo_path_read_buffer(path_buffer, "type", p_caches[i].type,
+						  WAYCA_CACHE_STRING_LEN);
+		real_len = strlen(p_caches[i].type);
+		if (type_len <= 0)
+			p_caches[i].type[0] = '\0';		/* on failure */
+		else if (p_caches[i].type[real_len -1] == '\n')
+			p_caches[i].type[real_len - 1] = '\0';	/* remove trailing newline and nonsense chars */
+
+		/* read cache: allocation_policy */
+		type_len = topo_path_read_buffer(path_buffer, "allocation_policy",
+						  p_caches[i].allocation_policy,
+						  WAYCA_CACHE_STRING_LEN);
+		real_len = strlen(p_caches[i].allocation_policy);
+		if (type_len <= 0)
+			p_caches[i].allocation_policy[0] = '\0';
+		else if (p_caches[i].allocation_policy[real_len -1] == '\n')
+			p_caches[i].allocation_policy[real_len - 1] = '\0';
+
+		/* read cache: write_policy */
+		type_len = topo_path_read_buffer(path_buffer, "write_policy",
+						  p_caches[i].write_policy,
+						  WAYCA_CACHE_STRING_LEN);
+		real_len = strlen(p_caches[i].write_policy);
+		if (type_len <= 0)
+			p_caches[i].write_policy[0] = '\0';
+		else if (p_caches[i].write_policy[real_len - 1] == '\n')
+			p_caches[i].write_policy[real_len - 1] = '\0';
+
+		/* read cache: ways_of_associativity, etc. */
+		topo_path_read_s32(path_buffer, "ways_of_associativity",
+					&p_caches[i].ways_of_associativity);
+		topo_path_read_s32(path_buffer, "physical_line_partition",
+					&p_caches[i].physical_line_partition);
+		topo_path_read_s32(path_buffer, "number_of_sets",
+					&p_caches[i].number_of_sets);
+		topo_path_read_s32(path_buffer, "coherency_line_size",
+					&p_caches[i].coherency_line_size);
+
+		/* read cache size */
+		type_len = topo_path_read_buffer(path_buffer, "size",
+						  p_caches[i].cache_size,
+						  WAYCA_CACHE_STRING_LEN);
+		real_len = strlen(p_caches[i].cache_size);
+		if (type_len <= 0)
+			p_caches[i].cache_size[0] = '\0';
+		/* TODO: parse size from string to unsigned long int */
+		else if (p_caches[i].cache_size[real_len - 1] == '\n')
+			p_caches[i].cache_size[real_len - 1] = '\0';
+
+		/* read cache: shared_cpu_list */
+		p_caches[i].shared_cpu_map = CPU_ALLOC(p_topo->kernel_max_cpus);
+		if (!p_caches[i].shared_cpu_map)
+			return -1;			/* no enough memory */
+		if (topo_path_read_cpulist(path_buffer, "shared_cpu_list",
+				p_caches[i].shared_cpu_map, p_topo->kernel_max_cpus) != 0)
+			return -1;			/* failed */
+
+	} /* end of for n_caches */
+
 	return 0;	/* on success */
 }
 
@@ -665,6 +822,22 @@ void topo_print_wayca_cpu(size_t setsize, struct wayca_cpu *p_cpu)
 	PRINT_DBG("core_id: %d\n", p_cpu->core_id);
 	PRINT_DBG("\tCPU count in this core / SMT factor: %d\n",
 				CPU_COUNT_S(setsize, p_cpu->core_cpus_map));
+	PRINT_DBG("Number of caches: %d\n", p_cpu->n_caches);
+	for (int i = 0; i < p_cpu->n_caches; i++) {
+		PRINT_DBG("\tCache index %d:\n", i);
+		PRINT_DBG("\t\tid: %d\n", p_cpu->p_caches[i].id);
+		PRINT_DBG("\t\tlevel: %d\n", p_cpu->p_caches[i].level);
+		PRINT_DBG("\t\ttype: %s\n", p_cpu->p_caches[i].type);
+		PRINT_DBG("\t\tallocation_policy: %s\n", p_cpu->p_caches[i].allocation_policy);
+		PRINT_DBG("\t\twrite_policy: %s\n", p_cpu->p_caches[i].write_policy);
+		PRINT_DBG("\t\tcache_size: %s\n", p_cpu->p_caches[i].cache_size);
+		PRINT_DBG("\t\tways_of_associativity: %u\n", p_cpu->p_caches[i].ways_of_associativity);
+		PRINT_DBG("\t\tphysical_line_partition: %u\n", p_cpu->p_caches[i].physical_line_partition);
+		PRINT_DBG("\t\tnumber_of_sets: %u\n", p_cpu->p_caches[i].number_of_sets);
+		PRINT_DBG("\t\tcoherency_line_size: %u\n", p_cpu->p_caches[i].coherency_line_size);
+		PRINT_DBG("\t\tshared with how many cores: %d\n",
+				CPU_COUNT_S(setsize, p_cpu->p_caches[i].shared_cpu_map));
+	}
 	if (p_cpu->p_cluster != NULL)
 		PRINT_DBG("belongs to cluster_id: \t%08x\n", p_cpu->p_cluster->cluster_id);
 	PRINT_DBG("belongs to node: \t%d\n", p_cpu->p_numa_node->node_idx);
@@ -719,6 +892,7 @@ void topo_free(void)
 	CPU_FREE(p_topo->cpu_map);
 	for (i = 0; i < p_topo->n_cpus; i++) {
 		CPU_FREE(p_topo->cpus[i]->core_cpus_map);
+		free(p_topo->cpus[i]->p_caches);
 		free(p_topo->cpus[i]);
 	}
 	free(p_topo->cpus);
@@ -1112,4 +1286,3 @@ int main()
 }
 
 #endif
-
