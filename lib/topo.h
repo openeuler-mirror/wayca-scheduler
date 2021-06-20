@@ -11,6 +11,7 @@
 
 #include <sched.h>
 
+#define SYSDEV_FNAME 	"/sys/devices"
 #define NODE_FNAME 	"/sys/devices/system/node"
 #define CPU_FNAME 	"/sys/devices/system/cpu"	/* no ending '/' in the filename */
 #define DEFAULT_KERNEL_MAX 	(2048)
@@ -57,6 +58,19 @@ struct wayca_cluster {
 	cpu_set_t *cpu_map;	/* mask of contained CPUs */
 };
 
+struct wayca_pci_device {
+	int numa_node;
+	char absolute_path[PATH_LEN_MAX];
+
+	unsigned int   class;		/* 3 bytes: (base, sub, prog-if) */
+	unsigned short vendor;
+	unsigned short device;
+
+	unsigned int enable;
+
+	cpu_set_t *local_cpu_map;
+};
+
 struct wayca_node {
 	int node_idx;			/* index of node */
 	size_t n_cpus;			/* number of CPUs in this numa node */
@@ -65,6 +79,9 @@ struct wayca_node {
 
 	int *distance;			/* array of distance */
 	struct wayca_meminfo	*p_meminfo;	/* memory information of this node */
+
+	size_t n_pcidevs;			/* number of detected PCI devices */
+	struct wayca_pci_device **pcidevs;	/* array of PCI devices */
 };
 
 struct wayca_meminfo {

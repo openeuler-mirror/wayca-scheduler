@@ -698,6 +698,8 @@ static int topo_read_node_topology(int node_index, struct wayca_topo *p_topo)
 	return 0;
 }
 
+static int topo_recursively_read_io_devices(const char *rootdir, struct wayca_topo *p_topo);
+
 /* External callable functions */
 static void topo_init(void)
 {
@@ -785,6 +787,10 @@ static void topo_init(void)
 	/* at the end of the cpu%d for loop, the following has been established:
 	 *  - p_topo->nodes[]->distance
 	 */
+	/* read I/O devices topology */
+	if (topo_recursively_read_io_devices(SYSDEV_FNAME, p_topo) == -1)
+		goto cleanup_on_error;
+
 	return;
 
 	/* cleanup_on_error */
@@ -812,6 +818,16 @@ void topo_print_wayca_node(size_t setsize, struct wayca_node *p_node, size_t dis
 	for (int i = 0; i < distance_size; i++)
 		PRINT_DBG("%d\t", p_node->distance[i]);
 	PRINT_DBG("\n");
+	PRINT_DBG("n_pcidevs: %lu\n", p_node->n_pcidevs);
+	for (int i = 0; i < p_node->n_pcidevs; i++) {
+		PRINT_DBG("\tpcidev%d: numa_node=%d\n", i, p_node->pcidevs[i]->numa_node);
+		PRINT_DBG("\t\t class=0x%06x\n", p_node->pcidevs[i]->class);
+		PRINT_DBG("\t\t vendor=0x%04x\n", p_node->pcidevs[i]->vendor);
+		PRINT_DBG("\t\t device=0x%04x\n", p_node->pcidevs[i]->device);
+		PRINT_DBG("\t\t number of local CPUs: %d\n",
+				CPU_COUNT_S(setsize, p_node->pcidevs[i]->local_cpu_map));
+		PRINT_DBG("\t\t absolute_path: %s\n", p_node->pcidevs[i]->absolute_path);
+	}
 	/* TODO: fill up the following */
 	PRINT_DBG("pointer of cluster_map: 0x%p EXPECTED (nil)\n", p_node->cluster_map);
 }
@@ -887,7 +903,7 @@ void topo_print(void)
 void topo_free(void)
 {
 	struct wayca_topo *p_topo = &topo;
-	int i;
+	int i, j;
 
 	CPU_FREE(p_topo->cpu_map);
 	for (i = 0; i < p_topo->n_cpus; i++) {
@@ -909,6 +925,11 @@ void topo_free(void)
 		CPU_FREE(p_topo->nodes[i]->cluster_map);
 		free(p_topo->nodes[i]->distance);
 		free(p_topo->nodes[i]->p_meminfo);
+		for (j = 0; j < p_topo->nodes[i]->n_pcidevs; j++) {
+			CPU_FREE(p_topo->nodes[i]->pcidevs[j]->local_cpu_map);
+			free(p_topo->nodes[i]->pcidevs[j]);
+		}
+		free(p_topo->nodes[i]->pcidevs);
 		free(p_topo->nodes[i]);
 	}
 	free(p_topo->nodes);
@@ -1246,37 +1267,147 @@ int pipe_latency_NUMA[4] = {
 
 /* TODO: for recursively searching the directories for PCI devices' and finding 'numa_node' */
 
-#if 0
-void printdir(char *dir, int depth)
+/* Return -1 on failure, 0 on successs
+ */
+static int topo_parse_io_device(const char *dir, struct wayca_topo *p_topo)
 {
-    DIR *dp;
-    struct dirent *entry;
-    struct stat statbuf;
-    if((dp = opendir(dir)) == NULL) {
-        fprintf(stderr,"cannot open directory: %s\n", dir);
-        return;
-    }
-    chdir(dir);
-    while((entry = readdir(dp)) != NULL) {
-        lstat(entry->d_name,&statbuf);
-        if(S_ISDIR(statbuf.st_mode)) {
-            /* Found a directory, but ignore . and .. */
-            if(strcmp(".",entry->d_name) == 0 ||
-                strcmp("..",entry->d_name) == 0)
-                continue;
-            /* TODO: insert PCI device information retrieving code here. And insert
-	     *     - insert PCI node creation code
-	     */
-            printf("%*s%s/\n",depth,"",entry->d_name);
-            /* Recurse at a new indent level */
-            printdir(entry->d_name,depth+4);
-        }
-        else printf("%*s%s\n",depth,"",entry->d_name);
-    }
-    chdir("..");
-    closedir(dp);
+	int node_nb;
+	int i;
+	int ret;
+	char buf[WAYCA_CACHE_STRING_LEN];
+	struct wayca_pci_device *p_pcidev;
+
+	if (strstr(dir, "pci")) {		/* PCI */
+		PRINT_DBG("PCI full path: %s\n", dir);
+		/* allocate struct wayca_pci_device */
+		p_pcidev = (struct wayca_pci_device *)calloc(1, sizeof(struct wayca_pci_device));
+		if (!p_pcidev) {
+			return -1;		/* no enough memory */
+		}
+		/* store dir full path */
+		strcpy(p_pcidev->absolute_path, dir);
+		PRINT_DBG("absolute path: %s\n", p_pcidev->absolute_path);
+
+		/* read 'numa_node' */
+		topo_path_read_s32(dir, "numa_node", &node_nb);
+		PRINT_DBG("numa_node: %d\n", node_nb);
+		if (node_nb < 0)
+			node_nb = 0;		/* on failure, default to node #0 */
+		p_pcidev->numa_node = node_nb;
+
+		/* get the 'wayca_node *' whoes node_idx == this 'node_nb' */
+		for (i = 0; i < p_topo->n_nodes; i++) {
+			if (p_topo->nodes[i]->node_idx == node_nb)
+				break;
+		}
+		if (i == p_topo->n_nodes) {
+			PRINT_ERROR("failed to match this PCI device to any numa node: %s", dir);
+			free(p_pcidev);
+			return -1;
+		}
+		/* append p_pcidevto 'wayca node *'->pcidevs */
+		struct wayca_pci_device **p_temp;
+		p_temp = (struct wayca_pci_device **)realloc(p_topo->nodes[i]->pcidevs,
+				(p_topo->nodes[i]->n_pcidevs + 1) * sizeof(struct wayca_pci_device *));
+		if (!p_temp) {
+			free(p_pcidev);
+			return -1;	/* no enough memory */
+		}
+		p_topo->nodes[i]->pcidevs = p_temp;
+		p_topo->nodes[i]->pcidevs[p_topo->nodes[i]->n_pcidevs] = p_pcidev;
+		p_topo->nodes[i]->n_pcidevs ++;		/* incement number of PCI devices */
+		PRINT_DBG("n_pcidevs = %d\n", p_topo->nodes[i]->n_pcidevs);
+
+		/* read PCI information into: p_pcidev
+		 * Note: sysfs data output format is defined in linux kernel code:
+		 *           [linux.kernel]/drivers/pci/pci-sysfs.c
+		 */
+		/* read class:vendor:device */
+		ret = topo_path_read_buffer(dir, "class", buf, WAYCA_CACHE_STRING_LEN);
+		if (ret <= 0)
+			p_pcidev->class = 0;		/* on failure */
+		else {
+			if (sscanf(buf, "%x", &p_pcidev->class) != 1)
+				p_pcidev->class = 0;		/* on failure */
+			PRINT_DBG("class: 0x%06x\n", p_pcidev->class);
+		}
+		ret = topo_path_read_buffer(dir, "vendor", buf, WAYCA_CACHE_STRING_LEN);
+		if (ret <= 0)
+			p_pcidev->vendor= 0;		/* on failure */
+		else {
+			if (sscanf(buf, "%hx", &p_pcidev->vendor) != 1)
+				p_pcidev->vendor= 0;		/* on failure */
+			PRINT_DBG("vendor: 0x%04x\n", p_pcidev->vendor);
+		}
+		ret = topo_path_read_buffer(dir, "device", buf, WAYCA_CACHE_STRING_LEN);
+		if (ret <= 0)
+			p_pcidev->device = 0;		/* on failure */
+		else {
+			if (sscanf(buf, "%hx", &p_pcidev->device) != 1)
+				p_pcidev->device= 0;		/* on failure */
+			PRINT_DBG("device: 0x%04x\n", p_pcidev->device);
+		}
+		/* read local_cpulist */
+		p_pcidev->local_cpu_map = CPU_ALLOC(p_topo->kernel_max_cpus);
+		if (!p_pcidev->local_cpu_map)
+			return -1;			/* no enough memory */
+		if (topo_path_read_cpulist(dir, "local_cpulist",
+					   p_pcidev->local_cpu_map, p_topo->kernel_max_cpus) != 0)
+			return -1;			/* failed */
+
+		/* TODO: read irqs */
+		/* TODO: read enable */
+		p_pcidev->enable = 1;
+		return 0;
+	}
+	else if (strstr(dir, "smmu")) {		/* SMMU */
+		/* TODO */
+		PRINT_DBG("SMMU full path: %s\n", dir);
+		return 0;
+	}
+	else {					/* others */
+		/* TODO */
+		PRINT_DBG("other IO device at full path: %s\n", dir);
+		return 0;
+	}
+
+	return 0;
 }
 
+/* Return -1 on failure, 0 on successs
+ */
+static int topo_recursively_read_io_devices(const char *rootdir, struct wayca_topo *p_topo)
+{
+	DIR *dp;
+	struct dirent *entry;
+	struct stat statbuf;
+	char cwd[PATH_LEN_MAX];
+
+	if ((dp = opendir(rootdir)) == NULL)
+		return -1;				/* on failure */
+
+	chdir(rootdir);
+	while ((entry = readdir(dp)) != NULL) {
+		lstat(entry->d_name, &statbuf);
+		if (S_ISDIR(statbuf.st_mode)) {
+			/* Found a directory, but ignore . and .. */
+			if (strcmp(".",entry->d_name) == 0 ||
+			    strcmp("..",entry->d_name) == 0)
+				continue;
+			topo_recursively_read_io_devices(entry->d_name, p_topo);
+		}
+		else {
+			if (strcmp("numa_node", entry->d_name) == 0) {
+				topo_parse_io_device(getcwd(cwd, PATH_LEN_MAX), p_topo);
+			}
+		}
+	}
+
+	chdir("..");
+	closedir(dp);
+}
+
+#if 0
 int main()
 {
     printf("Directory scan of /home:\n");
