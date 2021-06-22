@@ -32,21 +32,21 @@ static int socket_fd;
 
 static int ccl_idle_cpu_cores(int ccl)
 {
-	return cores_in_ccl() - ccl_cpus_load[ccl];
+	return wayca_sc_cpus_in_ccl() - ccl_cpus_load[ccl];
 }
 
 static int node_idle_cpu_cores(int node)
 {
-	return cores_in_node() - node_cpus_load[node];
+	return wayca_sc_cpus_in_node() - node_cpus_load[node];
 }
 
 static int process_cpulist_bind(struct program *prog)
 {
 	cpu_set_t mask;
 
-	int cr_in_total = cores_in_total();
-	int cr_in_ccl = cores_in_ccl();
-	int cr_in_node = cores_in_node();
+	int cr_in_total = wayca_sc_cpus_in_total();
+	int cr_in_ccl = wayca_sc_cpus_in_ccl();
+	int cr_in_node = wayca_sc_cpus_in_node();
 
 	list_to_mask(prog->cpu_list, &mask);
 	for (int i = 0; i < cr_in_total; i++) {
@@ -79,15 +79,15 @@ static int process_managed_threads_bind(struct program *prog)
 			int cpus = CPU_COUNT(&maps[i].cpus);
 
 			if (nodes > 0) {
-				for (j = 0; j < nodes_in_total(); j++) {
+				for (j = 0; j < wayca_sc_nodes_in_total(); j++) {
 					if (NODE_ISSET(j, &maps[i].nodes))
 						node_cpus_load[j] += maps[i].cpu_util / nodes;
 				}
 			} else {
-				for (j = 0; j < cores_in_total(); j++) {
+				for (j = 0; j < wayca_sc_cpus_in_total(); j++) {
 					if (CPU_ISSET(j, &maps[i].cpus)) {
-						node_cpus_load[j / cores_in_node()] += maps[i].cpu_util / cpus;
-						ccl_cpus_load[j /cores_in_ccl()] += maps[i].cpu_util / cpus;
+						node_cpus_load[j / wayca_sc_cpus_in_node()] += maps[i].cpu_util / cpus;
+						ccl_cpus_load[j / wayca_sc_cpus_in_ccl()] += maps[i].cpu_util / cpus;
 					}
 				}
 			}
@@ -103,9 +103,9 @@ static int occupied_cpu_to_load(char *s)
 {
 	cpu_set_t mask;
 
-	int cr_in_total = cores_in_total();
-	int cr_in_ccl = cores_in_ccl();
-	int cr_in_node = cores_in_node();
+	int cr_in_total = wayca_sc_cpus_in_total();
+	int cr_in_ccl = wayca_sc_cpus_in_ccl();
+	int cr_in_node = wayca_sc_cpus_in_node();
 
 	list_to_mask(s, &mask);
 	for (int i = 0; i < cr_in_total; i++) {
@@ -120,9 +120,9 @@ static int occupied_cpu_to_load(char *s)
 
 static int process_auto_bind(struct program *prog)
 {
-	int cr_in_pack = cores_in_package();
-	int cr_in_ccl = cores_in_ccl();
-	int cr_in_node = cores_in_node();
+	int cr_in_pack = wayca_sc_cpus_in_package();
+	int cr_in_ccl = wayca_sc_cpus_in_ccl();
+	int cr_in_node = wayca_sc_cpus_in_node();
 	int cpu = cr_in_node * prog->io_node;
 
 	if (prog->io_node < 0)

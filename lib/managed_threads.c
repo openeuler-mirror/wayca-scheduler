@@ -13,8 +13,8 @@ struct task_cpu_map maps[MAX_MANAGED_MAPS];
 
 static inline void nodemask_to_cpumask(node_set_t *node_mask, cpu_set_t *cpu_mask)
 {
-	int cr_in_node = cores_in_node();
-	int nr_in_total = nodes_in_total();
+	int cr_in_node = wayca_sc_cpus_in_node();
+	int nr_in_total = wayca_sc_nodes_in_total();
 
 	CPU_ZERO(cpu_mask);
 

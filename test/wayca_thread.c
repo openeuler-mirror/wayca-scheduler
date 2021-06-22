@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
 	int ret, created;
 	wayca_sc_group_attr_t group_attr = 0;
 
-	system_cpu_nr = cores_in_total();
+	system_cpu_nr = wayca_sc_cpus_in_total();
 	read_environ();
 
 	ret = wayca_sc_group_create(&group);

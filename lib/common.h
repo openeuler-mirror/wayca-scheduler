@@ -2,6 +2,9 @@
 #define LIB_COMMON_H_
 
 #define _GNU_SOURCE
+#include <stdbool.h>
+#include <linux/limits.h>
+#include <errno.h>
 #include <sched.h>
 
 extern char *wayca_scheduler_socket_path;

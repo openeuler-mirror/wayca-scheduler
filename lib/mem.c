@@ -34,7 +34,7 @@ static inline void set_node_mask(int node, node_set_t * mask)
 
 static inline void set_package_mask(int node, node_set_t * mask)
 {
-	int nr_in_pack = nodes_in_package();
+	int nr_in_pack = wayca_sc_nodes_in_package();
 	node = node / nr_in_pack * nr_in_pack;
 	int i;
 
@@ -48,7 +48,7 @@ static inline void set_all_mask(node_set_t * mask)
 	int i;
 
 	NODE_ZERO(mask);
-	for (i = 0; i < nodes_in_total(); i++)
+	for (i = 0; i < wayca_sc_nodes_in_total(); i++)
 		NODE_SET(i, mask);
 }
 
@@ -57,7 +57,7 @@ int mem_interleave_in_package(int node)
 	node_set_t mask;
 	set_package_mask(node, &mask);
 	return set_mempolicy(MPOL_INTERLEAVE, (unsigned long *)&mask,
-			     nodes_in_total());
+			     wayca_sc_nodes_in_total());
 }
 
 int mem_interleave_in_all(void)
@@ -65,7 +65,7 @@ int mem_interleave_in_all(void)
 	node_set_t mask;
 	set_all_mask(&mask);
 	return set_mempolicy(MPOL_INTERLEAVE, (unsigned long *)&mask,
-			     nodes_in_total());
+			     wayca_sc_nodes_in_total());
 }
 
 int mem_bind_node(int node)
@@ -80,12 +80,12 @@ int mem_bind_package(int node)
 	node_set_t mask;
 	set_package_mask(node, &mask);
 	return set_mempolicy(MPOL_BIND, (unsigned long *)&mask,
-			     nodes_in_total());
+			     wayca_sc_nodes_in_total());
 }
 
 int mem_unbind(void)
 {
-	return set_mempolicy(MPOL_DEFAULT, NULL, nodes_in_total());
+	return set_mempolicy(MPOL_DEFAULT, NULL, wayca_sc_nodes_in_total());
 }
 
 /*
@@ -98,7 +98,7 @@ long mem_migrate_to_node(pid_t pid, int node)
 	node_set_t all_mask, node_mask;
 	set_all_mask(&all_mask);
 	set_node_mask(node, &node_mask);
-	return migrate_pages(pid, nodes_in_total(), &all_mask, &node_mask);
+	return migrate_pages(pid, wayca_sc_nodes_in_total(), &all_mask, &node_mask);
 }
 
 long mem_migrate_to_package(pid_t pid, int node)
@@ -106,5 +106,5 @@ long mem_migrate_to_package(pid_t pid, int node)
 	node_set_t all_mask, pack_mask;
 	set_all_mask(&all_mask);
 	set_package_mask(node, &pack_mask);
-	return migrate_pages(pid, nodes_in_total(), &all_mask, &pack_mask);
+	return migrate_pages(pid, wayca_sc_nodes_in_total(), &all_mask, &pack_mask);
 }
