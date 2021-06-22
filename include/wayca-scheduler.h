@@ -27,12 +27,30 @@ int mem_unbind(void);
 long mem_migrate_to_node(pid_t pid, int node);
 long mem_migrate_to_package(pid_t pid, int node);
 
-int cores_in_ccl(void);
-int cores_in_node(void);
-int cores_in_package(void);
-int cores_in_total(void);
-int nodes_in_package(void);
-int nodes_in_total(void);
+int wayca_sc_cpus_in_ccl(void);
+int wayca_sc_cpus_in_node(void);
+int wayca_sc_cpus_in_package(void);
+int wayca_sc_cpus_in_total(void);
+int wayca_sc_ccls_in_package(void);
+int wayca_sc_ccls_in_node(void);
+int wayca_sc_ccls_in_total(void);
+int wayca_sc_nodes_in_package(void);
+int wayca_sc_nodes_in_total(void);
+int wayca_sc_packages_in_total(void);
+
+int wayca_sc_core_cpu_mask(int core, size_t cpusetsize, cpu_set_t *mask);
+int wayca_sc_ccl_cpu_mask(int ccl, size_t cpusetsize, cpu_set_t *mask);
+int wayca_sc_node_cpu_mask(int node, size_t cpusetsize, cpu_set_t *mask);
+int wayca_sc_package_cpu_mask(int node, size_t cpusetsize, cpu_set_t *mask);
+int wayca_sc_total_cpu_mask(size_t cpusetsize, cpu_set_t *mask);
+
+int wayca_sc_get_core_id(int cpu);
+int wayca_sc_get_ccl_id(int cpu);
+int wayca_sc_get_node_id(int cpu);
+int wayca_sc_get_package_id(int cpu);
+
+int wayca_sc_get_node_mem_size(int node, unsigned long *size);
+
 void topo_print(void);
 
 int wayca_managed_thread_create(int id, pthread_t *thread, const pthread_attr_t *attr,

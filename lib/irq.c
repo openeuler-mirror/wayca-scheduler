@@ -82,7 +82,7 @@ int irq_bind_cpu(int irq, int cpu)
 		return -1;
 
 	bitmap_scnprintf(buf, PATH_MAX, (unsigned long *)&mask,
-			 cores_in_total());
+			 wayca_sc_cpus_in_total());
 	ret = write(fd, buf, strlen(buf) + 1);
 
 	close(fd);

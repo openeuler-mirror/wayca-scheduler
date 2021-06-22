@@ -13,6 +13,9 @@
 #include <wayca-scheduler.h>
 #include "wayca_thread.h"
 
+WAYCA_SC_INIT_PRIO(wayca_thread_init, THREAD);
+WAYCA_SC_FINI_PRIO(wayca_thread_exit, THREAD);
+
 static inline void set_cpu_mask(int cpu, cpu_set_t * mask)
 {
 	CPU_ZERO(mask);
@@ -22,13 +25,13 @@ static inline void set_cpu_mask(int cpu, cpu_set_t * mask)
 static inline void set_ccl_cpumask(int cpu, cpu_set_t * mask)
 {
 	CPU_ZERO(mask);
-	for (int i = 0; i < cores_in_ccl(); i++)
+	for (int i = 0; i < wayca_sc_cpus_in_ccl(); i++)
 		CPU_SET(cpu + i, mask);
 }
 
 static inline void set_node_cpumask(int node, cpu_set_t * mask)
 {
-	int cr_in_node = cores_in_node();
+	int cr_in_node = wayca_sc_cpus_in_node();
 
 	CPU_ZERO(mask);
 	for (int i = 0; i < cr_in_node; i++)
@@ -37,9 +40,9 @@ static inline void set_node_cpumask(int node, cpu_set_t * mask)
 
 static inline void set_package_cpumask(int node, cpu_set_t * mask)
 {
-	int nr_in_pack = nodes_in_package();
-	int cr_in_node = cores_in_node();
-	int cr_in_pack = cores_in_package();
+	int nr_in_pack = wayca_sc_nodes_in_package();
+	int cr_in_node = wayca_sc_cpus_in_node();
+	int cr_in_pack = wayca_sc_cpus_in_package();
 	node = node / nr_in_pack * nr_in_pack;
 
 	CPU_ZERO(mask);
@@ -49,7 +52,7 @@ static inline void set_package_cpumask(int node, cpu_set_t * mask)
 
 static inline void set_all_cpumask(cpu_set_t * mask)
 {
-	int cr_in_total = cores_in_total();
+	int cr_in_total = wayca_sc_cpus_in_total();
 
 	CPU_ZERO(mask);
 	for (int i = 0; i < cr_in_total; i++)
@@ -58,7 +61,7 @@ static inline void set_all_cpumask(cpu_set_t * mask)
 
 int list_to_mask(char *s, cpu_set_t * mask)
 {
-	int cr_in_total = cores_in_total();
+	int cr_in_total = wayca_sc_cpus_in_total();
 
 	CPU_ZERO(mask);
 	while(1) {
@@ -255,13 +258,13 @@ cpu_set_t total_cpu_set;
 long long *wayca_cpu_loads;
 pthread_mutex_t wayca_cpu_loads_mutex;
 
-__attribute__((constructor)) void wayca_thread_init(void)
+static void wayca_thread_init(void)
 {
 	size_t num, total_cpu_cnt;
 	char *p;
 
 	CPU_ZERO(&total_cpu_set);
-	total_cpu_cnt = cores_in_total();
+	total_cpu_cnt = wayca_sc_cpus_in_total();
 	for (int cpu = 0; cpu < total_cpu_cnt; cpu++)
 		CPU_SET(cpu, &total_cpu_set);
 
@@ -292,7 +295,7 @@ __attribute__((constructor)) void wayca_thread_init(void)
 	pthread_mutex_init(&wayca_groups_array_mutex, NULL);
 }
 
-__attribute__((destructor)) void wayca_thread_exit(void)
+static void wayca_thread_exit(void)
 {
 	free(wayca_cpu_loads);
 	pthread_mutex_destroy(&wayca_cpu_loads_mutex);
@@ -394,7 +397,7 @@ int wayca_thread_get_attr(wayca_thread_t wthread, wayca_thread_attr_t *attr)
 	wt_p = id_to_wayca_thread(wthread);
 	*attr = wt_p->attribute;
 
-	return 0; 
+	return 0;
 }
 
 struct wayca_thread *wayca_thread_alloc()
@@ -475,7 +478,7 @@ int wayca_thread_join(wayca_thread_t id, void **retval)
 
 	if (thread->group)
 		wayca_thread_detach_group(id, thread->group->id);
-	
+
 	wayca_thread_update_load(thread, false);
 
 	wayca_thread_free(thread);

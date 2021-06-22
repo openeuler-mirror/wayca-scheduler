@@ -106,7 +106,7 @@ void readEnv(void)
 		perCcl_attr |= WT_GF_PACKAGE;
 	else
 		perCcl_attr |= WT_GF_CCL;
-	
+
 	p = getenv("WAYCA_TEST_THREAD_BIND_PERCPU");
 	if (p)
 		perCcl_attr |= WT_GF_PERCPU;
@@ -143,7 +143,7 @@ int main()
 		}
 	}
 
-	system_cpu_nr = cores_in_total();
+	system_cpu_nr = wayca_sc_cpus_in_total();
 
 	group_attr = all_attr;
 

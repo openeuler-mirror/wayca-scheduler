@@ -15,7 +15,7 @@ void wayca_thread_update_load(struct wayca_thread *thread, bool add)
 
 	pthread_mutex_lock(&wayca_cpu_loads_mutex);
 	cnt = CPU_COUNT(&thread->cur_set);
-	load = div_round_up(cores_in_total(), cnt);
+	load = div_round_up(wayca_sc_cpus_in_total(), cnt);
 
 	if (!add)
 		load = -load;
@@ -361,16 +361,16 @@ int wayca_group_arrange(struct wayca_sc_group *group)
 		group->nr_cpus_per_topo = 1;
 		break;
 	case WT_GF_CCL:
-		group->nr_cpus_per_topo = cores_in_ccl();
+		group->nr_cpus_per_topo = wayca_sc_cpus_in_ccl();
 		break;
 	case WT_GF_NUMA:
-		group->nr_cpus_per_topo = cores_in_node();
+		group->nr_cpus_per_topo = wayca_sc_cpus_in_node();
 		break;
 	case WT_GF_PACKAGE:
-		group->nr_cpus_per_topo = cores_in_package();
+		group->nr_cpus_per_topo = wayca_sc_cpus_in_package();
 		break;
 	case WT_GF_ALL:
-		group->nr_cpus_per_topo = cores_in_total();
+		group->nr_cpus_per_topo = wayca_sc_cpus_in_total();
 		break;
 	}
 
@@ -399,7 +399,7 @@ int wayca_group_assign_thread_resource(struct wayca_sc_group *group, struct wayc
 	 * If threads in the group is compact, and the available CPU counts
 	 * isn't integer multiple of topology level CPU counts, then find the
 	 * incomplete topology set and place the thread.
-	 * 
+	 *
 	 * Else find the idlest core in the idlest set and place the thread.
 	 */
 	if ((CPU_COUNT(&available_set) % group->nr_cpus_per_topo) && group->attribute & WT_GF_COMPACT) {

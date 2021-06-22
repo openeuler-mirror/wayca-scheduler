@@ -2,6 +2,9 @@
 #define LIB_COMMON_H_
 
 #define _GNU_SOURCE
+#include <stdbool.h>
+#include <linux/limits.h>
+#include <errno.h>
 #include <sched.h>
 
 extern char *wayca_scheduler_socket_path;
@@ -22,6 +25,20 @@ extern char *wayca_scheduler_socket_path;
 #define TASK_ISSET CPU_ISSET
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+
+#define WAYCA_SC_PRIO_TOPO 101
+#define WAYCA_SC_PRIO_THREAD 120
+#define WAYCA_SC_PRIO_MANAGED_THREAD 110
+#define WAYCA_SC_PRIO_LAST 65535
+
+#define WAYCA_SC_PRIO(prio) \
+	WAYCA_SC_PRIO_ ## prio
+
+#define WAYCA_SC_INIT_PRIO(func, prio) \
+static void __attribute__ ((constructor(WAYCA_SC_PRIO(prio)), used)) func(void)
+
+#define WAYCA_SC_FINI_PRIO(func, prio) \
+static void __attribute__ ((destructor(WAYCA_SC_PRIO(prio)), used)) func(void)
 
 struct task_cpu_map
 {
