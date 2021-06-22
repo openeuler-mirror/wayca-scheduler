@@ -22,7 +22,7 @@ WAYCA_SC_INIT_PRIO(topo_init, TOPO);
 WAYCA_SC_FINI_PRIO(topo_free, TOPO);
 static struct wayca_topo topo;
 
-/* return -1 on error, 0 on success */
+/* return negative on error, 0 on success */
 static int topo_path_read_s32(const char *base, const char *filename, int *result)
 {
 	int dir_fd;
@@ -31,19 +31,21 @@ static int topo_path_read_s32(const char *base, const char *filename, int *resul
 	int ret, t;
 
 	dir_fd = open(base, O_RDONLY|O_CLOEXEC);
-	if (dir_fd == -1) return -1;
+	if (dir_fd == -1) return -errno;
 
 	fd = openat(dir_fd, filename, O_RDONLY);
 	if (fd == -1) {
+		ret = errno;
 		close(dir_fd);
-		return -1;
+		return -ret;
 	}
 
 	f = fdopen(fd, "r");
 	if (f == NULL) {
+		ret = errno;
 		close(fd);
 		close(dir_fd);
-		return -1;
+		return -ret;
 	}
 
 	ret = fscanf(f, "%d", &t);
@@ -55,7 +57,7 @@ static int topo_path_read_s32(const char *base, const char *filename, int *resul
 
 	/* return */
 	if (ret != 1)
-		return -1;
+		return -EINVAL;
 	if (result)
 		*result = t;
 	return 0;
@@ -65,7 +67,7 @@ static int topo_path_read_s32(const char *base, const char *filename, int *resul
  *  - array: is a pre-allocated integer array
  *  - nmemb: number of members to read from file "base/filename"
  *
- * return -1 on error, 0 on success */
+ * return negative on error, 0 on success */
 static int topo_path_read_multi_s32(const char *base, const char *filename, size_t nmemb, int array[])
 {
 	int dir_fd;
@@ -75,24 +77,26 @@ static int topo_path_read_multi_s32(const char *base, const char *filename, size
 	int ret = 0;
 
 	dir_fd = open(base, O_RDONLY|O_CLOEXEC);
-	if (dir_fd == -1) return -1;
+	if (dir_fd == -1) return -errno;
 
 	fd = openat(dir_fd, filename, O_RDONLY);
 	if (fd == -1) {
+		ret = errno;
 		close(dir_fd);
-		return -1;
+		return -ret;
 	}
 
 	f = fdopen(fd, "r");
 	if (f == NULL) {
+		ret = errno;
 		close(fd);
 		close(dir_fd);
-		return -1;
+		return -ret;
 	}
 
 	for (i = 0; i < nmemb; i++) {
 		if (fscanf(f, "%d", &t) != 1) {
-			ret = -1;	/* on failure */
+			ret = -EINVAL;	/* on failure */
 			break;
 		}
 		array[i] = t;		/* on success */
@@ -111,7 +115,7 @@ static int topo_path_read_multi_s32(const char *base, const char *filename, size
  *  - filename: usually, this is 'meminfo'
  *  - p_meminfo: a pre-allocated space to store parsing results
  *
- * return -1 on error, 0 on success */
+ * return negative on error, 0 on success */
 static int topo_path_parse_meminfo(const char *base, const char *filename, struct wayca_meminfo *p_meminfo)
 {
 	int dir_fd;
@@ -122,19 +126,21 @@ static int topo_path_parse_meminfo(const char *base, const char *filename, struc
 	int ret = -1;
 
 	dir_fd = open(base, O_RDONLY|O_CLOEXEC);
-	if (dir_fd == -1) return -1;
+	if (dir_fd == -1) return -errno;
 
 	fd = openat(dir_fd, filename, O_RDONLY);
 	if (fd == -1) {
+		ret = errno;
 		close(dir_fd);
-		return -1;
+		return -ret;
 	}
 
 	f = fdopen(fd, "r");
 	if (f == NULL) {
+		ret = errno;
 		close(fd);
 		close(dir_fd);
-		return -1;
+		return -ret;
 	}
 
 	/* the real work */
@@ -284,7 +290,7 @@ static int topo_path_read_cpulist(const char *base, const char *filename, cpu_se
 
 /* topo_read_cpu_topology() - read cpu%d topoloy, where %d is cpu_index
  *
- * Return -1 on error, 0 on success
+ * Return negative on error, 0 on success
  */
 static int topo_read_cpu_topology(int cpu_index, struct wayca_topo *p_topo)
 {
@@ -297,12 +303,13 @@ static int topo_read_cpu_topology(int cpu_index, struct wayca_topo *p_topo)
 	char path_buffer[PATH_LEN_MAX];
 
 	int core_id, cluster_id, ppkg_id;
+	int ret;
 	int i;
 
 	/* allocate a new struct wayca_cpu */
 	p_topo->cpus[cpu_index] = (struct wayca_cpu *)calloc(1, sizeof(struct wayca_cpu));	/* allocated memory is set to zero */
 	if (!p_topo->cpus[cpu_index]) {
-		return -1;	/* no enough memory */
+		return -ENOMEM;	/* no enough memory */
 	}
 	p_topo->cpus[cpu_index]->cpu_id = cpu_index;
 
@@ -311,7 +318,7 @@ static int topo_read_cpu_topology(int cpu_index, struct wayca_topo *p_topo)
 	/* read cpu%d/node* to learn which numa node this cpu belongs to */
 	dir = opendir(path_buffer);
 	if (!dir)
-		return -1;
+		return -errno;
 
 	while ((dirent = readdir(dir)) != NULL) {
 		if (strncmp(dirent->d_name, "node", 4))
@@ -329,7 +336,7 @@ static int topo_read_cpu_topology(int cpu_index, struct wayca_topo *p_topo)
 					(max_node_index + 1) * sizeof(struct wayca_node *));
 			if (!p_temp) {
 				closedir(dir);
-				return -1;	/* no enough memory */
+				return -ENOMEM;	/* no enough memory */
 			}
 			p_topo->nodes = p_temp;
 		}
@@ -340,14 +347,14 @@ static int topo_read_cpu_topology(int cpu_index, struct wayca_topo *p_topo)
 			p_topo->nodes[node_index] = (struct wayca_node *)calloc(1, sizeof(struct wayca_node));	/* allocated memory is set to zero */
 			if (!p_topo->nodes[node_index]) {
 				closedir(dir);
-				return -1;	/* no enough memory */
+				return -ENOMEM;	/* no enough memory */
 			}
 			p_topo->nodes[node_index]->node_idx = node_index;
 			/* initialize this node's cpu_map */
 			p_topo->nodes[node_index]->cpu_map = CPU_ALLOC(p_topo->kernel_max_cpus);
 			if (!p_topo->nodes[node_index]->cpu_map) {
 				closedir(dir);
-				return -1;			/* no enough memory */
+				return -ENOMEM;	/* no enough memory */
 			}
 			CPU_ZERO_S(p_topo->setsize, p_topo->nodes[node_index]->cpu_map);
 			/* add node_index into the top-level node map */
@@ -389,20 +396,23 @@ static int topo_read_cpu_topology(int cpu_index, struct wayca_topo *p_topo)
 		struct wayca_cluster **p_temp;
 		p_temp = (struct wayca_cluster **)realloc(p_topo->ccls, (p_topo->n_clusters) * sizeof(struct wayca_cluster *));
 		if (!p_temp)
-			return -1;	/* no enough memory */
+			return -ENOMEM;	/* no enough memory */
 		p_topo->ccls = p_temp;
 		/* allocate a new wayca_cluster struct, and link it to p_topo->ccls */
 		p_topo->ccls[i] = (struct wayca_cluster *)calloc(1, sizeof(struct wayca_cluster));	/* with calloc, allocated memory is set to zero */
 		if (!p_topo->ccls[i])
-			return -1;	/* no enough memory */
+			return -ENOMEM;	/* no enough memory */
 		/* initialize this cluster's cpu_map */
 		p_topo->ccls[i]->cpu_map = CPU_ALLOC(p_topo->kernel_max_cpus);
 		if (!p_topo->ccls[i]->cpu_map)
-			return -1;			/* no enough memory */
+			return -ENOMEM;			/* no enough memory */
 		/* read "cluster_cpus_list" */
-		if (topo_path_read_cpulist(path_buffer, "cluster_cpus_list",
-					   p_topo->ccls[i]->cpu_map, p_topo->kernel_max_cpus) != 0)
-			return -1;	/* failed */
+		ret = topo_path_read_cpulist(path_buffer, "cluster_cpus_list",
+					   p_topo->ccls[i]->cpu_map, p_topo->kernel_max_cpus);
+		if (ret) {
+			PRINT_ERROR("get ccl %d cluster_cpu_list fail, ret = %d\n", i, ret);
+			return ret;
+		}
 		/* assign cluster_id and n_cpus */
 		p_topo->ccls[i]->cluster_id = cluster_id;
 		p_topo->ccls[i]->n_cpus = CPU_COUNT_S(p_topo->setsize, p_topo->ccls[i]->cpu_map);
@@ -412,8 +422,11 @@ static int topo_read_cpu_topology(int cpu_index, struct wayca_topo *p_topo)
 
 read_package_info:
 	/* read "physical_package_id" */
-	if (topo_path_read_s32(path_buffer, "physical_package_id", &ppkg_id) != 0)	/* on failure */
-		return -1;
+	ret = topo_path_read_s32(path_buffer, "physical_package_id", &ppkg_id);
+	if (ret) {
+		PRINT_ERROR("get physical_package_id fail, ret = %d\n", ret);
+		return ret;
+	}
 
 	/* check this "physical_package_id" exists or not */
 	for (i = 0; i < p_topo->n_packages; i++)
@@ -427,20 +440,23 @@ read_package_info:
 		p_temp = (struct wayca_package **)realloc(p_topo->packages,
 			   p_topo->n_packages * sizeof(struct wayca_package *));
 		if (!p_temp)
-			return -1;	/* no enough memory */
+			return -ENOMEM;	/* no enough memory */
 		p_topo->packages = p_temp;
 		/* allocate a new wayca_ package struct, and link it to p_topo->ccls */
 		p_topo->packages[i] = (struct wayca_package *)calloc(1, sizeof(struct wayca_package));	/* with calloc, allocated memory is set to zero */
 		if (!p_topo->packages[i])
-			return -1;	/* no enough memory */
+			return -ENOMEM;	/* no enough memory */
 		/* initialize this package's cpu_map */
 		p_topo->packages[i]->cpu_map = CPU_ALLOC(p_topo->kernel_max_cpus);
 		if (!p_topo->packages[i]->cpu_map)
-			return -1;			/* no enough memory */
+			return -ENOMEM;			/* no enough memory */
 		/* read "package_cpus_list" */
-		if (topo_path_read_cpulist(path_buffer, "package_cpus_list",
-				p_topo->packages[i]->cpu_map, p_topo->kernel_max_cpus) != 0)
-			return -1;	/* failed */
+		ret = topo_path_read_cpulist(path_buffer, "package_cpus_list",
+				p_topo->packages[i]->cpu_map, p_topo->kernel_max_cpus);
+		if (ret) {
+			PRINT_ERROR("get package %d package_cpu_list fail, ret = %d\n", i, ret);
+			return ret;
+		}
 		/* assign physical_package_id and n_cpus */
 		p_topo->packages[i]->physical_package_id = ppkg_id;
 		p_topo->packages[i]->n_cpus = CPU_COUNT_S(p_topo->setsize,
@@ -452,25 +468,29 @@ read_package_info:
 	/* read core_cpus_list, (SMT: simultaneous multi-threading) */
 	p_topo->cpus[cpu_index]->core_cpus_map = CPU_ALLOC(p_topo->kernel_max_cpus);
 	if (!p_topo->cpus[cpu_index]->core_cpus_map)
-		return -1;			/* no enough memory */
+		return -ENOMEM;			/* no enough memory */
 	/* read "core_cpus_list" */
-	if (topo_path_read_cpulist(path_buffer, "core_cpus_list",
+	ret = topo_path_read_cpulist(path_buffer, "core_cpus_list",
 				   p_topo->cpus[cpu_index]->core_cpus_map,
-				   p_topo->kernel_max_cpus) != 0)
-		return -1;	/* failed */
+				   p_topo->kernel_max_cpus);
+	if (ret) {
+		PRINT_ERROR("get cpu %d core_cpus_list fail, ret = %d\n", cpu_index, ret);
+		return ret;
+	}
 
 	return 0;	/* on success */
 }
 
 /* topo_read_node_topology() - read node%d topoloy, where %d is node_index
  *
- * Return -1 on error, 0 on success
+ * Return negative on error, 0 on success
  */
 static int topo_read_node_topology(int node_index, struct wayca_topo *p_topo)
 {
 	cpu_set_t *node_cpu_map;
 	char path_buffer[PATH_LEN_MAX];
 	int *distance_array;
+	int ret;
 
 	sprintf(path_buffer, "%s/node%d", NODE_FNAME, node_index);
 
@@ -478,13 +498,15 @@ static int topo_read_node_topology(int node_index, struct wayca_topo *p_topo)
 	node_cpu_map = CPU_ALLOC(p_topo->kernel_max_cpus);
 	if (!node_cpu_map)
 		return -ENOMEM;			/* nothing to clean up, just return */
-	if (topo_path_read_cpulist(path_buffer, "cpulist",
-			node_cpu_map, p_topo->kernel_max_cpus) != 0)
-		return -1;	/* failed */
+
+	ret = topo_path_read_cpulist(path_buffer, "cpulist",
+			node_cpu_map, p_topo->kernel_max_cpus);
+	if (ret)
+		return ret;	/* failed */
 	/* check w/ what's previously composed in cpu_topology reading */
 	if (!CPU_EQUAL_S(p_topo->setsize, node_cpu_map, p_topo->nodes[node_index]->cpu_map)) {
 		PRINT_ERROR("mismatch detected in node%d cpulist read", node_index);
-		return -1;
+		return -EINVAL;
 	}
 	CPU_FREE(node_cpu_map);
 
@@ -493,9 +515,11 @@ static int topo_read_node_topology(int node_index, struct wayca_topo *p_topo)
 	if (!distance_array)
 		return -ENOMEM;
 	/* read node's distance */
-	if (topo_path_read_multi_s32(path_buffer, "distance", p_topo->n_nodes, distance_array) != 0) {
+	ret = topo_path_read_multi_s32(path_buffer, "distance", p_topo->n_nodes, distance_array);
+	if (ret) {
+		PRINT_ERROR("get node distance fail, ret = %d\n", ret);
 		free(distance_array);
-		return -1; 	/* failed */
+		return ret; 	/* failed */
 	}
 	/* assign */
 	p_topo->nodes[node_index]->distance = distance_array;
@@ -505,9 +529,11 @@ static int topo_read_node_topology(int node_index, struct wayca_topo *p_topo)
 	struct wayca_meminfo *meminfo_tmp = (struct wayca_meminfo *)calloc(1, sizeof(struct wayca_meminfo));
 	if (!meminfo_tmp)
 		return -ENOMEM;
-	if (topo_path_parse_meminfo(path_buffer, "meminfo", meminfo_tmp) != 0) {
+	ret = topo_path_parse_meminfo(path_buffer, "meminfo", meminfo_tmp);
+	if (ret) {
+		PRINT_ERROR("get node meminfo fail, ret = %d\n", ret);
 		free(meminfo_tmp);
-		return -1; 	/* failed */
+		return ret; 	/* failed */
 	}
 	/* assign */
 	p_topo->nodes[node_index]->p_meminfo = meminfo_tmp;
@@ -522,6 +548,7 @@ static void topo_init(void)
 	cpu_set_t *cpuset_possible;
 	cpu_set_t *node_possible;
 	int i = 0;
+	int ret;
 
 	memset(p_topo, 0, sizeof(struct wayca_topo));
 
@@ -557,7 +584,9 @@ static void topo_init(void)
 
 	/* read all cpu%d topology */
 	for (i = 0; i < p_topo->n_cpus; i++) {
-		if (topo_read_cpu_topology(i, p_topo) == -1) {         /* on failure */
+		ret = topo_read_cpu_topology(i, p_topo);
+		if (ret) {
+			PRINT_ERROR("get cpu %d topology fail, ret = %d\n", i, ret);
 			goto cleanup_on_error;
 		}
 	}
@@ -590,7 +619,9 @@ static void topo_init(void)
 
 	/* read all node%d topology */
 	for (i = 0; i < p_topo->n_nodes; i++) {
-		if (topo_read_node_topology(i, p_topo) == -1) /* on failure */ {
+		ret = topo_read_node_topology(i, p_topo);
+		if (ret) {
+			PRINT_ERROR("get node %d topology fail, ret = %d", i, ret);
 			goto cleanup_on_error;
 		}
 	}
@@ -722,70 +753,70 @@ void topo_free(void)
 int wayca_sc_cpus_in_ccl(void)
 {
 	if (topo.n_clusters < 1)
-		return -1;	/* not initialized */
+		return -ENODATA;	/* not initialized */
 	return topo.ccls[0]->n_cpus;
 }
 
 int wayca_sc_cpus_in_node(void)
 {
 	if (topo.n_nodes < 1)
-		return -1;	/* not initialized */
+		return -ENODATA;	/* not initialized */
 	return topo.nodes[0]->n_cpus;
 }
 
 int wayca_sc_cpus_in_package(void)
 {
 	if (topo.n_packages < 1)
-		return -1;	/* not initialized */
+		return -ENODATA;	/* not initialized */
 	return topo.packages[0]->n_cpus;
 }
 
 int wayca_sc_cpus_in_total(void)
 {
 	if (topo.n_cpus < 1)
-		return -1;	/* not initialized */
+		return -ENODATA;	/* not initialized */
 	return topo.n_cpus;
 }
 
 int wayca_sc_ccls_in_package(void)
 {
 	if (topo.n_clusters < 1)
-		return -1;	/* not initialized */
+		return -ENODATA;	/* not initialized */
 	return topo.packages[0]->n_cpus / topo.ccls[0]->n_cpus;
 }
 
 int wayca_sc_ccls_in_node(void)
 {
 	if (topo.n_clusters < 1)
-		return -1;	/* not initialized */
+		return -ENODATA;	/* not initialized */
 	return topo.nodes[0]->n_cpus / topo.ccls[0]->n_cpus;
 }
 
 int wayca_sc_ccls_in_total(void)
 {
 	if (topo.n_clusters < 1)
-		return -1;	/* not initialized */
+		return -ENODATA;	/* not initialized */
 	return topo.n_clusters;
 }
 
 int wayca_sc_nodes_in_package(void)
 {
 	if (topo.n_packages < 1)
-		return -1;	/* not initialized */
+		return -ENODATA;	/* not initialized */
 	return topo.packages[0]->n_cpus / topo.nodes[0]->n_cpus;
 }
 
 int wayca_sc_nodes_in_total(void)
 {
 	if (topo.n_nodes < 1)
-		return -1;	/* not initialized */
+		return -ENODATA;	/* not initialized */
 	return topo.n_nodes;
 }
 
 int wayca_sc_packages_in_total(void)
 {
 	if (topo.n_packages < 1)
-		return -1;	/* not initialized */
+		return -ENODATA;	/* not initialized */
 	return topo.n_packages;
 }
 
