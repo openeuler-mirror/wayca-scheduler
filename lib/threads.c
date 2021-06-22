@@ -13,6 +13,9 @@
 #include <wayca-scheduler.h>
 #include "wayca_thread.h"
 
+WAYCA_SC_INIT_PRIO(wayca_thread_init, THREAD);
+WAYCA_SC_FINI_PRIO(wayca_thread_exit, THREAD);
+
 static inline void set_cpu_mask(int cpu, cpu_set_t * mask)
 {
 	CPU_ZERO(mask);
@@ -255,7 +258,7 @@ cpu_set_t total_cpu_set;
 long long *wayca_cpu_loads;
 pthread_mutex_t wayca_cpu_loads_mutex;
 
-__attribute__((constructor)) void wayca_thread_init(void)
+static void wayca_thread_init(void)
 {
 	size_t num, total_cpu_cnt;
 	char *p;
@@ -292,7 +295,7 @@ __attribute__((constructor)) void wayca_thread_init(void)
 	pthread_mutex_init(&wayca_groups_array_mutex, NULL);
 }
 
-__attribute__((destructor)) void wayca_thread_exit(void)
+static void wayca_thread_exit(void)
 {
 	free(wayca_cpu_loads);
 	pthread_mutex_destroy(&wayca_cpu_loads_mutex);

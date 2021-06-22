@@ -18,6 +18,8 @@
 #include "common.h"
 #include "topo.h"
 
+WAYCA_SC_INIT_PRIO(topo_init, TOPO);
+WAYCA_SC_FINI_PRIO(topo_free, TOPO);
 static struct wayca_topo topo;
 
 /* return -1 on error, 0 on success */
@@ -514,11 +516,7 @@ static int topo_read_node_topology(int node_index, struct wayca_topo *p_topo)
 }
 
 /* External callable functions */
-
-void __attribute__ ((constructor)) topo_init(void);
-void __attribute__ ((destructor)) topo_free(void);
-
-void topo_init(void)
+static void topo_init(void)
 {
 	struct wayca_topo *p_topo = &topo;
 	cpu_set_t *cpuset_possible;
