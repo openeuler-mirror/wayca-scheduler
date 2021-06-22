@@ -58,17 +58,32 @@ struct wayca_cluster {
 	cpu_set_t *cpu_map;	/* mask of contained CPUs */
 };
 
+struct wayca_irq {
+	unsigned int irq_number;
+	unsigned int active; 		/* actively used in /proc/interrupts
+					 * 1: active;
+					 * 0: inactive;
+					 */
+	/* TODO: fine tune irq_name space */
+	char irq_name[WAYCA_CACHE_STRING_LEN];	/* string as reported in /proc/interrupts */
+};
+
+struct wayca_device_irqs {
+	size_t n_irqs;		/* number of irqs for this device */
+	struct wayca_irq *irqs; /* array */
+};
+
 struct wayca_pci_device {
 	int numa_node;
 	char absolute_path[PATH_LEN_MAX];
+	cpu_set_t *local_cpu_map;
 
 	unsigned int   class;		/* 3 bytes: (base, sub, prog-if) */
 	unsigned short vendor;
 	unsigned short device;
-
 	unsigned int enable;
 
-	cpu_set_t *local_cpu_map;
+	struct wayca_device_irqs irqs;	/* array of registered irqs */
 };
 
 struct wayca_node {

@@ -541,7 +541,6 @@ read_package_info:
 	size_t n_caches = 0;
 	struct wayca_cache *p_caches;
 	int type_len, real_len;
-	char size_string[WAYCA_CACHE_STRING_LEN];
 
 	/* count the number of caches exists */
 	do {
@@ -563,13 +562,13 @@ read_package_info:
 	p_topo->cpus[cpu_index]->p_caches = (struct wayca_cache *)calloc(n_caches,
 						sizeof(struct wayca_cache));
 	if (!p_topo->cpus[cpu_index]->p_caches)
-		return -1;	/* no enough memory */
+		return -ENOMEM;			/* no enough memory */
 
 	p_caches = p_topo->cpus[cpu_index]->p_caches;
 
 	for (i = 0; i < n_caches; i++) {
 		/* move the base to "cpu%d/cache/index%zu" */
-		sprintf(path_buffer, "%s/cpu%d/cache/index%zu", CPU_FNAME, cpu_index, i);
+		sprintf(path_buffer, "%s/cpu%d/cache/index%d", CPU_FNAME, cpu_index, i);
 
 		/* read cache: id, level, type */
 		if (topo_path_read_s32(path_buffer, "id", &p_caches[i].id) != 0)
@@ -606,13 +605,13 @@ read_package_info:
 
 		/* read cache: ways_of_associativity, etc. */
 		topo_path_read_s32(path_buffer, "ways_of_associativity",
-					&p_caches[i].ways_of_associativity);
+					(int *)&p_caches[i].ways_of_associativity);
 		topo_path_read_s32(path_buffer, "physical_line_partition",
-					&p_caches[i].physical_line_partition);
+					(int *)&p_caches[i].physical_line_partition);
 		topo_path_read_s32(path_buffer, "number_of_sets",
-					&p_caches[i].number_of_sets);
+					(int *)&p_caches[i].number_of_sets);
 		topo_path_read_s32(path_buffer, "coherency_line_size",
-					&p_caches[i].coherency_line_size);
+					(int *)&p_caches[i].coherency_line_size);
 
 		/* read cache size */
 		type_len = topo_path_read_buffer(path_buffer, "size",
@@ -628,11 +627,14 @@ read_package_info:
 		/* read cache: shared_cpu_list */
 		p_caches[i].shared_cpu_map = CPU_ALLOC(p_topo->kernel_max_cpus);
 		if (!p_caches[i].shared_cpu_map)
-			return -1;			/* no enough memory */
-		if (topo_path_read_cpulist(path_buffer, "shared_cpu_list",
-				p_caches[i].shared_cpu_map, p_topo->kernel_max_cpus) != 0)
-			return -1;			/* failed */
-
+			return -ENOMEM;			/* no enough memory */
+		ret = topo_path_read_cpulist(path_buffer, "shared_cpu_list",
+				p_caches[i].shared_cpu_map, p_topo->kernel_max_cpus);
+		if (ret) {
+			PRINT_ERROR("Failed to read %s/shared_cpu_list, \
+				     Error code: %d\n", path_buffer, ret);
+			return ret;
+		}
 	} /* end of for n_caches */
 
 	return 0;	/* on success */
@@ -788,7 +790,7 @@ static void topo_init(void)
 	 *  - p_topo->nodes[]->distance
 	 */
 	/* read I/O devices topology */
-	if (topo_recursively_read_io_devices(SYSDEV_FNAME, p_topo) == -1)
+	if (topo_recursively_read_io_devices(SYSDEV_FNAME, p_topo) != 0)
 		goto cleanup_on_error;
 
 	return;
@@ -827,6 +829,14 @@ void topo_print_wayca_node(size_t setsize, struct wayca_node *p_node, size_t dis
 		PRINT_DBG("\t\t number of local CPUs: %d\n",
 				CPU_COUNT_S(setsize, p_node->pcidevs[i]->local_cpu_map));
 		PRINT_DBG("\t\t absolute_path: %s\n", p_node->pcidevs[i]->absolute_path);
+		/* print irqs */
+		int j;
+		PRINT_DBG("\t\t count of irqs (inc. msi_irqs): %d\n", j = p_node->pcidevs[i]->irqs.n_irqs);
+		PRINT_DBG("\t\t\t List of IRQs: ");
+		for (j = 0; j < p_node->pcidevs[i]->irqs.n_irqs; j ++) {
+			PRINT_DBG("%u\t", p_node->pcidevs[i]->irqs.irqs[j].irq_number);
+		}
+		PRINT_DBG("\n");
 	}
 	/* TODO: fill up the following */
 	PRINT_DBG("pointer of cluster_map: 0x%p EXPECTED (nil)\n", p_node->cluster_map);
@@ -838,7 +848,7 @@ void topo_print_wayca_cpu(size_t setsize, struct wayca_cpu *p_cpu)
 	PRINT_DBG("core_id: %d\n", p_cpu->core_id);
 	PRINT_DBG("\tCPU count in this core / SMT factor: %d\n",
 				CPU_COUNT_S(setsize, p_cpu->core_cpus_map));
-	PRINT_DBG("Number of caches: %d\n", p_cpu->n_caches);
+	PRINT_DBG("Number of caches: %zu\n", p_cpu->n_caches);
 	for (int i = 0; i < p_cpu->n_caches; i++) {
 		PRINT_DBG("\tCache index %d:\n", i);
 		PRINT_DBG("\t\tid: %d\n", p_cpu->p_caches[i].id);
@@ -927,6 +937,7 @@ void topo_free(void)
 		free(p_topo->nodes[i]->p_meminfo);
 		for (j = 0; j < p_topo->nodes[i]->n_pcidevs; j++) {
 			CPU_FREE(p_topo->nodes[i]->pcidevs[j]->local_cpu_map);
+			free(p_topo->nodes[i]->pcidevs[j]->irqs.irqs);
 			free(p_topo->nodes[i]->pcidevs[j]);
 		}
 		free(p_topo->nodes[i]->pcidevs);
@@ -1264,10 +1275,116 @@ int pipe_latency_NUMA[4] = {
 	 * diff CCLs |  NUMAs   | NUMA0  | NUMA1  */
 };
 
+/* parse I/O device irqs information
+ * Input: device_sysfs_dir, this device's absolute pathname in /sys/devices
+ * Return negative on error, 0 on success
+ */
+static int topo_parse_device_irqs(const char *device_sysfs_dir, struct wayca_device_irqs *wirqs)
+{
+	DIR *dp;
+	struct dirent *entry;
+	struct stat statbuf;
+	int msi_irqs_exist = 0;
+	int irq_file_exist = 0;
+	int msi_irqs_count = 0;
+	char path_buffer[PATH_LEN_MAX];
 
-/* TODO: for recursively searching the directories for PCI devices' and finding 'numa_node' */
+	struct wayca_irq *p_irqs;	/* pointer to array */
 
-/* Return -1 on failure, 0 on successs
+	/* init */
+	wirqs->n_irqs = 0;
+
+	/* find "msi_irqs" and/or "irq" */
+	if ((dp = opendir(device_sysfs_dir)) == NULL)
+		return -errno;
+	while (((msi_irqs_exist == 0) || (irq_file_exist == 0)) &&
+			(entry = readdir(dp)) != NULL) {
+		lstat(entry->d_name, &statbuf);
+		if ((msi_irqs_exist == 0) && S_ISDIR(statbuf.st_mode)) {
+			if (strcmp("msi_irqs",entry->d_name) == 0) {
+				msi_irqs_exist = 1;	/* Found a 'msi_irqs' directory */
+				PRINT_DBG("FOUND msi_irqs directory under %s\n", device_sysfs_dir);
+				continue;
+			}
+		}
+		else if ((irq_file_exist == 0) && (strcmp("irq", entry->d_name) == 0)) {
+				irq_file_exist = 1;	/* Found a file named 'irq' */
+				PRINT_DBG("FOUND irq file under %s\n", device_sysfs_dir);
+				continue;
+		}
+	}
+	closedir(dp);
+
+	if (msi_irqs_exist == 1) {
+		sprintf(path_buffer, "%s/msi_irqs", device_sysfs_dir);
+
+		dp = opendir(path_buffer);
+		if (dp == NULL)
+			return -errno;
+		while ((entry = readdir(dp)) != NULL) {
+			if (entry->d_type == DT_REG) { /* If the entry is a regular file */
+				msi_irqs_count++;
+			}
+		}
+		wirqs->n_irqs = msi_irqs_count;
+		PRINT_DBG("Found %d interrupts in msi_irqs\n", msi_irqs_count);
+
+		/* allocate irq structs */
+		p_irqs = (struct wayca_irq *)calloc(msi_irqs_count, sizeof(struct wayca_irq));
+		if (!p_irqs) {
+			closedir(dp);
+			return -ENOMEM;		/* no enough memory */
+		}
+		wirqs->irqs = p_irqs;
+
+		/* fill in irq_number */
+		rewinddir(dp);
+		int i = 0;
+		PRINT_DBG("\tInterrupt numbers: ");
+		while ( (msi_irqs_count != 0) && (entry = readdir(dp)) != NULL) {
+			if (entry->d_type == DT_REG) { /* If the entry is a regular file */
+				p_irqs[i++].irq_number = atoi(entry->d_name);
+				PRINT_DBG("%u\t", p_irqs[i-1].irq_number);
+				msi_irqs_count--;
+			}
+		}
+		PRINT_DBG("\n");
+		closedir(dp);
+	}
+
+	if (irq_file_exist == 1) {
+		int irq_number = 0;
+		int j;
+
+		topo_path_read_s32(device_sysfs_dir, "irq", &irq_number);
+		PRINT_DBG("irq file exists, irq number is: %d\n", irq_number);
+		if (irq_number < 0)
+			irq_number = 0;		/* on failure */
+		/* check it exists in wirqs or not */
+		for(j = 0; j < wirqs->n_irqs; j ++)
+			if (wirqs->irqs[j].irq_number == irq_number)
+				break;
+		if (j == wirqs->n_irqs) {	/* doesn't exist, create a new one */
+			p_irqs = (struct wayca_irq *)realloc(wirqs->irqs,
+					(wirqs->n_irqs + 1) * sizeof(struct wayca_irq));
+			if (!p_irqs)
+				return -ENOMEM;		/* no enough memory */
+			p_irqs[wirqs->n_irqs].irq_number = irq_number;
+			wirqs->n_irqs ++;
+			wirqs->irqs = p_irqs;
+		}
+	}
+
+	/* TODO */
+	/* for each irq structure created:
+		Is the 'irq_no.' actively used in /proc/interrupts
+		if yes, read in its interrupt name and strings. i.e.
+	 */
+
+	return 0;
+}
+
+/* Return negative on error, 0 on success
  */
 static int topo_parse_io_device(const char *dir, struct wayca_topo *p_topo)
 {
@@ -1282,7 +1399,7 @@ static int topo_parse_io_device(const char *dir, struct wayca_topo *p_topo)
 		/* allocate struct wayca_pci_device */
 		p_pcidev = (struct wayca_pci_device *)calloc(1, sizeof(struct wayca_pci_device));
 		if (!p_pcidev) {
-			return -1;		/* no enough memory */
+			return -ENOMEM;		/* no enough memory */
 		}
 		/* store dir full path */
 		strcpy(p_pcidev->absolute_path, dir);
@@ -1311,12 +1428,12 @@ static int topo_parse_io_device(const char *dir, struct wayca_topo *p_topo)
 				(p_topo->nodes[i]->n_pcidevs + 1) * sizeof(struct wayca_pci_device *));
 		if (!p_temp) {
 			free(p_pcidev);
-			return -1;	/* no enough memory */
+			return -ENOMEM;		/* no enough memory */
 		}
 		p_topo->nodes[i]->pcidevs = p_temp;
 		p_topo->nodes[i]->pcidevs[p_topo->nodes[i]->n_pcidevs] = p_pcidev;
 		p_topo->nodes[i]->n_pcidevs ++;		/* incement number of PCI devices */
-		PRINT_DBG("n_pcidevs = %d\n", p_topo->nodes[i]->n_pcidevs);
+		PRINT_DBG("n_pcidevs = %zu\n", p_topo->nodes[i]->n_pcidevs);
 
 		/* read PCI information into: p_pcidev
 		 * Note: sysfs data output format is defined in linux kernel code:
@@ -1350,12 +1467,22 @@ static int topo_parse_io_device(const char *dir, struct wayca_topo *p_topo)
 		/* read local_cpulist */
 		p_pcidev->local_cpu_map = CPU_ALLOC(p_topo->kernel_max_cpus);
 		if (!p_pcidev->local_cpu_map)
-			return -1;			/* no enough memory */
-		if (topo_path_read_cpulist(dir, "local_cpulist",
-					   p_pcidev->local_cpu_map, p_topo->kernel_max_cpus) != 0)
-			return -1;			/* failed */
+			return -ENOMEM;		/* no enough memory */
+		ret = topo_path_read_cpulist(dir, "local_cpulist",
+					   p_pcidev->local_cpu_map,
+					   p_topo->kernel_max_cpus);
+		if (ret != 0) {
+			PRINT_ERROR("Failed to get local_cpulist, ret = %d\n",
+				     ret);
+			return ret;
+		}
 
-		/* TODO: read irqs */
+		/* read irqs */
+		if (( ret = topo_parse_device_irqs(dir, &p_pcidev->irqs)) < 0) {
+			PRINT_ERROR("Failed in topo_parse_device_irqs: %s\n", dir);
+			PRINT_ERROR("\t Error code: %d\n", ret);
+			return ret;
+		}
 		/* TODO: read enable */
 		p_pcidev->enable = 1;
 		return 0;
@@ -1374,9 +1501,10 @@ static int topo_parse_io_device(const char *dir, struct wayca_topo *p_topo)
 	return 0;
 }
 
-/* Return -1 on failure, 0 on successs
+/* Return negative on error, 0 on success
  */
-static int topo_recursively_read_io_devices(const char *rootdir, struct wayca_topo *p_topo)
+static int topo_recursively_read_io_devices(const char *rootdir,
+					    struct wayca_topo *p_topo)
 {
 	DIR *dp;
 	struct dirent *entry;
@@ -1384,7 +1512,7 @@ static int topo_recursively_read_io_devices(const char *rootdir, struct wayca_to
 	char cwd[PATH_LEN_MAX];
 
 	if ((dp = opendir(rootdir)) == NULL)
-		return -1;				/* on failure */
+		return -errno;				/* on failure */
 
 	chdir(rootdir);
 	while ((entry = readdir(dp)) != NULL) {
@@ -1397,23 +1525,20 @@ static int topo_recursively_read_io_devices(const char *rootdir, struct wayca_to
 			topo_recursively_read_io_devices(entry->d_name, p_topo);
 		}
 		else {
+			/* TODO: We rely on 'numa_node' to represent a legitimate
+			 *  i/o device. However 'numa_node' exists only when
+			 *  NUMA is enabled in kernel. So,
+			 *  - Need to consider a better idea of identifying i/o
+			 *    device.
+			 */
 			if (strcmp("numa_node", entry->d_name) == 0) {
-				topo_parse_io_device(getcwd(cwd, PATH_LEN_MAX), p_topo);
+				topo_parse_io_device(getcwd(cwd, PATH_LEN_MAX),
+							    p_topo);
 			}
 		}
 	}
 
 	chdir("..");
 	closedir(dp);
+	return 0;
 }
-
-#if 0
-int main()
-{
-    printf("Directory scan of /home:\n");
-    printdir("/home",0);
-    printf("done.\n");
-    exit(0);
-}
-
-#endif
