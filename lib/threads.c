@@ -675,6 +675,7 @@ int wayca_sc_group_detach_group(wayca_sc_group_t group, wayca_sc_group_t father)
 	return ret;
 }
 
+#ifdef WAYCA_SC_DEBUG
 int wayca_sc_thread_get_cpuset(wayca_sc_thread_t wthread, cpu_set_t *cpuset)
 {
 	struct wayca_thread *wt_p;
@@ -704,14 +705,4 @@ int wayca_sc_group_get_cpuset(wayca_sc_group_t group, cpu_set_t *cpuset)
 
 	return 0;
 }
-
-pthread_t wayca_thread_get_pthtread(wayca_sc_thread_t wthread)
-{
-	struct wayca_thread *thread;
-
-	if (!is_thread_id_valid(wthread))
-		return -1; /* Invalid id */
-
-	thread = id_to_wayca_thread(wthread);
-	return thread->thread;
-}
+#endif /* WAYCA_SC_DEBUG */

@@ -40,8 +40,6 @@ int wayca_sc_get_package_id(int cpu);
 
 int wayca_sc_get_node_mem_size(int node, unsigned long *size);
 
-void topo_print(void);
-
 int wayca_managed_thread_create(int id, pthread_t *thread, const pthread_attr_t *attr,
 				void *(*start_routine) (void *), void *arg);
 
@@ -86,9 +84,23 @@ int wayca_sc_group_attach_group(wayca_sc_group_t group, wayca_sc_group_t father)
 int wayca_sc_group_detach_group(wayca_sc_group_t group, wayca_sc_group_t father);
 
 /* For debug purpose */
+#ifdef WAYCA_SC_DEBUG
+void wayca_sc_topo_print(void);
 int wayca_sc_thread_get_cpuset(wayca_sc_thread_t wthread, cpu_set_t *cpuset);
 int wayca_sc_group_get_cpuset(wayca_sc_group_t group, cpu_set_t *cpuset);
-
-pthread_t wayca_thread_get_pthtread(wayca_sc_thread_t wthread);
+#else
+static inline
+void wayca_sc_topo_print(void) { }
+static inline
+int wayca_sc_thread_get_cpuset(wayca_sc_thread_t wthread, cpu_set_t *cpuset)
+{
+	return 0;
+}
+static inline
+int wayca_sc_group_get_cpuset(wayca_sc_group_t group, cpu_set_t *cpuset)
+{
+	return 0;
+}
+#endif /* WAYCA_SC_DEBUG */
 
 #endif
