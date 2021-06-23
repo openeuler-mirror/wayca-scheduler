@@ -55,4 +55,15 @@ int thread_bind_cpulist(pid_t pid, char *s);
 int process_bind_cpumask(pid_t pid, cpu_set_t *cpumask, size_t maxCpus);
 int thread_bind_cpumask(pid_t pid, cpu_set_t *cpumask, size_t maxCpus);
 
+int thread_bind_cpu(pid_t pid, int cpu);
+int thread_bind_ccl(pid_t pid, int cpu);
+int thread_bind_node(pid_t pid, int node);
+int thread_bind_package(pid_t pid, int node);
+int thread_unbind(pid_t pid);
+int process_bind_cpu(pid_t pid, int cpu);
+int process_bind_ccl(pid_t pid, int cpu);
+int process_bind_node(pid_t pid, int node);
+int process_bind_package(pid_t pid, int node);
+int process_unbind(pid_t pid);
+
 #endif

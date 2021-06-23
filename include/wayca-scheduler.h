@@ -6,17 +6,6 @@
 #include <pthread.h>
 #include <unistd.h>
 
-int thread_bind_cpu(pid_t pid, int cpu);
-int thread_bind_ccl(pid_t pid, int cpu);
-int thread_bind_node(pid_t pid, int node);
-int thread_bind_package(pid_t pid, int node);
-int thread_unbind(pid_t pid);
-int process_bind_cpu(pid_t pid, int cpu);
-int process_bind_ccl(pid_t pid, int cpu);
-int process_bind_node(pid_t pid, int node);
-int process_bind_package(pid_t pid, int node);
-int process_unbind(pid_t pid);
-
 int wayca_sc_irq_bind_cpu(int irq, int cpu);
 
 int wayca_sc_mem_interleave_in_package(int node);
