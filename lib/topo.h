@@ -11,25 +11,26 @@
 
 #include <sched.h>
 
-#define SYSDEV_FNAME 	"/sys/devices"
-#define NODE_FNAME 	"/sys/devices/system/node"
-#define CPU_FNAME 	"/sys/devices/system/cpu"	/* no ending '/' in the filename */
-#define DEFAULT_KERNEL_MAX 	(2048)
-#define PATH_LEN_MAX		(4096)		/* maximum length of file pathname */ 
-#define MAX_FD_RETRIES		(5)		/* maximum retries when reading from an open file */
-#define USLEEP_DELAY_250MS	(250000)	/* 250ms */
+#define WAYCA_SC_SYSDEV_FNAME 	"/sys/devices"
+#define WAYCA_SC_NODE_FNAME 	"/sys/devices/system/node"
+#define WAYCA_SC_CPU_FNAME 	"/sys/devices/system/cpu"
+
+#define WAYCA_SC_DEFAULT_KERNEL_MAX 	(2048)
+#define WAYCA_SC_PATH_LEN_MAX		(4096)		/* maximum length of file pathname */
+#define WAYCA_SC_MAX_FD_RETRIES		(5)		/* maximum retries when reading from an open file */
+#define WAYCA_SC_USLEEP_DELAY_250MS	(250000)	/* 250ms */
+#define WAYCA_SC_ATTR_STRING_LEN	(256)		/* default attribute string length */
 
 #define PRINT_DBG	printf
 #define PRINT_ERROR	printf
 
-#define WAYCA_CACHE_STRING_LEN	(256)
 struct wayca_cache {
 	int id;
 	int level;
-	char type[WAYCA_CACHE_STRING_LEN];
-	char allocation_policy[WAYCA_CACHE_STRING_LEN];
-	char write_policy[WAYCA_CACHE_STRING_LEN];
-	char cache_size[WAYCA_CACHE_STRING_LEN];
+	char type[WAYCA_SC_ATTR_STRING_LEN];
+	char allocation_policy[WAYCA_SC_ATTR_STRING_LEN];
+	char write_policy[WAYCA_SC_ATTR_STRING_LEN];
+	char cache_size[WAYCA_SC_ATTR_STRING_LEN];
 
 	unsigned int	ways_of_associativity;
 	unsigned int	physical_line_partition;
@@ -65,7 +66,7 @@ struct wayca_irq {
 					 * 0: inactive;
 					 */
 	/* TODO: fine tune irq_name space */
-	char irq_name[WAYCA_CACHE_STRING_LEN];	/* string as reported in /proc/interrupts */
+	char irq_name[WAYCA_SC_ATTR_STRING_LEN];	/* string as reported in /proc/interrupts */
 };
 
 struct wayca_device_irqs {
@@ -75,7 +76,7 @@ struct wayca_device_irqs {
 
 struct wayca_pci_device {
 	int numa_node;
-	char absolute_path[PATH_LEN_MAX];
+	char absolute_path[WAYCA_SC_PATH_LEN_MAX];
 	cpu_set_t *local_cpu_map;
 
 	unsigned int   class;		/* 3 bytes: (base, sub, prog-if) */

@@ -24,7 +24,7 @@ static struct wayca_topo topo;
 
 /* topo_path_read_buffer - read from filename into buf, maximum 'count' in size
  * return:
- *   -1 on error
+ *   negative on error
  *   0 or more: total number of bytes read
  */
 static int topo_path_read_buffer(const char *base, const char *filename,
@@ -33,22 +33,25 @@ static int topo_path_read_buffer(const char *base, const char *filename,
 	int dir_fd;
 	int fd;
 	FILE *f;
-	int ret, c, tries = 0;
+	int ret;
+	int c = 0, tries = 0;
 
 	dir_fd = open(base, O_RDONLY|O_CLOEXEC);
-	if (dir_fd == -1) return -1;
+	if (dir_fd == -1) return -errno;
 
 	fd = openat(dir_fd, filename, O_RDONLY);
 	if (fd == -1) {
+		ret = errno;
 		close(dir_fd);
-		return -1;
+		return -ret;
 	}
 
 	f = fdopen(fd, "r");
 	if (f == NULL) {
+		ret = errno;
 		close(fd);
 		close(dir_fd);
-		return -1;
+		return -ret;
 	}
 
 	/* read into buf */
@@ -57,11 +60,11 @@ static int topo_path_read_buffer(const char *base, const char *filename,
 		ret = read(fd, buf, count);
 		if (ret < 0) {
 			if ((errno == EAGAIN || errno == EINTR)
-					&& (tries++ < MAX_FD_RETRIES)) {
-				usleep(USLEEP_DELAY_250MS);
+					&& (tries++ < WAYCA_SC_MAX_FD_RETRIES)) {
+				usleep(WAYCA_SC_USLEEP_DELAY_250MS);
 				continue;
 			}
-			c = c ? c : -1;
+			c = c ? c : (-errno);
 			break;			/* failure */
 		}
 		if (ret == 0)
@@ -359,7 +362,7 @@ static int topo_read_cpu_topology(int cpu_index, struct wayca_topo *p_topo)
 	struct dirent *dirent;
 	long node_index;
 	char *endptr;
-	char path_buffer[PATH_LEN_MAX];
+	char path_buffer[WAYCA_SC_PATH_LEN_MAX];
 
 	int core_id, cluster_id, ppkg_id;
 	int ret;
@@ -372,7 +375,7 @@ static int topo_read_cpu_topology(int cpu_index, struct wayca_topo *p_topo)
 	}
 	p_topo->cpus[cpu_index]->cpu_id = cpu_index;
 
-	sprintf(path_buffer, "%s/cpu%d", CPU_FNAME, cpu_index);
+	sprintf(path_buffer, "%s/cpu%d", WAYCA_SC_CPU_FNAME, cpu_index);
 
 	/* read cpu%d/node* to learn which numa node this cpu belongs to */
 	dir = opendir(path_buffer);
@@ -430,7 +433,7 @@ static int topo_read_cpu_topology(int cpu_index, struct wayca_topo *p_topo)
 	closedir(dir);
 
 	/* move the base to "cpu%d/topology" */
-	sprintf(path_buffer, "%s/cpu%d/topology", CPU_FNAME, cpu_index);
+	sprintf(path_buffer, "%s/cpu%d/topology", WAYCA_SC_CPU_FNAME, cpu_index);
 
 	/* read "core_id" */
 	if (topo_path_read_s32(path_buffer, "core_id", &core_id) != 0)	/* on failure */
@@ -545,7 +548,7 @@ read_package_info:
 	/* count the number of caches exists */
 	do {
 		/* move the base to "cpu%d/cache/index%zu" */
-		sprintf(path_buffer, "%s/cpu%d/cache/index%zu", CPU_FNAME, cpu_index, n_caches);
+		sprintf(path_buffer, "%s/cpu%d/cache/index%zu", WAYCA_SC_CPU_FNAME, cpu_index, n_caches);
 		/* check access */
 		if (access(path_buffer, F_OK) != 0) /* doesn't exist */
 			break;
@@ -568,7 +571,7 @@ read_package_info:
 
 	for (i = 0; i < n_caches; i++) {
 		/* move the base to "cpu%d/cache/index%zu" */
-		sprintf(path_buffer, "%s/cpu%d/cache/index%d", CPU_FNAME, cpu_index, i);
+		sprintf(path_buffer, "%s/cpu%d/cache/index%d", WAYCA_SC_CPU_FNAME, cpu_index, i);
 
 		/* read cache: id, level, type */
 		if (topo_path_read_s32(path_buffer, "id", &p_caches[i].id) != 0)
@@ -576,7 +579,7 @@ read_package_info:
 		if (topo_path_read_s32(path_buffer, "level", &p_caches[i].level) != 0)
 			p_caches[i].level = -1;	/* on failure */
 		type_len = topo_path_read_buffer(path_buffer, "type", p_caches[i].type,
-						  WAYCA_CACHE_STRING_LEN);
+						  WAYCA_SC_ATTR_STRING_LEN);
 		real_len = strlen(p_caches[i].type);
 		if (type_len <= 0)
 			p_caches[i].type[0] = '\0';		/* on failure */
@@ -586,7 +589,7 @@ read_package_info:
 		/* read cache: allocation_policy */
 		type_len = topo_path_read_buffer(path_buffer, "allocation_policy",
 						  p_caches[i].allocation_policy,
-						  WAYCA_CACHE_STRING_LEN);
+						  WAYCA_SC_ATTR_STRING_LEN);
 		real_len = strlen(p_caches[i].allocation_policy);
 		if (type_len <= 0)
 			p_caches[i].allocation_policy[0] = '\0';
@@ -596,7 +599,7 @@ read_package_info:
 		/* read cache: write_policy */
 		type_len = topo_path_read_buffer(path_buffer, "write_policy",
 						  p_caches[i].write_policy,
-						  WAYCA_CACHE_STRING_LEN);
+						  WAYCA_SC_ATTR_STRING_LEN);
 		real_len = strlen(p_caches[i].write_policy);
 		if (type_len <= 0)
 			p_caches[i].write_policy[0] = '\0';
@@ -616,7 +619,7 @@ read_package_info:
 		/* read cache size */
 		type_len = topo_path_read_buffer(path_buffer, "size",
 						  p_caches[i].cache_size,
-						  WAYCA_CACHE_STRING_LEN);
+						  WAYCA_SC_ATTR_STRING_LEN);
 		real_len = strlen(p_caches[i].cache_size);
 		if (type_len <= 0)
 			p_caches[i].cache_size[0] = '\0';
@@ -647,11 +650,11 @@ read_package_info:
 static int topo_read_node_topology(int node_index, struct wayca_topo *p_topo)
 {
 	cpu_set_t *node_cpu_map;
-	char path_buffer[PATH_LEN_MAX];
+	char path_buffer[WAYCA_SC_PATH_LEN_MAX];
 	int *distance_array;
 	int ret;
 
-	sprintf(path_buffer, "%s/node%d", NODE_FNAME, node_index);
+	sprintf(path_buffer, "%s/node%d", WAYCA_SC_NODE_FNAME, node_index);
 
 	/* read node's cpulist */
 	node_cpu_map = CPU_ALLOC(p_topo->kernel_max_cpus);
@@ -714,10 +717,10 @@ static void topo_init(void)
 	memset(p_topo, 0, sizeof(struct wayca_topo));
 
 	/* read "cpu/kernel_max" to determine maximum size for future memory allocations */
-	if (topo_path_read_s32(CPU_FNAME, "kernel_max", &p_topo->kernel_max_cpus) == 0)
+	if (topo_path_read_s32(WAYCA_SC_CPU_FNAME, "kernel_max", &p_topo->kernel_max_cpus) == 0)
 		p_topo->kernel_max_cpus += 1;
 	else
-		p_topo->kernel_max_cpus = DEFAULT_KERNEL_MAX;
+		p_topo->kernel_max_cpus = WAYCA_SC_DEFAULT_KERNEL_MAX;
 	p_topo->setsize = CPU_ALLOC_SIZE(p_topo->kernel_max_cpus);
 
 	/* read "cpu/possible" to determine number of CPUs */
@@ -725,7 +728,7 @@ static void topo_init(void)
 	if (!cpuset_possible)
 		return;			/* nothing to clean up, just return */
 
-	if (topo_path_read_cpulist(CPU_FNAME, "possible", cpuset_possible, p_topo->kernel_max_cpus) == 0) {
+	if (topo_path_read_cpulist(WAYCA_SC_CPU_FNAME, "possible", cpuset_possible, p_topo->kernel_max_cpus) == 0) {
 		/* determine number of CPUs in cpuset_possible */
 		p_topo->n_cpus = CPU_COUNT_S(p_topo->setsize, cpuset_possible);
 		p_topo->cpu_map = cpuset_possible;
@@ -766,7 +769,7 @@ static void topo_init(void)
 		goto cleanup_on_error;
 
 	/* read "node/possible" to determine number of numa nodes */
-	if (topo_path_read_cpulist(NODE_FNAME, "possible", node_possible, p_topo->n_cpus) == 0) {
+	if (topo_path_read_cpulist(WAYCA_SC_NODE_FNAME, "possible", node_possible, p_topo->n_cpus) == 0) {
 		if (!CPU_EQUAL_S(CPU_ALLOC_SIZE(p_topo->n_cpus), node_possible, p_topo->node_map) ||
 		    CPU_COUNT_S(CPU_ALLOC_SIZE(p_topo->n_cpus), node_possible) != p_topo->n_nodes) {
 			/* mismatch with what cpu topology shows */
@@ -790,7 +793,7 @@ static void topo_init(void)
 	 *  - p_topo->nodes[]->distance
 	 */
 	/* read I/O devices topology */
-	if (topo_recursively_read_io_devices(SYSDEV_FNAME, p_topo) != 0)
+	if (topo_recursively_read_io_devices(WAYCA_SC_SYSDEV_FNAME, p_topo) != 0)
 		goto cleanup_on_error;
 
 	return;
@@ -1287,7 +1290,7 @@ static int topo_parse_device_irqs(const char *device_sysfs_dir, struct wayca_dev
 	int msi_irqs_exist = 0;
 	int irq_file_exist = 0;
 	int msi_irqs_count = 0;
-	char path_buffer[PATH_LEN_MAX];
+	char path_buffer[WAYCA_SC_PATH_LEN_MAX];
 
 	struct wayca_irq *p_irqs;	/* pointer to array */
 
@@ -1391,7 +1394,7 @@ static int topo_parse_io_device(const char *dir, struct wayca_topo *p_topo)
 	int node_nb;
 	int i;
 	int ret;
-	char buf[WAYCA_CACHE_STRING_LEN];
+	char buf[WAYCA_SC_ATTR_STRING_LEN];
 	struct wayca_pci_device *p_pcidev;
 
 	if (strstr(dir, "pci")) {		/* PCI */
@@ -1440,7 +1443,7 @@ static int topo_parse_io_device(const char *dir, struct wayca_topo *p_topo)
 		 *           [linux.kernel]/drivers/pci/pci-sysfs.c
 		 */
 		/* read class:vendor:device */
-		ret = topo_path_read_buffer(dir, "class", buf, WAYCA_CACHE_STRING_LEN);
+		ret = topo_path_read_buffer(dir, "class", buf, WAYCA_SC_ATTR_STRING_LEN);
 		if (ret <= 0)
 			p_pcidev->class = 0;		/* on failure */
 		else {
@@ -1448,7 +1451,7 @@ static int topo_parse_io_device(const char *dir, struct wayca_topo *p_topo)
 				p_pcidev->class = 0;		/* on failure */
 			PRINT_DBG("class: 0x%06x\n", p_pcidev->class);
 		}
-		ret = topo_path_read_buffer(dir, "vendor", buf, WAYCA_CACHE_STRING_LEN);
+		ret = topo_path_read_buffer(dir, "vendor", buf, WAYCA_SC_ATTR_STRING_LEN);
 		if (ret <= 0)
 			p_pcidev->vendor= 0;		/* on failure */
 		else {
@@ -1456,7 +1459,7 @@ static int topo_parse_io_device(const char *dir, struct wayca_topo *p_topo)
 				p_pcidev->vendor= 0;		/* on failure */
 			PRINT_DBG("vendor: 0x%04x\n", p_pcidev->vendor);
 		}
-		ret = topo_path_read_buffer(dir, "device", buf, WAYCA_CACHE_STRING_LEN);
+		ret = topo_path_read_buffer(dir, "device", buf, WAYCA_SC_ATTR_STRING_LEN);
 		if (ret <= 0)
 			p_pcidev->device = 0;		/* on failure */
 		else {
@@ -1509,7 +1512,7 @@ static int topo_recursively_read_io_devices(const char *rootdir,
 	DIR *dp;
 	struct dirent *entry;
 	struct stat statbuf;
-	char cwd[PATH_LEN_MAX];
+	char cwd[WAYCA_SC_PATH_LEN_MAX];
 
 	if ((dp = opendir(rootdir)) == NULL)
 		return -errno;				/* on failure */
@@ -1532,7 +1535,7 @@ static int topo_recursively_read_io_devices(const char *rootdir,
 			 *    device.
 			 */
 			if (strcmp("numa_node", entry->d_name) == 0) {
-				topo_parse_io_device(getcwd(cwd, PATH_LEN_MAX),
+				topo_parse_io_device(getcwd(cwd, WAYCA_SC_PATH_LEN_MAX),
 							    p_topo);
 			}
 		}
