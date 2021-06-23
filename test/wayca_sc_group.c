@@ -15,13 +15,13 @@ int group_elem_num = 11;
 
 wayca_sc_group_t all, *perCcl;
 wayca_sc_group_attr_t all_attr, perCcl_attr;
-wayca_thread_t **threads;
+wayca_sc_thread_t **threads;
 pid_t **threads_pid;
 
 int system_cpu_nr;
 
 struct wayca_thread_info {
-	wayca_thread_t wthread;
+	wayca_sc_thread_t wthread;
 	wayca_sc_group_t wgroup;
 };
 
@@ -38,7 +38,7 @@ void show_thread_affinity()
 			pid_t pid = threads_pid[i][j];
 
 			// sched_getaffinity(pid, sizeof(cpuset), &cpuset);
-			wayca_thread_get_cpuset(threads[i][j], &cpuset);
+			wayca_sc_thread_get_cpuset(threads[i][j], &cpuset);
 
 			printf("group %d thread %d pid %d:\t", i, j, pid);
 			for (int b = 0; b < (system_cpu_nr + __NCPUBITS - 1) / __NCPUBITS; b++)
@@ -124,7 +124,7 @@ int main()
 	readEnv();
 
 	perCcl = malloc(group_num * sizeof(wayca_sc_group_t));
-	threads = malloc(group_num * sizeof(wayca_thread_t *));
+	threads = malloc(group_num * sizeof(wayca_sc_thread_t *));
 	threads_pid = malloc(group_num * sizeof(pid_t *));
 	global_info = malloc(group_num * sizeof(struct wayca_thread_info *));
 
@@ -132,7 +132,7 @@ int main()
 		return -ENOMEM;
 
 	for (i = 0; i < group_num; i++) {
-		threads[i] = malloc(group_elem_num * sizeof(wayca_thread_t));
+		threads[i] = malloc(group_elem_num * sizeof(wayca_sc_thread_t));
 		threads_pid[i] = malloc(group_elem_num * sizeof(pid_t));
 		global_info[i] = malloc(group_elem_num * sizeof(struct wayca_thread_info));
 
@@ -167,13 +167,13 @@ int main()
 				.wgroup = group_created,
 				.wthread = group_elem_created,
 			};
-			ret = wayca_thread_create(&threads[group_created][group_elem_created],
+			ret = wayca_sc_thread_create(&threads[group_created][group_elem_created],
 						  NULL, thread_func,
 						  &global_info[group_created][group_elem_created]);
 			if (ret)
 				goto err_wayca_threads;
 
-			ret = wayca_thread_attach_group(threads[group_created][group_elem_created],
+			ret = wayca_sc_thread_attach_group(threads[group_created][group_elem_created],
 							perCcl[group_created]);
 			if (ret)
 				goto err_wayca_threads;
@@ -192,8 +192,8 @@ int main()
 err_wayca_threads:
 	for (i = 0; i < group_created; i++) {
 		for (j = 0; j < group_elem_created; j++) {
-			wayca_thread_detach_group(threads[i][j], perCcl[i]);
-			wayca_thread_join(threads[i][j], NULL);
+			wayca_sc_thread_detach_group(threads[i][j], perCcl[i]);
+			wayca_sc_thread_join(threads[i][j], NULL);
 		}
 
 		wayca_sc_group_detach_group(perCcl[i], all);

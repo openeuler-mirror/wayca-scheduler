@@ -23,11 +23,11 @@ extern pthread_mutex_t wayca_cpu_loads_mutex;
 
 struct wayca_thread {
 	/* Wayca thread id which is identity to this thread */
-	wayca_thread_t id;
+	wayca_sc_thread_t id;
 	/* pid_t of this wayca thread */
 	pid_t pid;
 	/* Wayca thread attribute */
-	wayca_thread_attr_t attribute;
+	wayca_sc_thread_attr_t attribute;
 	size_t target_pos;
 	cpu_set_t cur_set;
 	cpu_set_t allowed_set;

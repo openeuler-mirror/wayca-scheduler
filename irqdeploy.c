@@ -57,7 +57,7 @@ static void parse_command_line(int argc, char **argv)
 		exit(1);
 	}
 
-	ret = irq_bind_cpu(irq, cpu);
+	ret = wayca_sc_irq_bind_cpu(irq, cpu);
 	if (ret < 0)
 		fprintf(stderr, "Cannot change irq %i's affinity to cpu %i\n",
 			irq, cpu);

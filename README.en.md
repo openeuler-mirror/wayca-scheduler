@@ -297,15 +297,15 @@ int process_bind_package(pid_t pid, int node);
 int process_unbind(pid_t pid);
 int process_bind_cpulist(pid_t pid, char *s);
 
-int irq_bind_cpu(int irq, int cpu);
+int wayca_sc_irq_bind_cpu(int irq, int cpu);
 
-int mem_interleave_in_package(int node);
-int mem_interleave_in_all(void);
-int mem_bind_node(int node);
-int mem_bind_package(int node);
-int mem_unbind(void);
-int mem_migrate_to_node(pid_t pid, int node);
-int mem_migrate_to_package(pid_t pid, int node);
+int wayca_sc_mem_interleave_in_package(int node);
+int wayca_sc_mem_interleave_in_all(void);
+int wayca_sc_mem_bind_node(int node);
+int wayca_sc_mem_bind_package(int node);
+int wayca_sc_mem_unbind(void);
+int wayca_sc_mem_migrate_to_node(pid_t pid, int node);
+int wayca_sc_mem_migrate_to_package(pid_t pid, int node);
 
 int cores_in_ccl(void);
 int cores_in_node(void);

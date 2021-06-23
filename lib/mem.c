@@ -52,7 +52,7 @@ static inline void set_all_mask(node_set_t * mask)
 		NODE_SET(i, mask);
 }
 
-int mem_interleave_in_package(int node)
+int wayca_sc_mem_interleave_in_package(int node)
 {
 	node_set_t mask;
 	set_package_mask(node, &mask);
@@ -60,7 +60,7 @@ int mem_interleave_in_package(int node)
 			     wayca_sc_nodes_in_total());
 }
 
-int mem_interleave_in_all(void)
+int wayca_sc_mem_interleave_in_all(void)
 {
 	node_set_t mask;
 	set_all_mask(&mask);
@@ -68,14 +68,14 @@ int mem_interleave_in_all(void)
 			     wayca_sc_nodes_in_total());
 }
 
-int mem_bind_node(int node)
+int wayca_sc_mem_bind_node(int node)
 {
 	node_set_t mask;
 	set_node_mask(node, &mask);
 	return set_mempolicy(MPOL_BIND, (unsigned long *)&mask, node + 1);
 }
 
-int mem_bind_package(int node)
+int wayca_sc_mem_bind_package(int node)
 {
 	node_set_t mask;
 	set_package_mask(node, &mask);
@@ -83,7 +83,7 @@ int mem_bind_package(int node)
 			     wayca_sc_nodes_in_total());
 }
 
-int mem_unbind(void)
+int wayca_sc_mem_unbind(void)
 {
 	return set_mempolicy(MPOL_DEFAULT, NULL, wayca_sc_nodes_in_total());
 }
@@ -93,7 +93,7 @@ int mem_unbind(void)
  * zero means that all pages were successfully moved). On error, it returns -1, and sets
  * errno to indicate the error.
  */
-long mem_migrate_to_node(pid_t pid, int node)
+long wayca_sc_mem_migrate_to_node(pid_t pid, int node)
 {
 	node_set_t all_mask, node_mask;
 	set_all_mask(&all_mask);
@@ -101,7 +101,7 @@ long mem_migrate_to_node(pid_t pid, int node)
 	return migrate_pages(pid, wayca_sc_nodes_in_total(), &all_mask, &node_mask);
 }
 
-long mem_migrate_to_package(pid_t pid, int node)
+long wayca_sc_mem_migrate_to_package(pid_t pid, int node)
 {
 	node_set_t all_mask, pack_mask;
 	set_all_mask(&all_mask);

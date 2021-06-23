@@ -66,7 +66,7 @@ static int bitmap_scnprintf(char *buf, unsigned int buflen,
 	return len;
 }
 
-int irq_bind_cpu(int irq, int cpu)
+int wayca_sc_irq_bind_cpu(int irq, int cpu)
 {
 	char buf[PATH_MAX];
 	int fd;

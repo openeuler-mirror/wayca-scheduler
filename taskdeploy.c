@@ -110,7 +110,7 @@ static void parse_command_line(int argc, char **argv)
 			       cpulist);
 
 		if (mem_node != -1) {
-			ret = mem_migrate_to_node(pid, mem_node);
+			ret = wayca_sc_mem_migrate_to_node(pid, mem_node);
 			if (ret < 0)
 				fprintf(stderr,
 					"Cannot migrate task(s) %d's pages to node %d\n",
@@ -130,7 +130,7 @@ static void parse_command_line(int argc, char **argv)
 		argv += optind;
 		thread_bind_cpulist(pid, cpulist);
 		if (mem_node != -1)
-			mem_bind_node(mem_node);
+			wayca_sc_mem_bind_node(mem_node);
 
 		printf("starting app %s on cpu%s memory%d\n", argv[0], cpulist,
 		       mem_node);
