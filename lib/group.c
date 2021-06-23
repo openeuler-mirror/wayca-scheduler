@@ -69,6 +69,15 @@ void find_idlest_set(struct wayca_sc_group *group, cpu_set_t *cpuset)
 
 	pthread_mutex_lock(&wayca_cpu_loads_mutex);
 	while (pos <= cpuset_find_last_set(cpuset)) {
+		/**
+		 * @cpuset maybe inconsistent. So skip the inavailable
+		 * set of cpus.
+		 */
+		if (!CPU_ISSET(pos, cpuset)) {
+			pos += stride;
+			continue;
+		}
+
 		tload = 0;
 		for (i = 0; i < stride; i++)
 			tload += wayca_cpu_loads[pos + i];
@@ -416,6 +425,7 @@ int wayca_group_assign_thread_resource(struct wayca_sc_group *group, struct wayc
 	/* Reset the thread's cpuset infomation first */
 	CPU_ZERO(&thread->allowed_set);
 	CPU_ZERO(&thread->cur_set);
+	thread->target_pos = target_pos;
 
 	/**
 	 * If the bind policy is per-CPU, then
@@ -504,7 +514,10 @@ int wayca_group_delete_thread(struct wayca_sc_group *group, struct wayca_thread 
 		CPU_OR(&group->used, &group->used, &group->total);
 	}
 
-	CPU_XOR(&group->used, &group->used, &thread->allowed_set);
+	if ((group->attribute & WT_GF_COMPACT) && !(group->attribute & WT_GF_PERCPU))
+		CPU_CLR(thread->target_pos, &group->used);
+	else
+		CPU_XOR(&group->used, &group->used, &thread->allowed_set);
 
 	group_thread_delete_thread(group, thread);
 	thread->group = NULL;

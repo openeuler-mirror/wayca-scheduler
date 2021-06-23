@@ -28,6 +28,7 @@ struct wayca_thread {
 	pid_t pid;
 	/* Wayca thread attribute */
 	wayca_thread_attr_t attribute;
+	size_t target_pos;
 	cpu_set_t cur_set;
 	cpu_set_t allowed_set;
 	/* Siblings of this wayca thread in the same group, NULL terminated */
