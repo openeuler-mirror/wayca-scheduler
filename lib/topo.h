@@ -11,13 +11,34 @@
 
 #include <sched.h>
 
-#define NODE_FNAME 	"/sys/devices/system/node"
-#define CPU_FNAME 	"/sys/devices/system/cpu"	/* no ending '/' in the filename */
-#define DEFAULT_KERNEL_MAX 	(2048)
-#define PATH_LEN_MAX		(4096)		/* maximum length of file pathname */ 
+#define WAYCA_SC_SYSDEV_FNAME 	"/sys/devices"
+#define WAYCA_SC_NODE_FNAME 	"/sys/devices/system/node"
+#define WAYCA_SC_CPU_FNAME 	"/sys/devices/system/cpu"
+
+#define WAYCA_SC_DEFAULT_KERNEL_MAX 	(2048)
+#define WAYCA_SC_PATH_LEN_MAX		(4096)		/* maximum length of file pathname */
+#define WAYCA_SC_MAX_FD_RETRIES		(5)		/* maximum retries when reading from an open file */
+#define WAYCA_SC_USLEEP_DELAY_250MS	(250000)	/* 250ms */
+#define WAYCA_SC_ATTR_STRING_LEN	(256)		/* default attribute string length */
 
 #define PRINT_DBG	printf
 #define PRINT_ERROR	printf
+
+struct wayca_cache {
+	int id;
+	int level;
+	char type[WAYCA_SC_ATTR_STRING_LEN];
+	char allocation_policy[WAYCA_SC_ATTR_STRING_LEN];
+	char write_policy[WAYCA_SC_ATTR_STRING_LEN];
+	char cache_size[WAYCA_SC_ATTR_STRING_LEN];
+
+	unsigned int	ways_of_associativity;
+	unsigned int	physical_line_partition;
+	unsigned int	number_of_sets;
+	unsigned int	coherency_line_size;
+
+	cpu_set_t *shared_cpu_map;
+};
 
 struct wayca_cpu {
 	int cpu_id;
@@ -28,12 +49,42 @@ struct wayca_cpu {
 	cpu_set_t *core_cpus_map;		/* SMT - simultaneous multi-threading siblings; CPUs within the same core
 						 *   (deprecated name: "thread_siblings_list"
 						 */
+	size_t n_caches;			/* number of caches */
+	struct wayca_cache	*p_caches;	/* a matrix with n_caches entries */
 };
 
 struct wayca_cluster {
 	int cluster_id;
 	size_t n_cpus;		/* number of CPUs in this cluster */
 	cpu_set_t *cpu_map;	/* mask of contained CPUs */
+};
+
+struct wayca_irq {
+	unsigned int irq_number;
+	unsigned int active; 		/* actively used in /proc/interrupts
+					 * 1: active;
+					 * 0: inactive;
+					 */
+	/* TODO: fine tune irq_name space */
+	char irq_name[WAYCA_SC_ATTR_STRING_LEN];	/* string as reported in /proc/interrupts */
+};
+
+struct wayca_device_irqs {
+	size_t n_irqs;		/* number of irqs for this device */
+	struct wayca_irq *irqs; /* array */
+};
+
+struct wayca_pci_device {
+	int numa_node;
+	char absolute_path[WAYCA_SC_PATH_LEN_MAX];
+	cpu_set_t *local_cpu_map;
+
+	unsigned int   class;		/* 3 bytes: (base, sub, prog-if) */
+	unsigned short vendor;
+	unsigned short device;
+	unsigned int enable;
+
+	struct wayca_device_irqs irqs;	/* array of registered irqs */
 };
 
 struct wayca_node {
@@ -44,6 +95,9 @@ struct wayca_node {
 
 	int *distance;			/* array of distance */
 	struct wayca_meminfo	*p_meminfo;	/* memory information of this node */
+
+	size_t n_pcidevs;			/* number of detected PCI devices */
+	struct wayca_pci_device **pcidevs;	/* array of PCI devices */
 };
 
 struct wayca_meminfo {
