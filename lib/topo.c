@@ -826,6 +826,8 @@ void topo_print_wayca_node(size_t setsize, struct wayca_node *p_node, size_t dis
 	PRINT_DBG("n_pcidevs: %lu\n", p_node->n_pcidevs);
 	for (int i = 0; i < p_node->n_pcidevs; i++) {
 		PRINT_DBG("\tpcidev%d: numa_node=%d\n", i, p_node->pcidevs[i]->numa_node);
+		PRINT_DBG("\t\t linked to SMMU No.: %d\n", p_node->pcidevs[i]->smmu_idx);
+		PRINT_DBG("\t\t enable(1) or not(0): %d\n", p_node->pcidevs[i]->enable);
 		PRINT_DBG("\t\t class=0x%06x\n", p_node->pcidevs[i]->class);
 		PRINT_DBG("\t\t vendor=0x%04x\n", p_node->pcidevs[i]->vendor);
 		PRINT_DBG("\t\t device=0x%04x\n", p_node->pcidevs[i]->device);
@@ -1483,13 +1485,43 @@ static int topo_parse_io_device(const char *dir, struct wayca_topo *p_topo)
 		}
 
 		/* read irqs */
-		if (( ret = topo_parse_device_irqs(dir, &p_pcidev->irqs)) < 0) {
+		if ((ret = topo_parse_device_irqs(dir, &p_pcidev->irqs)) < 0) {
 			PRINT_ERROR("Failed in topo_parse_device_irqs: %s\n", dir);
 			PRINT_ERROR("\t Error code: %d\n", ret);
 			return ret;
 		}
-		/* TODO: read enable */
-		p_pcidev->enable = 1;
+		/* read enable */
+		if ((ret = topo_path_read_s32(dir, "enable", &p_pcidev->enable)) < 0) {
+			PRINT_ERROR("Failed to read %s/enable\n", dir);
+			PRINT_ERROR("\t Error code: %d\n", ret);
+			return ret;
+		}
+		/* read smmu link */
+		char buf_link[WAYCA_SC_PATH_LEN_MAX];
+		char path_buffer[WAYCA_SC_PATH_LEN_MAX];
+		p_pcidev->smmu_idx = 0;			/* initialize */
+
+		sprintf(path_buffer, "%s/iommu", dir);
+		if (readlink(path_buffer, buf_link, WAYCA_SC_PATH_LEN_MAX) == -1) {
+			if (errno == ENOENT)
+				PRINT_DBG(" No IOMMU\n");
+			else {
+				PRINT_ERROR("Failed to read iommu. Error code: %d\n", -errno);
+				return -errno;
+			}
+		} else {  /* extract smmu index from buf_link */
+			PRINT_DBG("iommu link: %s\n", buf_link);
+			/* ../../platform/arm-smmu-v3.3.auto/iommu/smmu3.0x0000000140000000 */
+			char *p_index;
+			p_index = strstr(buf_link, "arm-smmu-v3");		/* TODO: here is hard-coded name */
+										/* what to do in other versions of smmu? */
+			if (p_index == NULL)
+				PRINT_ERROR("Failed to parse iommu link: %s\n", buf_link);
+			else {
+				p_pcidev->smmu_idx = strtol(p_index + strlen("arm-smmu-v3") + 1, NULL, 0);
+				PRINT_DBG("smmu index: %d\n", p_pcidev->smmu_idx);
+			}
+		}
 		return 0;
 	}
 	else if (strstr(dir, "smmu")) {		/* SMMU */
