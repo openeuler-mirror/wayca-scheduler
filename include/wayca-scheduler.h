@@ -6,26 +6,15 @@
 #include <pthread.h>
 #include <unistd.h>
 
-int thread_bind_cpu(pid_t pid, int cpu);
-int thread_bind_ccl(pid_t pid, int cpu);
-int thread_bind_node(pid_t pid, int node);
-int thread_bind_package(pid_t pid, int node);
-int thread_unbind(pid_t pid);
-int process_bind_cpu(pid_t pid, int cpu);
-int process_bind_ccl(pid_t pid, int cpu);
-int process_bind_node(pid_t pid, int node);
-int process_bind_package(pid_t pid, int node);
-int process_unbind(pid_t pid);
+int wayca_sc_irq_bind_cpu(int irq, int cpu);
 
-int irq_bind_cpu(int irq, int cpu);
-
-int mem_interleave_in_package(int node);
-int mem_interleave_in_all(void);
-int mem_bind_node(int node);
-int mem_bind_package(int node);
-int mem_unbind(void);
-long mem_migrate_to_node(pid_t pid, int node);
-long mem_migrate_to_package(pid_t pid, int node);
+int wayca_sc_mem_interleave_in_package(int node);
+int wayca_sc_mem_interleave_in_all(void);
+int wayca_sc_mem_bind_node(int node);
+int wayca_sc_mem_bind_package(int node);
+int wayca_sc_mem_unbind(void);
+long wayca_sc_mem_migrate_to_node(pid_t pid, int node);
+long wayca_sc_mem_migrate_to_package(pid_t pid, int node);
 
 int wayca_sc_cpus_in_ccl(void);
 int wayca_sc_cpus_in_node(void);
@@ -51,24 +40,22 @@ int wayca_sc_get_package_id(int cpu);
 
 int wayca_sc_get_node_mem_size(int node, unsigned long *size);
 
-void topo_print(void);
-
 int wayca_managed_thread_create(int id, pthread_t *thread, const pthread_attr_t *attr,
 				void *(*start_routine) (void *), void *arg);
 
 int wayca_managed_threadpool_create(int id, int num, pthread_t *thread[],
 				    const pthread_attr_t *attr, void *(*start_routine) (void *), void *arg);
 
-typedef unsigned long long	wayca_thread_t;
-typedef unsigned long long	wayca_thread_attr_t;
+typedef unsigned long long	wayca_sc_thread_t;
+typedef unsigned long long	wayca_sc_thread_attr_t;
 /* Flags for wayca thread attributes */
 #define WT_TF_WAYCA_MANAGEABLE	0x10000
 
-int wayca_thread_set_attr(wayca_thread_t wthread, wayca_thread_attr_t *attr);
-int wayca_thread_get_attr(wayca_thread_t wthread, wayca_thread_attr_t *attr);
+int wayca_sc_thread_set_attr(wayca_sc_thread_t wthread, wayca_sc_thread_attr_t *attr);
+int wayca_sc_thread_get_attr(wayca_sc_thread_t wthread, wayca_sc_thread_attr_t *attr);
 
-int wayca_thread_create(wayca_thread_t *wthread, pthread_attr_t *attr, void *(*start_routine)(void *), void *arg);
-int wayca_thread_join(wayca_thread_t wthread, void **retval);
+int wayca_sc_thread_create(wayca_sc_thread_t *wthread, pthread_attr_t *attr, void *(*start_routine)(void *), void *arg);
+int wayca_sc_thread_join(wayca_sc_thread_t wthread, void **retval);
 
 typedef unsigned long long	wayca_sc_group_t;
 typedef unsigned long long	wayca_sc_group_attr_t;
@@ -91,15 +78,29 @@ int wayca_sc_group_get_attr(wayca_sc_group_t group, wayca_sc_group_attr_t *attr)
 
 int wayca_sc_group_create(wayca_sc_group_t* group);
 int wayca_sc_group_destroy(wayca_sc_group_t group);
-int wayca_thread_attach_group(wayca_thread_t wthread, wayca_sc_group_t group);
-int wayca_thread_detach_group(wayca_thread_t wthread, wayca_sc_group_t group);
+int wayca_sc_thread_attach_group(wayca_sc_thread_t wthread, wayca_sc_group_t group);
+int wayca_sc_thread_detach_group(wayca_sc_thread_t wthread, wayca_sc_group_t group);
 int wayca_sc_group_attach_group(wayca_sc_group_t group, wayca_sc_group_t father);
 int wayca_sc_group_detach_group(wayca_sc_group_t group, wayca_sc_group_t father);
 
 /* For debug purpose */
-int wayca_thread_get_cpuset(wayca_thread_t wthread, cpu_set_t *cpuset);
+#ifdef WAYCA_SC_DEBUG
+void wayca_sc_topo_print(void);
+int wayca_sc_thread_get_cpuset(wayca_sc_thread_t wthread, cpu_set_t *cpuset);
 int wayca_sc_group_get_cpuset(wayca_sc_group_t group, cpu_set_t *cpuset);
-
-pthread_t wayca_thread_get_pthtread(wayca_thread_t wthread);
+#else
+static inline
+void wayca_sc_topo_print(void) { }
+static inline
+int wayca_sc_thread_get_cpuset(wayca_sc_thread_t wthread, cpu_set_t *cpuset)
+{
+	return 0;
+}
+static inline
+int wayca_sc_group_get_cpuset(wayca_sc_group_t group, cpu_set_t *cpuset)
+{
+	return 0;
+}
+#endif /* WAYCA_SC_DEBUG */
 
 #endif

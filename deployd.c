@@ -269,7 +269,7 @@ static int deploy_program(struct program *prog, int fd)
 	/* IRQ, this should be done by deployed with root permission */
 	for (i = 0; i < MAX_IRQS_BIND; i++) {
 		if (prog->irq_bind[i][0] != -1)
-			irq_bind_cpu(prog->irq_bind[i][0],
+			wayca_sc_irq_bind_cpu(prog->irq_bind[i][0],
 				     prog->irq_bind[i][1]);
 	}
 

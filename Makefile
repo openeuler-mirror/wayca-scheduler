@@ -27,20 +27,28 @@ wayca_topo: libwaycadeployer.so.1.0 test/wayca_topo.c
 wayca_bitmap: test/wayca_bitmap.c
 	$(CC) $(CFLAGS) test/wayca_bitmap.c -I./lib -o test/$@
 
-CFLAGS +=-g -Wall -fPIC -DWAYCA_DEPLOY_VERSION=\"0.1\"
+CFLAGS += -Wall -fPIC -DWAYCA_DEPLOY_VERSION=\"0.1\"
+ifeq ($(DEBUG), 1)
+CFLAGS += -g -DWAYCA_SC_DEBUG
+endif
 SRCS = $(wildcard *.c)
 OBJS =$(SRCS:.c=.o)
 DEPS = $(SRCS:.c=.d)
+CC = $(CROSS_COMPILE)gcc
+INSTALL_PREFIX = /usr
 $(DEPS) : %.d : %.c
-	gcc -MM $< > $@
+	$(CROSS_COMPILE)gcc -MM $< > $@
 SRCS = $(wildcard *.c)
 %.o : %.c
 	$(CC) -c $(CFLAGS) -I./include -o $@ $^
 
 install:
-	install *.so* /usr/lib/
-	install $(tools) /usr/bin
-	install include/wayca-scheduler.h /usr/include
+	install -d -m 755 $(INSTALL_PREFIX)/lib
+	install -d -m 755 $(INSTALL_PREFIX)/bin
+	install -d -m 755 $(INSTALL_PREFIX)/include
+	install *.so* $(INSTALL_PREFIX)/lib/
+	install $(tools) $(INSTALL_PREFIX)/bin
+	install include/wayca-scheduler.h $(INSTALL_PREFIX)/include
 clean:
 	-rm -f *.o lib/*.o
 	-rm -f *.so*

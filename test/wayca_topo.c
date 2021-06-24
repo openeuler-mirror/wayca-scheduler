@@ -113,7 +113,7 @@ static void test_get_io_info()
 
 int main()
 {
-	topo_print();
+	wayca_sc_topo_print();
 
 	test_entity_number();
 	test_get_entity_id();

@@ -33,9 +33,9 @@ static int start_program(struct program *prog, char **argv)
 	prog->pid = getpid();
 	/* Memory */
 	if (prog->mem_band == PACKAGE)
-		mem_interleave_in_package(prog->io_node);
+		wayca_sc_mem_interleave_in_package(prog->io_node);
 	else if (prog->mem_band == ALL)
-		mem_interleave_in_all();
+		wayca_sc_mem_interleave_in_all();
 
 	if (socket_fd != -1) {
 		int ret;

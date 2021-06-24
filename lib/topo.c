@@ -671,7 +671,8 @@ void topo_print_wayca_cpu(size_t setsize, struct wayca_cpu *p_cpu)
 	PRINT_DBG("belongs to package_id: \t%08x\n", p_cpu->p_package->physical_package_id);
 }
 
-void topo_print(void)
+#ifdef WAYCA_SC_DEBUG
+void wayca_sc_topo_print(void)
 {
 	struct wayca_topo *p_topo = &topo;
 	int i;
@@ -709,6 +710,7 @@ void topo_print(void)
 
 	return;
 }
+#endif /* WAYCA_SC_DEBUG */
 
 /* topo_free - free up memories */
 void topo_free(void)
