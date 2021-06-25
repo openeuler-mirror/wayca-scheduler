@@ -826,6 +826,8 @@ void topo_print_wayca_node(size_t setsize, struct wayca_node *p_node, size_t dis
 	PRINT_DBG("n_pcidevs: %lu\n", p_node->n_pcidevs);
 	for (int i = 0; i < p_node->n_pcidevs; i++) {
 		PRINT_DBG("\tpcidev%d: numa_node=%d\n", i, p_node->pcidevs[i]->numa_node);
+		PRINT_DBG("\t\t linked to SMMU No.: %d\n", p_node->pcidevs[i]->smmu_idx);
+		PRINT_DBG("\t\t enable(1) or not(0): %d\n", p_node->pcidevs[i]->enable);
 		PRINT_DBG("\t\t class=0x%06x\n", p_node->pcidevs[i]->class);
 		PRINT_DBG("\t\t vendor=0x%04x\n", p_node->pcidevs[i]->vendor);
 		PRINT_DBG("\t\t device=0x%04x\n", p_node->pcidevs[i]->device);
@@ -840,6 +842,13 @@ void topo_print_wayca_node(size_t setsize, struct wayca_node *p_node, size_t dis
 			PRINT_DBG("%u\t", p_node->pcidevs[i]->irqs.irqs[j].irq_number);
 		}
 		PRINT_DBG("\n");
+	}
+	PRINT_DBG("n_smmus: %lu\n", p_node->n_smmus);
+	for (int i = 0; i < p_node->n_smmus; i++) {
+		PRINT_DBG("\tSMMU.%d:\n", p_node->smmus[i]->smmu_idx);
+		PRINT_DBG("\t\t numa_node: %d\n", p_node->smmus[i]->numa_node);
+		PRINT_DBG("\t\t base address : 0x%016llx\n", p_node->smmus[i]->base_addr);
+		PRINT_DBG("\t\t type(modalias): %s\n", p_node->smmus[i]->modalias);
 	}
 	/* TODO: fill up the following */
 	PRINT_DBG("pointer of cluster_map: 0x%p EXPECTED (nil)\n", p_node->cluster_map);
@@ -946,6 +955,10 @@ void topo_free(void)
 			free(p_topo->nodes[i]->pcidevs[j]);
 		}
 		free(p_topo->nodes[i]->pcidevs);
+		for (j = 0; j < p_topo->nodes[i]->n_smmus; j++) {
+			free(p_topo->nodes[i]->smmus[j]);
+		}
+		free(p_topo->nodes[i]->smmus);
 		free(p_topo->nodes[i]);
 	}
 	free(p_topo->nodes);
@@ -1393,11 +1406,17 @@ static int topo_parse_device_irqs(const char *device_sysfs_dir, struct wayca_dev
  */
 static int topo_parse_io_device(const char *dir, struct wayca_topo *p_topo)
 {
+	DIR *dp;
+	struct dirent *entry;
+
 	int node_nb;
 	int i;
 	int ret;
+	char *p_index;
 	char buf[WAYCA_SC_ATTR_STRING_LEN];
+	char path_buffer[WAYCA_SC_PATH_LEN_MAX];
 	struct wayca_pci_device *p_pcidev;
+	struct wayca_smmu *p_smmu;
 
 	if (strstr(dir, "pci")) {		/* PCI */
 		PRINT_DBG("PCI full path: %s\n", dir);
@@ -1427,7 +1446,7 @@ static int topo_parse_io_device(const char *dir, struct wayca_topo *p_topo)
 			free(p_pcidev);
 			return -1;
 		}
-		/* append p_pcidevto 'wayca node *'->pcidevs */
+		/* append p_pcidev to 'wayca node *'->pcidevs */
 		struct wayca_pci_device **p_temp;
 		p_temp = (struct wayca_pci_device **)realloc(p_topo->nodes[i]->pcidevs,
 				(p_topo->nodes[i]->n_pcidevs + 1) * sizeof(struct wayca_pci_device *));
@@ -1483,18 +1502,120 @@ static int topo_parse_io_device(const char *dir, struct wayca_topo *p_topo)
 		}
 
 		/* read irqs */
-		if (( ret = topo_parse_device_irqs(dir, &p_pcidev->irqs)) < 0) {
+		if ((ret = topo_parse_device_irqs(dir, &p_pcidev->irqs)) < 0) {
 			PRINT_ERROR("Failed in topo_parse_device_irqs: %s\n", dir);
 			PRINT_ERROR("\t Error code: %d\n", ret);
 			return ret;
 		}
-		/* TODO: read enable */
-		p_pcidev->enable = 1;
+		/* read enable */
+		if ((ret = topo_path_read_s32(dir, "enable", &p_pcidev->enable)) < 0) {
+			PRINT_ERROR("Failed to read %s/enable\n", dir);
+			PRINT_ERROR("\t Error code: %d\n", ret);
+			return ret;
+		}
+		/* read smmu link */
+		char buf_link[WAYCA_SC_PATH_LEN_MAX];
+		char path_buffer[WAYCA_SC_PATH_LEN_MAX];
+		p_pcidev->smmu_idx = -1;			/* initialize */
+
+		sprintf(path_buffer, "%s/iommu", dir);
+		if (readlink(path_buffer, buf_link, WAYCA_SC_PATH_LEN_MAX) == -1) {
+			if (errno == ENOENT)
+				PRINT_DBG(" No IOMMU\n");
+			else {
+				PRINT_ERROR("Failed to read iommu. Error code: %d\n", -errno);
+				return -errno;
+			}
+		} else {  /* extract smmu index from buf_link */
+			PRINT_DBG("iommu link: %s\n", buf_link);
+			/* example:
+			 * ../../platform/arm-smmu-v3.3.auto/iommu/smmu3.0x0000000140000000 */
+			p_index = strstr(buf_link, "arm-smmu-v3");		/* TODO: here is hard-coded name */
+										/* what to do in other versions of smmu? */
+			if (p_index == NULL)
+				PRINT_ERROR("Failed to parse iommu link: %s\n", buf_link);
+			else {
+				p_pcidev->smmu_idx = strtol(p_index + strlen("arm-smmu-v3") + 1, NULL, 0);
+				PRINT_DBG("smmu index: %d\n", p_pcidev->smmu_idx);
+			}
+		}
 		return 0;
 	}
 	else if (strstr(dir, "smmu")) {		/* SMMU */
-		/* TODO */
 		PRINT_DBG("SMMU full path: %s\n", dir);
+		/* allocate struct wayca_smmu */
+		p_smmu = (struct wayca_smmu *)calloc(1, sizeof(struct wayca_smmu));
+		if (!p_smmu) {
+			return -ENOMEM;		/* no enough memory */
+		}
+		/* read numa_node */
+		topo_path_read_s32(dir, "numa_node", &node_nb);
+		PRINT_DBG("numa_node: %d\n", node_nb);
+		if (node_nb < 0)
+			node_nb = 0;		/* on failure, default to node #0 */
+		p_smmu->numa_node = node_nb;
+
+		/* get the 'wayca_node *' whoes node_idx == this 'node_nb' */
+		for (i = 0; i < p_topo->n_nodes; i++) {
+			if (p_topo->nodes[i]->node_idx == node_nb)
+				break;
+		}
+		if (i == p_topo->n_nodes) {
+			PRINT_ERROR("Failed to match this PCI device to any numa node: %s", dir);
+			free(p_smmu);
+			return -1;
+		}
+		/* append p_smmu to 'wayca node *'->smmus */
+		struct wayca_smmu **p_temp;
+		p_temp = (struct wayca_smmu **)realloc(p_topo->nodes[i]->smmus,
+				(p_topo->nodes[i]->n_smmus+ 1) * sizeof(struct wayca_smmu *));
+		if (!p_temp) {
+			free(p_smmu);
+			return -ENOMEM;		/* no enough memory */
+		}
+		p_topo->nodes[i]->smmus = p_temp;
+		p_topo->nodes[i]->smmus[p_topo->nodes[i]->n_smmus] = p_smmu;
+		p_topo->nodes[i]->n_smmus ++;		/* incement number of SMMU devices */
+		PRINT_DBG("n_smmus = %zu\n", p_topo->nodes[i]->n_smmus);
+
+		/* read SMMU information into: p_smmu */
+		/* read type (modalias) */
+		ret = topo_path_read_buffer(dir, "modalias",
+						  p_smmu->modalias,
+						  WAYCA_SC_ATTR_STRING_LEN);
+		if (ret <= 0)
+			p_smmu->modalias[0] = '\0';
+		else if (p_smmu->modalias[strlen(p_smmu->modalias) -1] == '\n')
+			p_smmu->modalias[strlen(p_smmu->modalias) - 1] = '\0';
+		PRINT_DBG("modalias = %s\n", p_smmu->modalias);
+
+		/* identify smmu_idx from the 'dir' string */
+		/*  Eg. SMMU full path: /sys/devices/platform/arm-smmu-v3.4.auto */
+		p_index = strstr(dir, "arm-smmu-v3");	/* TODO: here is hard-coded name */
+							/* what to do in other versions of smmu? */
+		if (p_index == NULL)
+				PRINT_ERROR("Failed to parse smmu_idx : %s\n", dir);
+		else {
+			p_smmu->smmu_idx = strtol(p_index + strlen("arm-smmu-v3") + 1, NULL, 0);
+			PRINT_DBG("smmu index: %d\n", p_smmu->smmu_idx);
+		}
+		/* read base address */
+		sprintf(path_buffer, "%s/iommu", dir);
+		if ((dp = opendir(path_buffer)) == NULL)
+			return -errno;				/* on failure */
+
+		while ((entry = readdir(dp)) != NULL) {
+			/* Found a directory, eg. iommu/smmu3.0x0000000140000000 */
+			if ((p_index = strstr(entry->d_name, "smmu3")) != NULL) {
+				p_smmu->base_addr = strtoull(p_index +
+							strlen("smmu3") + 1,
+							NULL, 0);
+				PRINT_DBG("base address : 0x%016llx\n",
+					  p_smmu->base_addr);
+				break;
+			}
+			continue;
+		}
 		return 0;
 	}
 	else {					/* others */
@@ -1524,8 +1645,8 @@ static int topo_recursively_read_io_devices(const char *rootdir,
 		lstat(entry->d_name, &statbuf);
 		if (S_ISDIR(statbuf.st_mode)) {
 			/* Found a directory, but ignore . and .. */
-			if (strcmp(".",entry->d_name) == 0 ||
-			    strcmp("..",entry->d_name) == 0)
+			if (strcmp(".", entry->d_name) == 0 ||
+			    strcmp("..", entry->d_name) == 0)
 				continue;
 			topo_recursively_read_io_devices(entry->d_name, p_topo);
 		}

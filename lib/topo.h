@@ -59,6 +59,13 @@ struct wayca_cluster {
 	cpu_set_t *cpu_map;	/* mask of contained CPUs */
 };
 
+struct wayca_smmu {
+	int smmu_idx;				/* index, a sequence number from 0 to ... */
+	int numa_node;				/* which node it belongs to */
+	unsigned long long int base_addr;	/* base address - 64 bits */
+	char modalias[WAYCA_SC_ATTR_STRING_LEN];	/* type, eg. arm-smmu-v3 */
+};
+
 struct wayca_irq {
 	unsigned int irq_number;
 	unsigned int active; 		/* actively used in /proc/interrupts
@@ -75,14 +82,15 @@ struct wayca_device_irqs {
 };
 
 struct wayca_pci_device {
-	int numa_node;
+	int numa_node;			/* to which numa_node it belongs */
+	int smmu_idx;			/* to which smmu it belongs. -1 none */
+	int enable;
 	char absolute_path[WAYCA_SC_PATH_LEN_MAX];
 	cpu_set_t *local_cpu_map;
 
 	unsigned int   class;		/* 3 bytes: (base, sub, prog-if) */
 	unsigned short vendor;
 	unsigned short device;
-	unsigned int enable;
 
 	struct wayca_device_irqs irqs;	/* array of registered irqs */
 };
@@ -98,6 +106,9 @@ struct wayca_node {
 
 	size_t n_pcidevs;			/* number of detected PCI devices */
 	struct wayca_pci_device **pcidevs;	/* array of PCI devices */
+
+	size_t n_smmus;			/* number of detected SMMU devices */
+	struct wayca_smmu **smmus;	/* array of SMMU devices */
 };
 
 struct wayca_meminfo {
