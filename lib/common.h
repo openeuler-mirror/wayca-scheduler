@@ -7,17 +7,13 @@
 #include <errno.h>
 #include <sched.h>
 
+#include <wayca-scheduler.h>
+
 extern char *wayca_scheduler_socket_path;
 
 /* default configurations */
 #define MAX_MANAGED_MAPS	100
 #define SOCKET_PATH		wayca_scheduler_socket_path
-
-/* leverage the bitmap of cpu_set_t */
-#define node_set_t cpu_set_t
-#define NODE_ZERO CPU_ZERO
-#define NODE_SET  CPU_SET
-#define NODE_ISSET CPU_ISSET
 
 #define task_set_t cpu_set_t
 #define TASK_ZERO CPU_ZERO

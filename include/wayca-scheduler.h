@@ -9,13 +9,20 @@
 int wayca_sc_irq_bind_cpu(int irq, int cpu);
 int wayca_sc_get_irq_bind_cpu(int irq, size_t cpusetsize, cpu_set_t *cpuset);
 
+/* Leverage the bitmap of cpu_set_t */
+#define node_set_t cpu_set_t
+#define NODE_ZERO CPU_ZERO
+#define NODE_SET  CPU_SET
+#define NODE_ISSET CPU_ISSET
+
 int wayca_sc_mem_interleave_in_package(int node);
 int wayca_sc_mem_interleave_in_all(void);
 int wayca_sc_mem_bind_node(int node);
 int wayca_sc_mem_bind_package(int node);
 int wayca_sc_mem_unbind(void);
+int wayca_sc_get_mem_bind_nodes(size_t nodesetsize, node_set_t *mask);
 long wayca_sc_mem_migrate_to_node(pid_t pid, int node);
-long wayca_sc_mem_migrate_to_package(pid_t pid, int node);
+long wayca_sc_mem_migrate_to_package(pid_t pid, int package);
 
 int wayca_sc_cpus_in_ccl(void);
 int wayca_sc_cpus_in_node(void);

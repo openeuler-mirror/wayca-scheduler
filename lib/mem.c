@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
 #include <sched.h>
 #include <limits.h>
+#include <linux/mempolicy.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -13,18 +14,17 @@
 #define set_mempolicy(mode, nodemask, maxnode) \
 	syscall(__NR_set_mempolicy, (int)mode, (unsigned long *)nodemask, (unsigned long)maxnode)
 
+static inline long get_mempolicy(int *mode, unsigned long *nodemask,
+				 unsigned long maxnode, void *addr,
+				 unsigned long flags)
+{
+	return syscall(__NR_get_mempolicy, mode, nodemask,
+		       maxnode, addr, flags);
+}
+
 #define migrate_pages(pid, maxnode, frommask, tomask) \
 	syscall(__NR_migrate_pages, (int)pid, (unsigned long)maxnode, \
 		(const unsigned long *)frommask, (const unsigned long *)tomask);
-
-enum {
-	MPOL_DEFAULT,
-	MPOL_PREFERRED,
-	MPOL_BIND,
-	MPOL_INTERLEAVE,
-	MPOL_LOCAL,
-	MPOL_MAX,
-};
 
 static inline void set_node_mask(int node, node_set_t * mask)
 {
@@ -32,10 +32,10 @@ static inline void set_node_mask(int node, node_set_t * mask)
 	NODE_SET(node, mask);
 }
 
-static inline void set_package_mask(int node, node_set_t * mask)
+static inline void set_package_mask(int package, node_set_t * mask)
 {
 	int nr_in_pack = wayca_sc_nodes_in_package();
-	node = node / nr_in_pack * nr_in_pack;
+	int node = package * nr_in_pack;
 	int i;
 
 	NODE_ZERO(mask);
@@ -52,10 +52,10 @@ static inline void set_all_mask(node_set_t * mask)
 		NODE_SET(i, mask);
 }
 
-int wayca_sc_mem_interleave_in_package(int node)
+int wayca_sc_mem_interleave_in_package(int package)
 {
 	node_set_t mask;
-	set_package_mask(node, &mask);
+	set_package_mask(package, &mask);
 	return set_mempolicy(MPOL_INTERLEAVE, (unsigned long *)&mask,
 			     wayca_sc_nodes_in_total());
 }
@@ -75,10 +75,10 @@ int wayca_sc_mem_bind_node(int node)
 	return set_mempolicy(MPOL_BIND, (unsigned long *)&mask, node + 1);
 }
 
-int wayca_sc_mem_bind_package(int node)
+int wayca_sc_mem_bind_package(int package)
 {
 	node_set_t mask;
-	set_package_mask(node, &mask);
+	set_package_mask(package, &mask);
 	return set_mempolicy(MPOL_BIND, (unsigned long *)&mask,
 			     wayca_sc_nodes_in_total());
 }
@@ -86,6 +86,11 @@ int wayca_sc_mem_bind_package(int node)
 int wayca_sc_mem_unbind(void)
 {
 	return set_mempolicy(MPOL_DEFAULT, NULL, wayca_sc_nodes_in_total());
+}
+
+int wayca_sc_get_mem_bind_nodes(size_t nodesetsize, node_set_t *mask)
+{
+	return get_mempolicy(NULL, (unsigned long *)mask, nodesetsize, NULL, MPOL_F_MEMS_ALLOWED);
 }
 
 /*
@@ -101,10 +106,10 @@ long wayca_sc_mem_migrate_to_node(pid_t pid, int node)
 	return migrate_pages(pid, wayca_sc_nodes_in_total(), &all_mask, &node_mask);
 }
 
-long wayca_sc_mem_migrate_to_package(pid_t pid, int node)
+long wayca_sc_mem_migrate_to_package(pid_t pid, int package)
 {
 	node_set_t all_mask, pack_mask;
 	set_all_mask(&all_mask);
-	set_package_mask(node, &pack_mask);
+	set_package_mask(package, &pack_mask);
 	return migrate_pages(pid, wayca_sc_nodes_in_total(), &all_mask, &pack_mask);
 }
