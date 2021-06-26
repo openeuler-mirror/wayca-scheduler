@@ -116,39 +116,4 @@ bool is_thread_in_group(struct wayca_sc_group *group, struct wayca_thread *threa
 
 bool is_group_in_father(struct wayca_sc_group *group, struct wayca_sc_group *father);
 
-static inline int cpuset_find_first_unset(cpu_set_t *cpusetp)
-{
-	int pos;
-
-	pos = find_first_zero_bit((unsigned long *)cpusetp, CPU_SETSIZE);
-
-	return pos == CPU_SETSIZE ? -1 : pos;
-}
-
-static inline int cpuset_find_first_set(cpu_set_t *cpusetp)
-{
-	int pos;
-
-	pos = find_first_bit((unsigned long *)cpusetp, CPU_SETSIZE);
-
-	return pos == CPU_SETSIZE ? -1 : pos;
-}
-
-static inline int cpuset_find_last_set(cpu_set_t *cpusetp)
-{
-	int pos;
-
-	pos = find_last_bit((unsigned long *)cpusetp, CPU_SETSIZE);
-
-	return pos == CPU_SETSIZE ? -1 : pos;
-}
-
-static inline int cpuset_find_next_set(cpu_set_t *cpusetp, int begin)
-{
-	int pos;
-
-	pos = find_next_bit((unsigned long *)cpusetp, CPU_SETSIZE, begin + 1);
-
-	return pos == CPU_SETSIZE ? -1 : pos;
-}
 #endif	/* _WAYCA_THREAD_H */

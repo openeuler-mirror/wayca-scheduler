@@ -4,6 +4,8 @@
 #ifndef LIB_BITMAP_H
 #define LIB_BITMAP_H
 
+#include <ctype.h>
+#include <sched.h>
 #include <sys/types.h>
 
 #include "math.h"
@@ -12,6 +14,10 @@
 #define unlikely(cond)	__builtin_expect(!!(cond), 0)
 
 #define BITS_PER_LONG	__WORDSIZE
+#define BITS_TO_LONGS(bits) \
+        (((bits)+BITS_PER_LONG-1)/BITS_PER_LONG)
+
+#define ALIGN(x,a) (((x)+(a)-1UL)&~((a)-1UL))
 
 #define small_const_nbits(nbits) \
 	(__builtin_constant_p(nbits) && (nbits) <= BITS_PER_LONG && (nbits) > 0)
@@ -247,5 +253,43 @@ unsigned long find_first_zero_bit(const unsigned long *addr, unsigned long size)
 
 	return _find_first_zero_bit(addr, size);
 }
+
+#ifdef _GNU_SOURCE
+static inline int cpuset_find_first_unset(cpu_set_t *cpusetp)
+{
+	int pos;
+
+	pos = find_first_zero_bit((unsigned long *)cpusetp, CPU_SETSIZE);
+
+	return pos == CPU_SETSIZE ? -1 : pos;
+}
+
+static inline int cpuset_find_first_set(cpu_set_t *cpusetp)
+{
+	int pos;
+
+	pos = find_first_bit((unsigned long *)cpusetp, CPU_SETSIZE);
+
+	return pos == CPU_SETSIZE ? -1 : pos;
+}
+
+static inline int cpuset_find_last_set(cpu_set_t *cpusetp)
+{
+	int pos;
+
+	pos = find_last_bit((unsigned long *)cpusetp, CPU_SETSIZE);
+
+	return pos == CPU_SETSIZE ? -1 : pos;
+}
+
+static inline int cpuset_find_next_set(cpu_set_t *cpusetp, int begin)
+{
+	int pos;
+
+	pos = find_next_bit((unsigned long *)cpusetp, CPU_SETSIZE, begin + 1);
+
+	return pos == CPU_SETSIZE ? -1 : pos;
+}
+#endif /* _GNU_SOURCE */
 
 #endif	/* LIB_BITMAP_H */

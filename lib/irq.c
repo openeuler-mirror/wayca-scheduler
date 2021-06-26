@@ -8,17 +8,7 @@
 #include <string.h>
 #include <wayca-scheduler.h>
 
-/*
- * bitmap code is taken from the Linux kernel&irqbalance and minimally adapted for use
- * in userspace
- */
-
-#define BITS_PER_LONG ((int)sizeof(unsigned long)*8)
-
-#define BITS_TO_LONGS(bits) \
-        (((bits)+BITS_PER_LONG-1)/BITS_PER_LONG)
-#define ALIGN(x,a) (((x)+(a)-1UL)&~((a)-1UL))
-
+#include "bitmap.h"
 /*
  * Bitmap printing & parsing functions: first version by Bill Irwin,
  * second version by Paul Jackson, third by Joe Korty.
