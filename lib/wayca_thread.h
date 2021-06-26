@@ -112,6 +112,10 @@ int wayca_group_delete_group(struct wayca_sc_group *group, struct wayca_sc_group
 
 void wayca_thread_update_load(struct wayca_thread *thread, bool add);
 
+bool is_thread_in_group(struct wayca_sc_group *group, struct wayca_thread *thread);
+
+bool is_group_in_father(struct wayca_sc_group *group, struct wayca_sc_group *father);
+
 static inline int cpuset_find_first_unset(cpu_set_t *cpusetp)
 {
 	int pos;

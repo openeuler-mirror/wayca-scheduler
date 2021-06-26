@@ -82,6 +82,8 @@ int wayca_sc_thread_attach_group(wayca_sc_thread_t wthread, wayca_sc_group_t gro
 int wayca_sc_thread_detach_group(wayca_sc_thread_t wthread, wayca_sc_group_t group);
 int wayca_sc_group_attach_group(wayca_sc_group_t group, wayca_sc_group_t father);
 int wayca_sc_group_detach_group(wayca_sc_group_t group, wayca_sc_group_t father);
+int wayca_sc_is_thread_in_group(wayca_sc_thread_t thread, wayca_sc_group_t group);
+int wayca_sc_is_group_in_group(wayca_sc_group_t target, wayca_sc_group_t group);
 
 /* For debug purpose */
 #ifdef WAYCA_SC_DEBUG

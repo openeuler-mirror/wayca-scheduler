@@ -675,6 +675,25 @@ int wayca_sc_group_detach_group(wayca_sc_group_t group, wayca_sc_group_t father)
 	return ret;
 }
 
+int wayca_sc_is_thread_in_group(wayca_sc_thread_t thread, wayca_sc_group_t group)
+{
+	struct wayca_sc_group *wg_p;
+	struct wayca_thread *wt_p;
+
+	wt_p = id_to_wayca_thread(thread);
+	wg_p = id_to_wayca_group(group);
+	return is_thread_in_group(wg_p, wt_p);
+}
+
+int wayca_sc_is_group_in_group(wayca_sc_group_t target, wayca_sc_group_t group)
+{
+	struct wayca_sc_group *wg_p, *father_p;
+
+	wg_p = id_to_wayca_group(target);
+	father_p = id_to_wayca_group(group);
+	return is_group_in_father(wg_p, father_p);
+}
+
 #ifdef WAYCA_SC_DEBUG
 int wayca_sc_thread_get_cpuset(wayca_sc_thread_t wthread, cpu_set_t *cpuset)
 {
