@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 int wayca_sc_irq_bind_cpu(int irq, int cpu);
+int wayca_sc_get_irq_bind_cpu(int irq, size_t cpusetsize, cpu_set_t *cpuset);
 
 int wayca_sc_mem_interleave_in_package(int node);
 int wayca_sc_mem_interleave_in_all(void);
