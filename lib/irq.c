@@ -1,4 +1,5 @@
 #define _GNU_SOURCE
+#include <errno.h>
 #include <sched.h>
 #include <limits.h>
 #include <stdio.h>
@@ -8,17 +9,7 @@
 #include <string.h>
 #include <wayca-scheduler.h>
 
-/*
- * bitmap code is taken from the Linux kernel&irqbalance and minimally adapted for use
- * in userspace
- */
-
-#define BITS_PER_LONG ((int)sizeof(unsigned long)*8)
-
-#define BITS_TO_LONGS(bits) \
-        (((bits)+BITS_PER_LONG-1)/BITS_PER_LONG)
-#define ALIGN(x,a) (((x)+(a)-1UL)&~((a)-1UL))
-
+#include "bitmap.h"
 /*
  * Bitmap printing & parsing functions: first version by Bill Irwin,
  * second version by Paul Jackson, third by Joe Korty.
@@ -66,12 +57,45 @@ static int bitmap_scnprintf(char *buf, unsigned int buflen,
 	return len;
 }
 
+static int bitmap_str_to_cpumask(char *start, size_t len, cpu_set_t *cpuset)
+{
+	int i, pos, num;
+	char *c, *tmp;
+
+	c = strchr(start, '\0');
+	if (!c)
+		c = start + len;
+
+	CPU_ZERO(cpuset);
+
+	pos = i = 0;
+
+	while (c != start) {
+		tmp = --c;
+		if (*tmp == ',')
+			continue;
+
+		num = hex_to_bin(*tmp);
+		if (num < 0)
+			return -EINVAL;
+
+		*((unsigned int *)cpuset + pos) |= (num << i);
+		i += 4;
+		if (i >= CHUNKSZ) {
+			i = 0;
+			pos++;
+		}
+	}
+
+	return 0;
+}
+
 int wayca_sc_irq_bind_cpu(int irq, int cpu)
 {
 	char buf[PATH_MAX];
-	int fd;
-	int ret;
 	cpu_set_t mask;
+	int ret;
+	int fd;
 
 	CPU_ZERO(&mask);
 	CPU_SET(cpu, &mask);
@@ -79,13 +103,44 @@ int wayca_sc_irq_bind_cpu(int irq, int cpu)
 	sprintf(buf, "/proc/irq/%i/smp_affinity", irq);
 	fd = open(buf, O_WRONLY, S_IRUSR | S_IWUSR);
 	if (fd < 0)
-		return -1;
+		return -errno;
 
 	bitmap_scnprintf(buf, PATH_MAX, (unsigned long *)&mask,
 			 wayca_sc_cpus_in_total());
 	ret = write(fd, buf, strlen(buf) + 1);
 
 	close(fd);
+	if (ret < 0)
+		return -errno;
 
-	return ret;
+	return 0;
+}
+
+int wayca_sc_get_irq_bind_cpu(int irq, size_t cpusetsize, cpu_set_t *cpuset)
+{
+	int fd, ret, last_set;
+	char buf[PATH_MAX];
+	cpu_set_t mask;
+
+	sprintf(buf, "/proc/irq/%i/smp_affinity", irq);
+	fd = open(buf, O_WRONLY, S_IRUSR | S_IWUSR);
+	if (fd < 0)
+		return -errno;
+
+	ret = read(fd, buf, PATH_MAX);
+	close(fd);
+
+	if (ret < 0)
+		return -errno;
+
+	ret = bitmap_str_to_cpumask(buf, ret, &mask);
+	if (ret)
+		return ret;
+
+	last_set = cpuset_find_last_set(&mask);
+	if (last_set < 0 || last_set > cpusetsize)
+		return -EINVAL;
+
+	CPU_OR_S(cpusetsize, cpuset, cpuset, &mask);
+	return 0;
 }
