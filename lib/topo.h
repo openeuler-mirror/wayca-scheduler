@@ -40,15 +40,32 @@ struct wayca_cache {
 	cpu_set_t *shared_cpu_map;
 };
 
+/* CPU - a logical Linux CPU (aka. a thread) which is a single scheduling unit.
+ */
 struct wayca_cpu {
 	int cpu_id;
-	int core_id;
+	int core_id;				/* to which core it belongs to */
 	struct wayca_cluster	*p_cluster;	/* in which cluster */
 	struct wayca_node	*p_numa_node;	/* in which Numa node */
 	struct wayca_package	*p_package;	/* in which Package */
 	cpu_set_t *core_cpus_map;		/* SMT - simultaneous multi-threading siblings; CPUs within the same core
 						 *   (deprecated name: "thread_siblings_list"
 						 */
+	size_t n_caches;			/* number of caches */
+	struct wayca_cache	*p_caches;	/* a matrix with n_caches entries */
+};
+
+/* Core - A core consists of 1 or more Linux CPUs (i.e. threads)
+ */
+struct wayca_core {
+	int core_id;				/* unique ID to label a core */
+	size_t n_cpus;				/* number of CPUs contained by this core */
+	cpu_set_t *core_cpus_map;		/* which CPUs it contains */
+
+	struct wayca_cluster	*p_cluster;	/* in which cluster */
+	struct wayca_node	*p_numa_node;	/* in which Numa node */
+	struct wayca_package	*p_package;	/* in which Package */
+
 	size_t n_caches;			/* number of caches */
 	struct wayca_cache	*p_caches;	/* a matrix with n_caches entries */
 };
@@ -129,6 +146,9 @@ struct wayca_topo {
 	size_t n_cpus;				/* total number of CPUs */
 	cpu_set_t *cpu_map;
 	struct wayca_cpu	**cpus;		/* possible CPUs */
+
+	size_t n_cores;				/* number of cores in this node */
+	struct wayca_core **cores;		/* array of cores */
 
 	size_t n_clusters;
 	struct wayca_cluster	**ccls;		/* array of clusters */
