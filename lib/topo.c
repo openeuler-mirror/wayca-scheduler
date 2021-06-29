@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include "common.h"
 #include "topo.h"
+#include "log.h"
 
 WAYCA_SC_INIT_PRIO(topo_init, TOPO);
 WAYCA_SC_FINI_PRIO(topo_free, TOPO);
@@ -716,7 +717,7 @@ static int topo_construct_core_topology(struct wayca_topo *p_topo)
 
 	/* initialization */
 	if (p_topo->cores != NULL || p_topo->n_cores != 0) {
-		PRINT_ERROR("Duplicated call, wayca_cores has been established\n");
+		WAYCA_SC_LOG_ERR("Duplicated call, wayca_cores has been established\n");
 		return -1;
 	}
 
@@ -962,7 +963,7 @@ void topo_print_wayca_core(size_t setsize, struct wayca_core *p_core)
 	if (p_core->p_cluster != NULL)
 		PRINT_DBG("belongs to cluster_id: \t%08x\n", p_core->p_cluster->cluster_id);
 	PRINT_DBG("belongs to node: \t%d\n", p_core->p_numa_node->node_idx);
-	PRINT_DBG("belongs to package_id: \t%08x\n", p_core->p_package->physical_package_id);
+	WAYCA_SC_LOG_INFO("belongs to package_id: \t%08x\n", p_core->p_package->physical_package_id);
 	return;
 }
 

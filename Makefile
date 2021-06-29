@@ -13,7 +13,7 @@ wayca-irqdeploy: libwaycadeployer.so.1.0 irqdeploy.c
 	$(CC) $(CFLAGS) irqdeploy.c -L. -lwaycadeployer -I./include -o $@
 wayca-irqdump: libwaycadeployer.so.1.0 irqdump.c
 	$(CC) $(CFLAGS) irqdump.c -L. -lwaycadeployer -I./include -o $@
-libwaycadeployer.so.1.0: lib/threads.o lib/managed_threads.o lib/irq.o lib/mem.o lib/topo.o lib/group.o
+libwaycadeployer.so.1.0: lib/threads.o lib/managed_threads.o lib/irq.o lib/mem.o lib/topo.o lib/group.o lib/log.o
 	$(CC) -fPIC -pthread -shared -Wl,-soname,libwaycadeployer.so.1 -o $@ $^
 	-ln -s libwaycadeployer.so.1.0 libwaycadeployer.so
 	-ln -s libwaycadeployer.so.1.0 libwaycadeployer.so.1
@@ -29,8 +29,9 @@ wayca_bitmap: test/wayca_bitmap.c
 
 CFLAGS += -Wall -fPIC -DWAYCA_DEPLOY_VERSION=\"0.1\"
 ifeq ($(DEBUG), 1)
-CFLAGS += -g -DWAYCA_SC_DEBUG
+  CFLAGS += -g -DWAYCA_SC_DEBUG
 endif
+
 SRCS = $(wildcard *.c)
 OBJS =$(SRCS:.c=.o)
 DEPS = $(SRCS:.c=.d)

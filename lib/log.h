@@ -18,6 +18,20 @@
 #define Cyan(str) 		"\033[36m" str Reset
 #define White(str) 		"\033[37m" str Reset
 
+/* wayca log level definitions:
+ *   INFO: most verbose, prints info(), warn() and err()
+ *   WARN: middle level, prints warn() and err()
+ *   ERR:  most concise, prints err()
+ */
+typedef enum {
+	WAYCA_SC_LOG_LEVEL_DEFAULT = 2,
+	WAYCA_SC_LOG_LEVEL_ERR = 0,
+	WAYCA_SC_LOG_LEVEL_WARN = 1,
+	WAYCA_SC_LOG_LEVEL_INFO = 2
+} WAYCA_SC_LOG_LEVEL;
+
+extern WAYCA_SC_LOG_LEVEL wayca_sc_log_level;
+
 static inline void logTimeStamp(FILE *file)
 {
 	time_t rawtime;
@@ -43,18 +57,35 @@ static inline void _log(FILE *file, bool conn, char *fmt, ...)
 	va_end(args);
 }
 
-#define info(fmt, ...)	\
-	_log(stdout, false, "[Info] " fmt, __VA_ARGS__)
-#define err(fmt, ...)	\
-	_log(stderr, false, Red("[Error] ") fmt, __VA_ARGS__)
-#define warn(fmt, ...)	\
-	_log(stdout, false, Yellow("[Warn] ") fmt, __VA_ARGS__)
+#define WAYCA_SC_LOG_ERR(fmt, ...) \
+	do {if (WAYCA_SC_LOG_LEVEL_ERR <= wayca_sc_log_level) \
+		_log(stderr, false, Red("[Error] ") fmt, ##__VA_ARGS__); \
+	} while (0);
 
-#define info_conn(fmt, ...)	\
-	_log(stdout, true, "[Info] " fmt, __VA_ARGS__)
-#define err_conn(fmt, ...)	\
-	_log(stderr, true, Red("[Error] ") fmt, __VA_ARGS__)
-#define warn_conn(fmt, ...)	\
-	_log(stdout, true, Yellow("[Warn] ") fmt, __VA_ARGS__)
+#define WAYCA_SC_LOG_ERR_CONN(fmt, ...) \
+	do {if (WAYCA_SC_LOG_LEVEL_ERR <= wayca_sc_log_level) \
+		_log(stderr, true, Red("[Error] ") fmt, ##__VA_ARGS__); \
+	} while (0);
 
+#define WAYCA_SC_LOG_WARN(fmt, ...) \
+	do {if (WAYCA_SC_LOG_LEVEL_WARN <= wayca_sc_log_level) \
+		_log(stderr, false, Yellow("[Warning] ") fmt, ##__VA_ARGS__); \
+	} while (0);
+
+#define WAYCA_SC_LOG_WARN_CONN(fmt, ...) \
+	do {if (WAYCA_SC_LOG_LEVEL_WARN <= wayca_sc_log_level) \
+		_log(stderr, true, Yellow("[Warning] ") fmt, ##__VA_ARGS__); \
+	} while (0);
+
+#define WAYCA_SC_LOG_INFO(fmt, ...) \
+	do {if (WAYCA_SC_LOG_LEVEL_INFO <= wayca_sc_log_level) \
+		_log(stderr, false, fmt, ##__VA_ARGS__); \
+	} while (0);
+
+#define WAYCA_SC_LOG_INFO_CONN(fmt, ...) \
+	do {if (WAYCA_SC_LOG_LEVEL_INFO <= wayca_sc_log_level) \
+		_log(stderr, true, fmt, ##__VA_ARGS__); \
+	} while (0);
+
+void wayca_sc_set_log_level(WAYCA_SC_LOG_LEVEL level);
 #endif /* LIB_LOG_H */
