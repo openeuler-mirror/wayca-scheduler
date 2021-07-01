@@ -421,11 +421,11 @@ static int topo_read_cpu_topology(int cpu_index, struct wayca_topo *p_topo)
 			CPU_ZERO_S(p_topo->setsize, p_topo->nodes[node_index]->cpu_map);
 			/* add node_index into the top-level node map */
 			CPU_SET_S(node_index, CPU_ALLOC_SIZE(p_topo->n_cpus), p_topo->node_map);
-			p_topo->n_nodes ++;
+			p_topo->n_nodes++;
 		}
 		/* add current CPU into this node's cpu map */
 		CPU_SET_S(cpu_index, p_topo->setsize, p_topo->nodes[node_index]->cpu_map);
-		p_topo->nodes[node_index]->n_cpus ++;
+		p_topo->nodes[node_index]->n_cpus++;
 		/* link this node back to current CPU */
 		p_topo->cpus[cpu_index]->p_numa_node = p_topo->nodes[node_index];
 		break;	/* found one "node" entry, no need to check any more */
@@ -453,7 +453,7 @@ static int topo_read_cpu_topology(int cpu_index, struct wayca_topo *p_topo)
 	}
 	if (i == p_topo->n_clusters) {	/* need to create a new wayca_cluster */
 		/* TODO: refactor this into a new funcion */
-		p_topo->n_clusters ++;
+		p_topo->n_clusters++;
 		/* increase p_topo->ccls array */
 		struct wayca_cluster **p_temp;
 		p_temp = (struct wayca_cluster **)realloc(p_topo->ccls, (p_topo->n_clusters) * sizeof(struct wayca_cluster *));
@@ -496,7 +496,7 @@ read_package_info:
 			break;
 	if (i == p_topo->n_packages) {	/* need to create a new wayca_package */
 		/* TODO: refactor this into a new funcion */
-		p_topo->n_packages ++;
+		p_topo->n_packages++;
 		/* increase p_topo->packages array */
 		struct wayca_package **p_temp;
 		p_temp = (struct wayca_package **)realloc(p_topo->packages,
@@ -552,7 +552,7 @@ read_package_info:
 		/* check access */
 		if (access(path_buffer, F_OK) != 0) /* doesn't exist */
 			break;
-		n_caches ++;
+		n_caches++;
 	} while (1);
 	p_topo->cpus[cpu_index]->n_caches = n_caches;
 
@@ -703,6 +703,67 @@ static int topo_read_node_topology(int node_index, struct wayca_topo *p_topo)
 	return 0;
 }
 
+/* topo_construct_core_topology
+ *  This function takes in wayca_cpus information and construct a wayca_cores
+ *  topology.
+ * Return negative on error, 0 on success
+ */
+static int topo_construct_core_topology(struct wayca_topo *p_topo)
+{
+	struct wayca_core **pp_core;
+	int cur_core_id;
+	int i, j;
+
+	/* initialization */
+	if (p_topo->cores != NULL || p_topo->n_cores != 0) {
+		PRINT_ERROR("Duplicated call, wayca_cores has been established\n");
+		return -1;
+	}
+
+	/* go through all n_cpus */
+	for (i = 0; i < p_topo->n_cpus; i++) {
+		/* read this cpu's core_id */
+		cur_core_id = p_topo->cpus[i]->core_id;
+		/* check whether it is already in wayca_core array */
+		for (j = 0; j < p_topo->n_cores; j++) {
+			if (p_topo->cores[j]->core_id == cur_core_id)
+				break;		/* it exists, skip */
+		}
+		if (j < p_topo->n_cores)
+			continue;		/* cur_core_id exists in p_topo->cores
+						 * go check next cpu's */
+		/* cur_core_id doesn't exists in p_topo->cores
+		 * need to allocate a new wayca_core
+		 */
+		pp_core = (struct wayca_core **)realloc(p_topo->cores,
+					(p_topo->n_cores + 1) * sizeof(struct wayca_core *));
+		if (!pp_core)
+			return -ENOMEM;		/* no enough memory */
+		p_topo->cores = pp_core;
+
+		/* j equals p_topo->n_cores */
+		p_topo->cores[j] = (struct wayca_core *)calloc(1,
+					sizeof(struct wayca_core));
+		if (!p_topo->cores[j])
+			return -ENOMEM;	/* no enough memory */
+
+		/* increase p_topo->n_cores */
+		p_topo->n_cores++;
+
+		/* copy from cpus[i] to cores[j] */
+		p_topo->cores[j]->core_id = cur_core_id;
+		p_topo->cores[j]->core_cpus_map = p_topo->cpus[i]->core_cpus_map;
+		p_topo->cores[j]->n_cpus = CPU_COUNT_S(p_topo->setsize,
+						       p_topo->cores[j]->core_cpus_map);
+		p_topo->cores[j]->p_cluster = p_topo->cpus[i]->p_cluster;
+		p_topo->cores[j]->p_numa_node = p_topo->cpus[i]->p_numa_node;
+		p_topo->cores[j]->p_package = p_topo->cpus[i]->p_package;
+		p_topo->cores[j]->n_caches = p_topo->cpus[i]->n_caches;
+		p_topo->cores[j]->p_caches = p_topo->cpus[i]->p_caches;
+	}
+	return 0;
+}
+
 static int topo_recursively_read_io_devices(const char *rootdir, struct wayca_topo *p_topo);
 
 /* External callable functions */
@@ -792,6 +853,15 @@ static void topo_init(void)
 	/* at the end of the cpu%d for loop, the following has been established:
 	 *  - p_topo->nodes[]->distance
 	 */
+
+	/* Construct wayca_cores topology from wayca_cpus */
+	ret = topo_construct_core_topology(p_topo);
+	if (ret) {
+		PRINT_ERROR("Failed to construct core topology, ret = %d", ret);
+		goto cleanup_on_error;
+	}
+
+
 	/* read I/O devices topology */
 	if (topo_recursively_read_io_devices(WAYCA_SC_SYSDEV_FNAME, p_topo) != 0)
 		goto cleanup_on_error;
@@ -838,7 +908,7 @@ void topo_print_wayca_node(size_t setsize, struct wayca_node *p_node, size_t dis
 		int j;
 		PRINT_DBG("\t\t count of irqs (inc. msi_irqs): %d\n", j = p_node->pcidevs[i]->irqs.n_irqs);
 		PRINT_DBG("\t\t\t List of IRQs: ");
-		for (j = 0; j < p_node->pcidevs[i]->irqs.n_irqs; j ++) {
+		for (j = 0; j < p_node->pcidevs[i]->irqs.n_irqs; j++) {
 			PRINT_DBG("%u\t", p_node->pcidevs[i]->irqs.irqs[j].irq_number);
 		}
 		PRINT_DBG("\n");
@@ -882,6 +952,20 @@ void topo_print_wayca_cpu(size_t setsize, struct wayca_cpu *p_cpu)
 	PRINT_DBG("belongs to package_id: \t%08x\n", p_cpu->p_package->physical_package_id);
 }
 
+void topo_print_wayca_core(size_t setsize, struct wayca_core *p_core)
+{
+	PRINT_DBG("core_id: %d\n", p_core->core_id);
+	PRINT_DBG("\tn_cpus: %lu\n", p_core->n_cpus);
+	PRINT_DBG("\tCPU count in this core / SMT factor: %d\n",
+				CPU_COUNT_S(setsize, p_core->core_cpus_map));
+	PRINT_DBG("Number of caches: %zu\n", p_core->n_caches);
+	if (p_core->p_cluster != NULL)
+		PRINT_DBG("belongs to cluster_id: \t%08x\n", p_core->p_cluster->cluster_id);
+	PRINT_DBG("belongs to node: \t%d\n", p_core->p_numa_node->node_idx);
+	PRINT_DBG("belongs to package_id: \t%08x\n", p_core->p_package->physical_package_id);
+	return;
+}
+
 #ifdef WAYCA_SC_DEBUG
 void wayca_sc_topo_print(void)
 {
@@ -898,6 +982,14 @@ void wayca_sc_topo_print(void)
 			continue;
 		PRINT_DBG("CPU%d information:\n", i);
 		topo_print_wayca_cpu(p_topo->setsize, p_topo->cpus[i]);
+	}
+
+	PRINT_DBG("n_cores: %lu\n", p_topo->n_cores);
+	for (i = 0; i < p_topo->n_cores; i++) {
+		if (p_topo->cores[i] == NULL)
+			continue;
+		PRINT_DBG("Core %d information:\n", i);
+		topo_print_wayca_core(p_topo->setsize, p_topo->cores[i]);
 	}
 
 	PRINT_DBG("n_clusters: %lu\n", p_topo->n_clusters);
@@ -936,6 +1028,13 @@ void topo_free(void)
 		free(p_topo->cpus[i]);
 	}
 	free(p_topo->cpus);
+
+	/* NOTE: pointers inside wayca_core are freed by wayca_cpu
+	 * So, here we only need to free the top-level wayca_core structure
+	 */
+	for (i = 0; i < p_topo->n_cores; i++)
+		free(p_topo->cores[i]);
+	free(p_topo->cores);
 
 	for (i = 0; i < p_topo->n_clusters; i++) {
 		CPU_FREE(p_topo->ccls[i]->cpu_map);
@@ -1379,7 +1478,7 @@ static int topo_parse_device_irqs(const char *device_sysfs_dir, struct wayca_dev
 		if (irq_number < 0)
 			irq_number = 0;		/* on failure */
 		/* check it exists in wirqs or not */
-		for(j = 0; j < wirqs->n_irqs; j ++)
+		for(j = 0; j < wirqs->n_irqs; j++)
 			if (wirqs->irqs[j].irq_number == irq_number)
 				break;
 		if (j == wirqs->n_irqs) {	/* doesn't exist, create a new one */
@@ -1388,7 +1487,7 @@ static int topo_parse_device_irqs(const char *device_sysfs_dir, struct wayca_dev
 			if (!p_irqs)
 				return -ENOMEM;		/* no enough memory */
 			p_irqs[wirqs->n_irqs].irq_number = irq_number;
-			wirqs->n_irqs ++;
+			wirqs->n_irqs++;
 			wirqs->irqs = p_irqs;
 		}
 	}
@@ -1456,7 +1555,7 @@ static int topo_parse_io_device(const char *dir, struct wayca_topo *p_topo)
 		}
 		p_topo->nodes[i]->pcidevs = p_temp;
 		p_topo->nodes[i]->pcidevs[p_topo->nodes[i]->n_pcidevs] = p_pcidev;
-		p_topo->nodes[i]->n_pcidevs ++;		/* incement number of PCI devices */
+		p_topo->nodes[i]->n_pcidevs++;		/* incement number of PCI devices */
 		PRINT_DBG("n_pcidevs = %zu\n", p_topo->nodes[i]->n_pcidevs);
 
 		/* read PCI information into: p_pcidev
@@ -1575,7 +1674,7 @@ static int topo_parse_io_device(const char *dir, struct wayca_topo *p_topo)
 		}
 		p_topo->nodes[i]->smmus = p_temp;
 		p_topo->nodes[i]->smmus[p_topo->nodes[i]->n_smmus] = p_smmu;
-		p_topo->nodes[i]->n_smmus ++;		/* incement number of SMMU devices */
+		p_topo->nodes[i]->n_smmus++;		/* incement number of SMMU devices */
 		PRINT_DBG("n_smmus = %zu\n", p_topo->nodes[i]->n_smmus);
 
 		/* read SMMU information into: p_smmu */
