@@ -27,16 +27,45 @@
 #define TEST_INVALID_ID -1
 static void test_entity_number()
 {
-	printf("cpus_in_ccl: %d\n", wayca_sc_cpus_in_ccl());
-	printf("cpus_in_node: %d\n", wayca_sc_cpus_in_node());
-	printf("cpus_in_package: %d\n", wayca_sc_cpus_in_package());
-	printf("cpus_in_total: %d\n", wayca_sc_cpus_in_total());
-	printf("ccls_in_node: %d\n", wayca_sc_ccls_in_node());
-	printf("ccls_in_package: %d\n", wayca_sc_ccls_in_package());
-	printf("ccls_in_total: %d\n", wayca_sc_ccls_in_total());
-	printf("nodes_in_package: %d\n", wayca_sc_nodes_in_package());
-	printf("nodes_in_total: %d\n", wayca_sc_nodes_in_total());
-	printf("packages_in_total: %d\n", wayca_sc_packages_in_total());
+	int ret;
+
+	ret = wayca_sc_cpus_in_ccl();
+	assert(ret > 0 || ret == -ENODATA);
+	if (ret != -ENODATA)
+		printf("cpus_in_ccl: %d\n", ret);
+	ret = wayca_sc_cpus_in_node();
+	assert(ret > 0);
+	printf("cpus_in_node: %d\n", ret);
+	ret = wayca_sc_cpus_in_package();
+	assert(ret > 0);
+	printf("cpus_in_package: %d\n", ret);
+	ret = wayca_sc_cpus_in_total();
+	assert(ret > 0);
+	printf("cpus_in_total: %d\n", ret);
+
+	ret = wayca_sc_ccls_in_node();
+	assert(ret > 0 || ret == -ENODATA);
+	if (ret != -ENODATA)
+		printf("ccls_in_node: %d\n", ret);
+	ret = wayca_sc_ccls_in_package();
+	assert(ret > 0 || ret == -ENODATA);
+	if (ret != -ENODATA)
+		printf("ccls_in_package: %d\n", ret);
+	ret = wayca_sc_ccls_in_total();
+	assert(ret > 0 || ret == -ENODATA);
+	if (ret != -ENODATA)
+		printf("ccls_in_total: %d\n", ret);
+
+	ret = wayca_sc_nodes_in_package();
+	assert(ret > 0);
+	printf("nodes_in_package: %d\n", ret);
+	ret = wayca_sc_nodes_in_total();
+	assert(ret > 0);
+	printf("nodes_in_total: %d\n", ret);
+
+	ret = wayca_sc_packages_in_total();
+	assert(ret > 0);
+	printf("packages_in_total: %d\n", ret);
 }
 
 static void test_get_entity_id()
