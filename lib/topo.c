@@ -334,13 +334,29 @@ int cpulist_parse(const char *str, cpu_set_t *set, size_t setsize, int fail)
 /* cpu_set_t *set: can contain anything and will be zero'ed by cpulist_parse() */
 static int topo_path_read_cpulist(const char *base, const char *filename, cpu_set_t *set, int maxcpus)
 {
-	int dir_fd = open(base, O_RDONLY|O_CLOEXEC);
-	int fd = openat(dir_fd, filename, O_RDONLY);
-	FILE *f = fdopen(fd, "r");
-
 	size_t len = maxcpus * 8;	/* big enough to hold a CPU ids */
 	char buf[len];			/* dynamic allocation */
 	int ret = 0;
+	int dir_fd;
+	FILE *f;
+	int fd;
+
+	dir_fd = open(base, O_RDONLY|O_CLOEXEC);
+	if (dir_fd == -1)
+		return -errno;
+
+	fd = openat(dir_fd, filename, O_RDONLY);
+	if (fd == -1) {
+		close(dir_fd);
+		return -errno;
+	}
+
+	f = fdopen(fd, "r");
+	if (f == NULL) {
+		close(fd);
+		close(dir_fd);
+		return -errno;
+	}
 
 	if (fgets(buf, len, f) == NULL)
 		ret = -errno;
