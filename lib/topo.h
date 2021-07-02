@@ -33,7 +33,11 @@
 #define WAYCA_SC_USLEEP_DELAY_250MS	(250000)	/* 250ms */
 #define WAYCA_SC_ATTR_STRING_LEN	(256)		/* default attribute string length */
 
-#define PRINT_DBG	printf
+#ifdef WAYCA_SC_DEBUG
+#define PRINT_DBG(fmt, args...)	printf(fmt, ## args)
+#else
+#define PRINT_DBG(fmt, args...)	do {} while (0)
+#endif
 #define PRINT_ERROR	printf
 
 struct wayca_cache {
