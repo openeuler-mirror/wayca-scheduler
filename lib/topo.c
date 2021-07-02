@@ -803,12 +803,14 @@ static int topo_recursively_read_io_devices(const char *rootdir, struct wayca_to
 /* External callable functions */
 static void topo_init(void)
 {
+	char origin_wd[WAYCA_SC_PATH_LEN_MAX];
 	struct wayca_topo *p_topo = &topo;
 	cpu_set_t *cpuset_possible;
 	cpu_set_t *node_possible;
 	int i = 0;
 	int ret;
 
+	getcwd(origin_wd, WAYCA_SC_PATH_LEN_MAX);
 	memset(p_topo, 0, sizeof(struct wayca_topo));
 
 	/* read "cpu/kernel_max" to determine maximum size for future memory allocations */
@@ -914,6 +916,7 @@ static void topo_init(void)
 	if (topo_recursively_read_io_devices(WAYCA_SC_SYSDEV_FNAME, p_topo) != 0)
 		goto cleanup_on_error;
 
+	chdir(origin_wd);
 	return;
 
 	/* cleanup_on_error */
