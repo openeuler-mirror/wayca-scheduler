@@ -1084,10 +1084,8 @@ void topo_free(void)
 		free(p_topo->cores[i]);
 	free(p_topo->cores);
 
-	for (i = 0; i < p_topo->n_clusters; i++) {
+	for (i = 0; i < p_topo->n_clusters; i++)
 		CPU_FREE(p_topo->ccls[i]->cpu_map);
-		free(p_topo->cpus[i]);
-	}
 	free(p_topo->ccls);
 
 	CPU_FREE(p_topo->node_map);
