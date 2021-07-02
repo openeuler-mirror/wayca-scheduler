@@ -33,6 +33,9 @@ static void test_entity_number()
 	assert(ret > 0 || ret == -ENODATA);
 	if (ret != -ENODATA)
 		printf("cpus_in_ccl: %d\n", ret);
+	ret = wayca_sc_cpus_in_core();
+	assert(ret > 0);
+	printf("cpus_in_core: %d\n", ret);
 	ret = wayca_sc_cpus_in_node();
 	assert(ret > 0);
 	printf("cpus_in_node: %d\n", ret);
@@ -42,6 +45,20 @@ static void test_entity_number()
 	ret = wayca_sc_cpus_in_total();
 	assert(ret > 0);
 	printf("cpus_in_total: %d\n", ret);
+
+	ret = wayca_sc_cores_in_ccl();
+	assert(ret > 0 || ret == -ENODATA);
+	if (ret != -ENODATA)
+		printf("cores_in_ccl: %d\n", ret);
+	ret = wayca_sc_cores_in_node();
+	assert(ret > 0);
+	printf("cores_in_node: %d\n", ret);
+	ret = wayca_sc_cores_in_package();
+	assert(ret > 0);
+	printf("cores_in_package: %d\n", ret);
+	ret = wayca_sc_cores_in_total();
+	assert(ret > 0);
+	printf("cores_in_total: %d\n", ret);
 
 	ret = wayca_sc_ccls_in_node();
 	assert(ret > 0 || ret == -ENODATA);
@@ -114,6 +131,8 @@ static void test_get_cpu_list()
 	setsize = CPU_ALLOC_SIZE(n_cpus);
 	cpu_set = CPU_ALLOC(n_cpus);
 
+	ret = wayca_sc_core_cpu_mask(0, 0, cpu_set);
+	assert(ret < 0);
 	ret = wayca_sc_ccl_cpu_mask(0, 0, cpu_set);
 	assert(ret < 0);
 	ret = wayca_sc_node_cpu_mask(0, 0, cpu_set);
@@ -123,6 +142,8 @@ static void test_get_cpu_list()
 	ret = wayca_sc_total_cpu_mask(0, cpu_set);
 	assert(ret < 0);
 
+	ret = wayca_sc_core_cpu_mask(TEST_INVALID_ID, setsize, cpu_set);
+	assert(ret < 0);
 	ret = wayca_sc_ccl_cpu_mask(TEST_INVALID_ID, setsize, cpu_set);
 	assert(ret < 0);
 	ret = wayca_sc_node_cpu_mask(TEST_INVALID_ID, setsize, cpu_set);
@@ -134,6 +155,9 @@ static void test_get_cpu_list()
 	assert(ret == 0 || ret == -EINVAL);
 	if (ret == 0)
 		print_cpumask("cluster 0",setsize, cpu_set);
+	ret = wayca_sc_core_cpu_mask(0, setsize, cpu_set);
+	assert(ret == 0);
+	print_cpumask("cluster 0", setsize, cpu_set);
 	ret = wayca_sc_node_cpu_mask(0, setsize, cpu_set);
 	assert(ret == 0);
 	print_cpumask("node 0", setsize, cpu_set);

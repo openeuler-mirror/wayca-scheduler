@@ -1086,6 +1086,13 @@ void topo_free(void)
 	return;
 }
 
+int wayca_sc_cpus_in_core(void)
+{
+	if (topo.n_cores < 1)
+		return -ENODATA;	/* not initialized */
+	return topo.cores[0]->n_cpus;
+}
+
 int wayca_sc_cpus_in_ccl(void)
 {
 	if (topo.n_clusters < 1)
@@ -1112,6 +1119,36 @@ int wayca_sc_cpus_in_total(void)
 	if (topo.n_cpus < 1)
 		return -ENODATA;	/* not initialized */
 	return topo.n_cpus;
+}
+
+int wayca_sc_cores_in_ccl(void)
+{
+	if (topo.n_clusters < 1)
+		return -ENODATA;	/* not initialized */
+	if (topo.n_cores < 1)
+		return -ENODATA;	/* not initialized */
+	return topo.ccls[0]->n_cpus / topo.cores[0]->n_cpus;
+}
+
+int wayca_sc_cores_in_node(void)
+{
+	if (topo.n_cores < 1)
+		return -ENODATA;	/* not initialized */
+	return topo.nodes[0]->n_cpus / topo.cores[0]->n_cpus;
+}
+
+int wayca_sc_cores_in_package(void)
+{
+	if (topo.n_cores < 1)
+		return -ENODATA;	/* not initialized */
+	return topo.packages[0]->n_cpus / topo.cores[0]->n_cpus;
+}
+
+int wayca_sc_cores_in_total(void)
+{
+	if (topo.n_cores < 1)
+		return -ENODATA;	/* not initialized */
+	return topo.n_cores;
 }
 
 int wayca_sc_ccls_in_package(void)
@@ -1158,7 +1195,12 @@ int wayca_sc_packages_in_total(void)
 
 static bool topo_is_valid_cpu(int cpu_id)
 {
-	return cpu_id >= 0 && cpu_id < wayca_sc_cpus_in_total();
+	return cpu_id >= 0 && cpu_id < wayca_sc_cores_in_total();
+}
+
+static bool topo_is_valid_core(int core_id)
+{
+	return core_id >= 0 && core_id < wayca_sc_cpus_in_total();
 }
 
 static bool topo_is_valid_ccl(int ccl_id)
@@ -1174,6 +1216,22 @@ static bool topo_is_valid_node(int node_id)
 static bool topo_is_valid_package(int package_id)
 {
 	return package_id >= 0 && package_id < wayca_sc_packages_in_total();
+}
+
+int wayca_sc_core_cpu_mask(int core_id, size_t cpusetsize, cpu_set_t *mask)
+{
+	size_t valid_cpu_setsize;
+
+	if (!topo_is_valid_core(core_id))
+		return -EINVAL;
+
+	valid_cpu_setsize = CPU_ALLOC_SIZE(topo.n_cpus);
+	if (cpusetsize < valid_cpu_setsize)
+		return -EINVAL;
+
+	CPU_ZERO_S(valid_cpu_setsize, mask);
+	CPU_OR_S(valid_cpu_setsize, mask, mask, topo.cores[core_id]->core_cpus_map);
+	return 0;
 }
 
 int wayca_sc_ccl_cpu_mask(int ccl_id, size_t cpusetsize, cpu_set_t *mask)

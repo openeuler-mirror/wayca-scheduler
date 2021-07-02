@@ -37,6 +37,7 @@ int wayca_sc_get_mem_bind_nodes(size_t nodesetsize, node_set_t *mask);
 long wayca_sc_mem_migrate_to_node(pid_t pid, int node);
 long wayca_sc_mem_migrate_to_package(pid_t pid, int package);
 
+int wayca_sc_cpus_in_core(void);
 int wayca_sc_cpus_in_ccl(void);
 int wayca_sc_cpus_in_node(void);
 int wayca_sc_cpus_in_package(void);
@@ -44,6 +45,10 @@ int wayca_sc_cpus_in_total(void);
 int wayca_sc_ccls_in_package(void);
 int wayca_sc_ccls_in_node(void);
 int wayca_sc_ccls_in_total(void);
+int wayca_sc_cores_in_ccl(void);
+int wayca_sc_cores_in_node(void);
+int wayca_sc_cores_in_package(void);
+int wayca_sc_cores_in_total(void);
 int wayca_sc_nodes_in_package(void);
 int wayca_sc_nodes_in_total(void);
 int wayca_sc_packages_in_total(void);
