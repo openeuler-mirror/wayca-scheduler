@@ -15,6 +15,7 @@
 #define DEPLOY_COMMON_H
 
 #include "lib/common.h"
+#include <string.h>
 
 #define MAX_IRQS_BIND 20
 

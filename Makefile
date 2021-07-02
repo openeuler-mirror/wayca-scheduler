@@ -1,5 +1,5 @@
 #Todo: move to autoconf + automake
-tools = wayca-deployer wayca-deployd wayca-irqdump wayca-irqdeploy wayca-taskdeploy
+tools = wayca-deployer wayca-deployd wayca-irqdump wayca-irqdeploy wayca-taskdeploy wayca-sc-info
 tests = wayca_sc_group wayca_thread wayca_threadpool wayca_topo wayca_bitmap
 
 all: $(tools) $(tests)
@@ -13,6 +13,11 @@ wayca-irqdeploy: libwaycadeployer.so.1.0 irqdeploy.c
 	$(CC) $(CFLAGS) irqdeploy.c -L. -lwaycadeployer -I./include -o $@
 wayca-irqdump: libwaycadeployer.so.1.0 irqdump.c
 	$(CC) $(CFLAGS) irqdump.c -L. -lwaycadeployer -I./include -o $@
+wayca-sc-info: libwaycadeployer.so.1.0 tools/wayca-sc-info/wayca_sc_info.c
+	$(CC) $(CFLAGS) tools/wayca-sc-info/wayca_sc_info.c \
+	    tools/wayca-sc-info/wayca_sc_topo.c \
+	    -L. -lwaycadeployer -lxml2 -I/usr/include/libxml2\
+	    -I./include -I ./ -o tools/wayca-sc-info/$@
 libwaycadeployer.so.1.0: lib/threads.o lib/managed_threads.o lib/irq.o lib/mem.o lib/topo.o lib/group.o lib/log.o
 	$(CC) -fPIC -pthread -shared -Wl,-soname,libwaycadeployer.so.1 -o $@ $^
 	-ln -s libwaycadeployer.so.1.0 libwaycadeployer.so
@@ -56,4 +61,5 @@ clean:
 	-rm -f *.o lib/*.o
 	-rm -f *.so*
 	-rm -f $(tools)
+	-rm -f tools/wayca-sc-info/wayca-sc-info
 	-cd test && rm -f $(tests)
