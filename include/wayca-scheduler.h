@@ -56,8 +56,10 @@ int wayca_sc_packages_in_total(void);
 int wayca_sc_core_cpu_mask(int core, size_t cpusetsize, cpu_set_t *mask);
 int wayca_sc_ccl_cpu_mask(int ccl, size_t cpusetsize, cpu_set_t *mask);
 int wayca_sc_node_cpu_mask(int node, size_t cpusetsize, cpu_set_t *mask);
-int wayca_sc_package_cpu_mask(int node, size_t cpusetsize, cpu_set_t *mask);
+int wayca_sc_package_cpu_mask(int package, size_t cpusetsize, cpu_set_t *mask);
 int wayca_sc_total_cpu_mask(size_t cpusetsize, cpu_set_t *mask);
+int wayca_sc_package_node_mask(int package, size_t setsize, cpu_set_t *mask);
+int wayca_sc_total_node_mask(size_t setsize, cpu_set_t *mask);
 
 int wayca_sc_get_core_id(int cpu);
 int wayca_sc_get_ccl_id(int cpu);

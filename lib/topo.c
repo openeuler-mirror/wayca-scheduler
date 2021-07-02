@@ -525,6 +525,11 @@ read_package_info:
 		p_topo->packages[i]->cpu_map = CPU_ALLOC(p_topo->kernel_max_cpus);
 		if (!p_topo->packages[i]->cpu_map)
 			return -ENOMEM;			/* no enough memory */
+		/* initialize this package's numa_map */
+		p_topo->packages[i]->numa_map = CPU_ALLOC(p_topo->n_cpus);
+		if (!p_topo->packages[i]->numa_map)
+			return -ENOMEM;			/* no enough memory */
+		CPU_ZERO_S(CPU_ALLOC_SIZE(p_topo->n_cpus), p_topo->packages[i]->numa_map);
 		/* read "package_cpus_list" */
 		ret = topo_path_read_cpulist(path_buffer, "package_cpus_list",
 				p_topo->packages[i]->cpu_map, p_topo->kernel_max_cpus);
@@ -857,12 +862,26 @@ static void topo_init(void)
 
 	/* read all node%d topology */
 	for (i = 0; i < p_topo->n_nodes; i++) {
+		cpu_set_t *res_cpu;
+		size_t setsize;
+		int j;
+
 		ret = topo_read_node_topology(i, p_topo);
 		if (ret) {
 			PRINT_ERROR("get node %d topology fail, ret = %d", i, ret);
 			goto cleanup_on_error;
 		}
+		res_cpu = CPU_ALLOC(p_topo->n_cpus);
+		setsize = CPU_ALLOC_SIZE(p_topo->n_cpus);
+		for (j = 0; j < p_topo->n_packages; j++) {
+			CPU_AND_S(setsize, res_cpu, p_topo->packages[j]->cpu_map,
+					p_topo->nodes[i]->cpu_map);
+			if (CPU_EQUAL_S(setsize, res_cpu, p_topo->nodes[i]->cpu_map))
+				CPU_SET_S(i, setsize, p_topo->packages[j]->numa_map);
+
+		}
 	}
+
 	/* at the end of the cpu%d for loop, the following has been established:
 	 *  - p_topo->nodes[]->distance
 	 */
@@ -1292,6 +1311,35 @@ int wayca_sc_total_cpu_mask(size_t cpusetsize, cpu_set_t *mask)
 
 	CPU_ZERO_S(valid_cpu_setsize, mask);
 	CPU_OR_S(valid_cpu_setsize, mask, mask, topo.cpu_map);
+	return 0;
+}
+
+int wayca_sc_package_node_mask(int package_id, size_t setsize, cpu_set_t *mask)
+{
+	size_t valid_numa_setsize;
+
+	if (!topo_is_valid_package(package_id))
+		return -EINVAL;
+
+	valid_numa_setsize = CPU_ALLOC_SIZE(topo.n_nodes);
+	if (setsize < valid_numa_setsize)
+		return -EINVAL;
+
+	CPU_ZERO_S(setsize, mask);
+	CPU_OR_S(valid_numa_setsize, mask, mask, topo.packages[package_id]->numa_map);
+	return 0;
+}
+
+int wayca_sc_total_node_mask(size_t setsize, cpu_set_t *mask)
+{
+	size_t valid_numa_setsize;
+
+	valid_numa_setsize = CPU_ALLOC_SIZE(topo.n_nodes);
+	if (setsize < valid_numa_setsize)
+		return -EINVAL;
+
+	CPU_ZERO_S(setsize, mask);
+	CPU_OR_S(valid_numa_setsize, mask, mask, topo.node_map);
 	return 0;
 }
 

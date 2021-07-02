@@ -121,6 +121,13 @@ static void print_cpumask(const char *topo, size_t setsize, cpu_set_t *mask)
 	printf("%d\n", CPU_COUNT_S(setsize, mask));
 }
 
+static void print_nodemask(const char *topo, size_t setsize, cpu_set_t *mask)
+{
+
+	printf("%s nodecount:", topo);
+	printf("%d\n", CPU_COUNT_S(setsize, mask));
+}
+
 static void test_get_cpu_list()
 {
 	int n_cpus = wayca_sc_cpus_in_total();
@@ -141,6 +148,10 @@ static void test_get_cpu_list()
 	assert(ret < 0);
 	ret = wayca_sc_total_cpu_mask(0, cpu_set);
 	assert(ret < 0);
+	ret = wayca_sc_package_node_mask(0, 0, cpu_set);
+	assert(ret < 0);
+	ret = wayca_sc_total_node_mask(0, cpu_set);
+	assert(ret < 0);
 
 	ret = wayca_sc_core_cpu_mask(TEST_INVALID_ID, setsize, cpu_set);
 	assert(ret < 0);
@@ -149,6 +160,8 @@ static void test_get_cpu_list()
 	ret = wayca_sc_node_cpu_mask(TEST_INVALID_ID, setsize, cpu_set);
 	assert(ret < 0);
 	ret = wayca_sc_package_cpu_mask(TEST_INVALID_ID, setsize, cpu_set);
+	assert(ret < 0);
+	ret = wayca_sc_package_node_mask(TEST_INVALID_ID, setsize, cpu_set);
 	assert(ret < 0);
 
 	ret = wayca_sc_ccl_cpu_mask(0, setsize, cpu_set);
@@ -167,6 +180,13 @@ static void test_get_cpu_list()
 	ret = wayca_sc_total_cpu_mask(setsize, cpu_set);
 	assert(ret == 0);
 	print_cpumask("total", setsize, cpu_set);
+
+	ret = wayca_sc_package_node_mask(0, setsize, cpu_set);
+	assert(ret == 0);
+	print_nodemask("package 0", setsize, cpu_set);
+	ret = wayca_sc_total_node_mask(setsize, cpu_set);
+	assert(ret == 0);
+	print_nodemask("total", setsize, cpu_set);
 }
 
 static void test_get_io_info()
