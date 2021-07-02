@@ -1247,13 +1247,21 @@ int wayca_sc_get_core_id(int cpu_id)
 
 int wayca_sc_get_ccl_id(int cpu_id)
 {
+	int physical_id;
+	int i;
+
 	if (!topo_is_valid_cpu(cpu_id))
 		return -EINVAL;
 	// cluster may not exist in some version of kernel
 	if (wayca_sc_cpus_in_ccl() < 0)
 		return -EINVAL;
 
-	return topo.cpus[cpu_id]->p_cluster->cluster_id;
+	physical_id = topo.cpus[cpu_id]->p_cluster->cluster_id;
+	for (i = 0; i < topo.n_clusters; i++) {
+		if (topo.ccls[i]->cluster_id == physical_id)
+			return i;
+	}
+	return -EINVAL;
 }
 
 int wayca_sc_get_node_id(int cpu_id)
@@ -1266,10 +1274,18 @@ int wayca_sc_get_node_id(int cpu_id)
 
 int wayca_sc_get_package_id(int cpu_id)
 {
+	int physical_id;
+	int i;
+
 	if (!topo_is_valid_cpu(cpu_id))
 		return -EINVAL;
 
-	return topo.cpus[cpu_id]->p_package->physical_package_id;
+	physical_id = topo.cpus[cpu_id]->p_package->physical_package_id;
+	for (i = 0; i < topo.n_packages; i++) {
+		if (topo.packages[i]->physical_package_id == physical_id)
+			return i;
+	}
+	return -EINVAL;
 }
 
 int wayca_sc_get_node_mem_size(int node_id, unsigned long *size)

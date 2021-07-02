@@ -84,12 +84,17 @@ static void test_get_entity_id()
 	/* normal case*/
 	ret = wayca_sc_get_package_id(0);
 	assert(ret >= 0);
+	printf("package logic id of cpu 0: %d\n", ret);
 	ret = wayca_sc_get_node_id(0);
 	assert(ret >= 0);
+	printf("numa node logic id of cpu 0: %d\n", ret);
 	ret = wayca_sc_get_ccl_id(0);
 	assert(ret == -EINVAL || ret >= 0);
+	if (ret >= 0)
+		printf("cluster logic id of cpu 0: %d\n", ret);
 	ret = wayca_sc_get_core_id(0);
 	assert(ret >= 0);
+	printf("core logic id of cpu 0: %d\n", ret);
 }
 
 static void print_cpumask(const char *topo, size_t setsize, cpu_set_t *mask)
