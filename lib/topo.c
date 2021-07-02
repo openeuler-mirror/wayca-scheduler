@@ -1241,6 +1241,9 @@ int wayca_sc_core_cpu_mask(int core_id, size_t cpusetsize, cpu_set_t *mask)
 {
 	size_t valid_cpu_setsize;
 
+	if (mask == NULL)
+		return -EINVAL;
+
 	if (!topo_is_valid_core(core_id))
 		return -EINVAL;
 
@@ -1248,7 +1251,7 @@ int wayca_sc_core_cpu_mask(int core_id, size_t cpusetsize, cpu_set_t *mask)
 	if (cpusetsize < valid_cpu_setsize)
 		return -EINVAL;
 
-	CPU_ZERO_S(valid_cpu_setsize, mask);
+	CPU_ZERO_S(cpusetsize, mask);
 	CPU_OR_S(valid_cpu_setsize, mask, mask, topo.cores[core_id]->core_cpus_map);
 	return 0;
 }
@@ -1257,6 +1260,9 @@ int wayca_sc_ccl_cpu_mask(int ccl_id, size_t cpusetsize, cpu_set_t *mask)
 {
 	size_t valid_cpu_setsize;
 
+	if (mask == NULL)
+		return -EINVAL;
+
 	if (!topo_is_valid_ccl(ccl_id))
 		return -EINVAL;
 
@@ -1264,7 +1270,7 @@ int wayca_sc_ccl_cpu_mask(int ccl_id, size_t cpusetsize, cpu_set_t *mask)
 	if (cpusetsize < valid_cpu_setsize)
 		return -EINVAL;
 
-	CPU_ZERO_S(valid_cpu_setsize, mask);
+	CPU_ZERO_S(cpusetsize, mask);
 	CPU_OR_S(valid_cpu_setsize, mask, mask, topo.ccls[ccl_id]->cpu_map);
 	return 0;
 }
@@ -1272,6 +1278,8 @@ int wayca_sc_ccl_cpu_mask(int ccl_id, size_t cpusetsize, cpu_set_t *mask)
 int wayca_sc_node_cpu_mask(int node_id, size_t cpusetsize, cpu_set_t *mask)
 {
 	size_t valid_cpu_setsize;
+	if (mask == NULL)
+		return -EINVAL;
 
 	if (!topo_is_valid_node(node_id))
 		return -EINVAL;
@@ -1280,7 +1288,7 @@ int wayca_sc_node_cpu_mask(int node_id, size_t cpusetsize, cpu_set_t *mask)
 	if (cpusetsize < valid_cpu_setsize)
 		return -EINVAL;
 
-	CPU_ZERO_S(valid_cpu_setsize, mask);
+	CPU_ZERO_S(cpusetsize, mask);
 	CPU_OR_S(valid_cpu_setsize, mask, mask, topo.nodes[node_id]->cpu_map);
 	return 0;
 }
@@ -1289,6 +1297,9 @@ int wayca_sc_package_cpu_mask(int package_id, size_t cpusetsize, cpu_set_t *mask
 {
 	size_t valid_cpu_setsize;
 
+	if (mask == NULL)
+		return -EINVAL;
+
 	if (!topo_is_valid_package(package_id))
 		return -EINVAL;
 
@@ -1296,7 +1307,7 @@ int wayca_sc_package_cpu_mask(int package_id, size_t cpusetsize, cpu_set_t *mask
 	if (cpusetsize < valid_cpu_setsize)
 		return -EINVAL;
 
-	CPU_ZERO_S(valid_cpu_setsize, mask);
+	CPU_ZERO_S(cpusetsize, mask);
 	CPU_OR_S(valid_cpu_setsize, mask, mask, topo.packages[package_id]->cpu_map);
 	return 0;
 }
@@ -1305,11 +1316,14 @@ int wayca_sc_total_cpu_mask(size_t cpusetsize, cpu_set_t *mask)
 {
 	size_t valid_cpu_setsize;
 
+	if (mask == NULL)
+		return -EINVAL;
+
 	valid_cpu_setsize = CPU_ALLOC_SIZE(topo.n_cpus);
 	if (cpusetsize < valid_cpu_setsize)
 		return -EINVAL;
 
-	CPU_ZERO_S(valid_cpu_setsize, mask);
+	CPU_ZERO_S(cpusetsize, mask);
 	CPU_OR_S(valid_cpu_setsize, mask, mask, topo.cpu_map);
 	return 0;
 }
@@ -1317,6 +1331,9 @@ int wayca_sc_total_cpu_mask(size_t cpusetsize, cpu_set_t *mask)
 int wayca_sc_package_node_mask(int package_id, size_t setsize, cpu_set_t *mask)
 {
 	size_t valid_numa_setsize;
+
+	if (mask == NULL)
+		return -EINVAL;
 
 	if (!topo_is_valid_package(package_id))
 		return -EINVAL;
@@ -1333,6 +1350,9 @@ int wayca_sc_package_node_mask(int package_id, size_t setsize, cpu_set_t *mask)
 int wayca_sc_total_node_mask(size_t setsize, cpu_set_t *mask)
 {
 	size_t valid_numa_setsize;
+
+	if (mask == NULL)
+		return -EINVAL;
 
 	valid_numa_setsize = CPU_ALLOC_SIZE(topo.n_nodes);
 	if (setsize < valid_numa_setsize)
@@ -1396,6 +1416,9 @@ int wayca_sc_get_package_id(int cpu_id)
 
 int wayca_sc_get_node_mem_size(int node_id, unsigned long *size)
 {
+	if (size == NULL)
+		return -EINVAL;
+
 	if (!topo_is_valid_node(node_id))
 		return -EINVAL;
 	*size = topo.nodes[node_id]->p_meminfo->total_avail_kB;
