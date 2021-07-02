@@ -1296,6 +1296,102 @@ int wayca_sc_get_node_mem_size(int node_id, unsigned long *size)
 	return 0;
 }
 
+static int parse_cache_size(const char* size)
+{
+	int cache_size;
+	char *endstr;
+
+	cache_size = strtol(size, &endstr, 10);
+	if (cache_size < 0 || *endstr != 'K') {
+		return -EINVAL;
+	}
+	return cache_size;
+}
+
+int wayca_sc_get_l1i_size(int cpu_id)
+{
+	static const char *size;
+	static const char *type;
+	int level;
+	int i;
+
+	if (!topo_is_valid_cpu(cpu_id))
+		return -EINVAL;
+
+	for(i = 0; i < topo.cpus[cpu_id]->n_caches; i++) {
+		level = topo.cpus[cpu_id]->p_caches[i].level;
+		type = topo.cpus[cpu_id]->p_caches[i].type;
+		if (level == 1 && !strcmp(type, "Instruction")) {
+			size = topo.cpus[cpu_id]->p_caches[i].cache_size;
+			return parse_cache_size(size);
+		}
+	}
+	return -ENODATA;
+}
+
+int wayca_sc_get_l1d_size(int cpu_id)
+{
+	static const char *size;
+	static const char *type;
+	int level;
+	int i;
+
+	if (!topo_is_valid_cpu(cpu_id))
+		return -EINVAL;
+
+	for(i = 0; i < topo.cpus[cpu_id]->n_caches; i++) {
+		level = topo.cpus[cpu_id]->p_caches[i].level;
+		type = topo.cpus[cpu_id]->p_caches[i].type;
+		if (level == 1 && !strcmp(type, "Data")) {
+			size = topo.cpus[cpu_id]->p_caches[i].cache_size;
+			return parse_cache_size(size);
+		}
+	}
+	return -ENODATA;
+}
+
+int wayca_sc_get_l2_size(int cpu_id)
+{
+	static const char *size;
+	static const char *type;
+	int level;
+	int i;
+
+	if (!topo_is_valid_cpu(cpu_id))
+		return -EINVAL;
+
+	for(i = 0; i < topo.cpus[cpu_id]->n_caches; i++) {
+		level = topo.cpus[cpu_id]->p_caches[i].level;
+		type = topo.cpus[cpu_id]->p_caches[i].type;
+		if (level == 2 && !strcmp(type, "Unified")) {
+			size = topo.cpus[cpu_id]->p_caches[i].cache_size;
+			return parse_cache_size(size);
+		}
+	}
+	return -ENODATA;
+}
+
+int wayca_sc_get_l3_size(int cpu_id)
+{
+	static const char *size;
+	static const char *type;
+	int level;
+	int i;
+
+	if (!topo_is_valid_cpu(cpu_id))
+		return -EINVAL;
+
+	for(i = 0; i < topo.cpus[cpu_id]->n_caches; i++) {
+		level = topo.cpus[cpu_id]->p_caches[i].level;
+		type = topo.cpus[cpu_id]->p_caches[i].type;
+		if (level == 3 && !strcmp(type, "Unified")) {
+			size = topo.cpus[cpu_id]->p_caches[i].cache_size;
+			return parse_cache_size(size);
+		}
+	}
+	return -ENODATA;
+}
+
 /* memory bandwidth (relative value) of speading over multiple CCLs
  *
  * Measured with: bw_mem bcopy

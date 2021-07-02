@@ -157,6 +157,33 @@ static void test_get_io_info()
 	assert(ret >= 0);
 }
 
+static void test_get_cache_info()
+{
+	int ret;
+
+	ret = wayca_sc_get_l1d_size(TEST_INVALID_ID);
+	assert(ret < 0);
+	ret = wayca_sc_get_l1i_size(TEST_INVALID_ID);
+	assert(ret < 0);
+	ret = wayca_sc_get_l2_size(TEST_INVALID_ID);
+	assert(ret < 0);
+	ret = wayca_sc_get_l3_size(TEST_INVALID_ID);
+	assert(ret < 0);
+
+	ret = wayca_sc_get_l1d_size(0);
+	assert(ret > 0);
+	printf("core 0 L1 data cache: %dKB\n", ret);
+	ret = wayca_sc_get_l1i_size(0);
+	assert(ret > 0);
+	printf("core 0 L1 instruction cache: %dKB\n", ret);
+	ret = wayca_sc_get_l2_size(0);
+	assert(ret > 0);
+	printf("core 0 L2 cache: %dKB\n", ret);
+	ret = wayca_sc_get_l3_size(0);
+	assert(ret > 0);
+	printf("core 0 L3 cache: %dKB\n", ret);
+}
+
 int main()
 {
 	wayca_sc_topo_print();
@@ -164,6 +191,7 @@ int main()
 	test_entity_number();
 	test_get_entity_id();
 	test_get_cpu_list();
+	test_get_cache_info();
 	test_get_io_info();
 
 	return 0;

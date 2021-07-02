@@ -59,6 +59,11 @@ int wayca_sc_get_ccl_id(int cpu);
 int wayca_sc_get_node_id(int cpu);
 int wayca_sc_get_package_id(int cpu);
 
+int wayca_sc_get_l1d_size(int cpu_id);
+int wayca_sc_get_l1i_size(int cpu_id);
+int wayca_sc_get_l2_size(int cpu_id);
+int wayca_sc_get_l3_size(int cpu_id);
+
 int wayca_sc_get_node_mem_size(int node, unsigned long *size);
 
 int wayca_managed_thread_create(int id, pthread_t *thread, const pthread_attr_t *attr,
