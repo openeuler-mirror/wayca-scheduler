@@ -204,31 +204,39 @@ static int parse_cfg_file(void)
 			return -1;
 		}
 
+		len = 0;
+		p = NULL;
 		while (getline(&p, &len, fp) != EOF) {
 			if (str_start_with(p, "occupied_cpus")) {
 				char occupied_cpus[PATH_MAX];
-				cfg_strtostr(p, occupied_cpus);
-				occupied_cpu_to_load(occupied_cpus);
+				if (cfg_strtostr(p, occupied_cpus) == 0)
+					occupied_cpu_to_load(occupied_cpus);
 			}
 			else if (str_start_with(p, "occupied_io_nodes")) {
 				char occupied_io_nodes[PATH_MAX];
 				cfg_strtostr(p, occupied_io_nodes);
+				/* TODO: not impemented occupied_io_nodes */
 			}
 			else if (str_start_with(p, "default_task_bind")) {
 				char default_task_bind_str[PATH_MAX];
-				cfg_strtostr(p, default_task_bind_str);
-				cfg_strtocpubind(default_task_bind_str, &default_task_bind);
-				fprintf(stdout, "default task bind is %s\n", cpubind_string[default_task_bind]);
+				if (cfg_strtostr(p, default_task_bind_str) == 0) {
+					cfg_strtocpubind(default_task_bind_str, &default_task_bind);
+					fprintf(stdout, "default task bind is %s\n", cpubind_string[default_task_bind]);
+				}
 			}
 			else if (str_start_with(p, "default_mem_bandwidth")) {
 				char default_mem_bandwidth_str[PATH_MAX];
-				cfg_strtostr(p, default_mem_bandwidth_str);
-				cfg_strtomemband(default_mem_bandwidth_str, &default_mem_bandwidth);
-				fprintf(stdout, "default memory bandwidth is %s\n", memband_string[default_mem_bandwidth]);
+				if (cfg_strtostr(p, default_mem_bandwidth_str) == 0) {
+					cfg_strtomemband(default_mem_bandwidth_str, &default_mem_bandwidth);
+					fprintf(stdout, "default memory bandwidth is %s\n", memband_string[default_mem_bandwidth]);
+				}
 			}
+			else {	/* unrecognized configuration */
+				fprintf(stdout, "WARN: unrecognized configuration line: %s\n", p);
 
-			free(p);
+			}
 		}
+		free(p);
 	}
 
 	fclose(fp);
