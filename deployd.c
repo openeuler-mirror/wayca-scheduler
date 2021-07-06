@@ -307,10 +307,10 @@ void parse_command_line(int argc, char **argv)
 	while ((opt = getopt(argc, argv, "f:s:")) != EOF) {
 		switch (opt) {
 		case 'f':
-			config_file_path = strdup(optarg);
+			config_file_path = optarg;
 			break;
 		case 's':
-			wayca_scheduler_socket_path = strdup(optarg);
+			wayca_scheduler_socket_path = optarg;
 			break;
 		default:
 			break;
@@ -395,7 +395,6 @@ int main(int argc, char **argv)
 	}
 
 	unlink(SOCKET_PATH);
-	free(config_file_path);
 
 	return 0;
 }
