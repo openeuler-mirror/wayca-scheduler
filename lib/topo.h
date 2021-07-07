@@ -22,13 +22,15 @@
 #define _TOPO_H 	1
 
 #include <sched.h>
+#include <linux/limits.h>
 
 #define WAYCA_SC_SYSDEV_FNAME 	"/sys/devices"
 #define WAYCA_SC_NODE_FNAME 	"/sys/devices/system/node"
 #define WAYCA_SC_CPU_FNAME 	"/sys/devices/system/cpu"
 
 #define WAYCA_SC_DEFAULT_KERNEL_MAX 	(2048)
-#define WAYCA_SC_PATH_LEN_MAX		(4096)		/* maximum length of file pathname */
+#define WAYCA_SC_PATH_LEN_MAX		(PATH_MAX)	/* maximum length of file pathname */
+#define WAYCA_SC_NAME_LEN_MAX		(NAME_MAX)	/* maximum length of chars in a file name */
 #define WAYCA_SC_MAX_FD_RETRIES		(5)		/* maximum retries when reading from an open file */
 #define WAYCA_SC_USLEEP_DELAY_250MS	(250000)	/* 250ms */
 #define WAYCA_SC_ATTR_STRING_LEN	(256)		/* default attribute string length */
@@ -119,6 +121,8 @@ struct wayca_pci_device {
 	int smmu_idx;			/* to which smmu it belongs. -1 none */
 	int enable;
 	char absolute_path[WAYCA_SC_PATH_LEN_MAX];
+	char slot_name[WAYCA_SC_NAME_LEN_MAX];	/* PCI_SLOT_NAME, in format eg. 0000:05:00.0 */
+						/* same as reported by uevent */
 	cpu_set_t *local_cpu_map;
 
 	unsigned int   class;		/* 3 bytes: (base, sub, prog-if) */

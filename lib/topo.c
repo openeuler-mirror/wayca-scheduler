@@ -955,6 +955,7 @@ void topo_print_wayca_node(size_t setsize, struct wayca_node *p_node, size_t dis
 		PRINT_DBG("\t\t number of local CPUs: %d\n",
 				CPU_COUNT_S(setsize, p_node->pcidevs[i]->local_cpu_map));
 		PRINT_DBG("\t\t absolute_path: %s\n", p_node->pcidevs[i]->absolute_path);
+		PRINT_DBG("\t\t PCI_SLOT_NAME: %s\n", p_node->pcidevs[i]->slot_name);
 		/* print irqs */
 		int j;
 		PRINT_DBG("\t\t count of irqs (inc. msi_irqs): %d\n", j = p_node->pcidevs[i]->irqs.n_irqs);
@@ -1798,6 +1799,12 @@ static int topo_parse_io_device(const char *dir, struct wayca_topo *p_topo)
 		/* store dir full path */
 		strcpy(p_pcidev->absolute_path, dir);
 		PRINT_DBG("absolute path: %s\n", p_pcidev->absolute_path);
+
+		/* cut out PCI_SLOT_NAME from the absolute path, which is last part of the path */
+		if ((p_index = rindex(dir, '/')) != NULL) {
+			strncpy(p_pcidev->slot_name, p_index + 1, WAYCA_SC_NAME_LEN_MAX - 1);
+			PRINT_DBG("slot_name : %s\n", p_pcidev->slot_name);
+		}
 
 		/* read 'numa_node' */
 		topo_path_read_s32(dir, "numa_node", &node_nb);
