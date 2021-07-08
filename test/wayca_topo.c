@@ -238,5 +238,19 @@ int main()
 	test_get_cache_info();
 	test_get_io_info();
 
+	/* example: wayca_sc_get_pcidev_irqs() */
+	size_t sz;
+	unsigned int *p_irqs;
+	int ret, idx;
+
+	ret = wayca_sc_get_pcidev_irqs("0000:00:17.0", &sz, &p_irqs, NULL);
+	if (ret == 0) { /* succeeded */
+		printf("It has %lu irqs.\t", sz);
+		printf("They are: ");
+		for (idx = 0; idx < sz; idx ++) {
+			printf("%u\t", p_irqs[idx]);
+		}
+		printf("\n");
+	}
 	return 0;
 }

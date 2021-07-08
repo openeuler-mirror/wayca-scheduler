@@ -108,7 +108,11 @@ struct wayca_irq {
 					 * 0: inactive;
 					 */
 	/* TODO: fine tune irq_name space */
-	char irq_name[WAYCA_SC_ATTR_STRING_LEN];	/* string as reported in /proc/interrupts */
+	/* Note: only active irqs have names, as in /proc/interrupts.
+	 *   inactive irqs were not listed in /proc/interrupts,
+	 *   so have no names. In that case, its irq_name is filled by NULL.
+	 */
+	char irq_name[WAYCA_SC_ATTR_STRING_LEN];
 };
 
 struct wayca_device_irqs {

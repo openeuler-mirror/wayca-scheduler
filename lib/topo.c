@@ -1539,6 +1539,60 @@ int wayca_sc_get_l3_size(int cpu_id)
 	return -ENODATA;
 }
 
+/* wayca_sc_get_pcidev_irqs, given a PCI/e device name 'dev_name', return irqs infor
+ * Input:
+ *   - dev_name: device's name. For a PCI device, it is PCI_SLOT_NAME.
+ * Output:
+ *   - n_irqs: number of irqs for this device
+ *   - p_irqs: pointer to interrupt numbers array
+ *   - irq_names: interrupt names array
+ *		(only active irqs have names, as in /proc/interrupts)
+ *		(inactive irqs were not listed in /proc/interrupts,
+ *		  so have no names. In that case, it's filled by NULL)
+ * Return: negative on error, 0 on success
+ *	-ENODEV, if the named pcidev doesn't exist.
+ */
+int wayca_sc_get_pcidev_irqs(const char *dev_name, size_t *n_irqs,
+			     unsigned int **p_irqs, char **irq_names)
+{
+	int i, j;
+	bool found = false;
+	struct wayca_device_irqs *p_dev_irqs = NULL;
+
+	/* search for dev_name */
+	for (i = 0; i < topo.n_nodes; i++) {
+		for (j = 0; j < topo.nodes[i]->n_pcidevs; j++) {
+			/* compare dev_name with slot_name */
+			if (strcmp(dev_name,
+				   topo.nodes[i]->pcidevs[j]->slot_name) == 0) {
+				found = true;
+				p_dev_irqs = &topo.nodes[i]->pcidevs[j]->irqs;
+				break;
+			}
+		}
+		if (found == true) break;
+	}
+
+	/* return early if not found */
+	if (found == false) {
+		*n_irqs = 0;
+		*p_irqs = NULL;
+		return -ENODEV;
+	}
+
+	/* output */
+	*n_irqs = p_dev_irqs->n_irqs;
+	/* set interrupt numbers arrary */
+	*p_irqs = (unsigned int *)calloc(1, sizeof(unsigned int) * (*n_irqs));
+	if (p_irqs == NULL)
+		return -ENOMEM;		/* no enough memory */
+
+	for (i = 0; i < (*n_irqs); i++) {
+		(*p_irqs)[i] = p_dev_irqs->irqs[i].irq_number;
+	}
+	return 0;
+}
+
 /* memory bandwidth (relative value) of speading over multiple CCLs
  *
  * Measured with: bw_mem bcopy
