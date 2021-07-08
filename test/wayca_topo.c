@@ -243,7 +243,8 @@ int main()
 	unsigned int *p_irqs;
 	int ret, idx;
 
-	ret = wayca_sc_get_pcidev_irqs("0000:00:17.0", &sz, &p_irqs, NULL);
+	ret = wayca_sc_get_pcidev_irqs("0000:bd:00.0" /* "0000:ba:01.0" */
+					, &sz, &p_irqs, NULL);
 	if (ret == 0) { /* succeeded */
 		printf("It has %lu irqs.\t", sz);
 		printf("They are: ");

@@ -959,11 +959,13 @@ void topo_print_wayca_node(size_t setsize, struct wayca_node *p_node, size_t dis
 		/* print irqs */
 		int j;
 		PRINT_DBG("\t\t count of irqs (inc. msi_irqs): %d\n", j = p_node->pcidevs[i]->irqs.n_irqs);
-		PRINT_DBG("\t\t\t List of IRQs: ");
+		PRINT_DBG("\t\t\t List of IRQs (irq_number:activeness:\"irq_name)\"\n");
 		for (j = 0; j < p_node->pcidevs[i]->irqs.n_irqs; j++) {
-			PRINT_DBG("%u\t", p_node->pcidevs[i]->irqs.irqs[j].irq_number);
+			PRINT_DBG("\t\t\t\t %u:%u:\"%s\"\n",
+				  p_node->pcidevs[i]->irqs.irqs[j].irq_number,
+				  p_node->pcidevs[i]->irqs.irqs[j].active,
+				  p_node->pcidevs[i]->irqs.irqs[j].irq_name);
 		}
-		PRINT_DBG("\n");
 	}
 	PRINT_DBG("n_smmus: %lu\n", p_node->n_smmus);
 	for (int i = 0; i < p_node->n_smmus; i++) {
@@ -1718,6 +1720,88 @@ int pipe_latency_NUMA[4] = {
 	 * diff CCLs |  NUMAs   | NUMA0  | NUMA1  */
 };
 
+/* topo_query_proc_interrupts - find whether an irq is active in /proc/interrupts
+ *   and get the irq_name
+ * Input:
+ *   - irq: the irq number to query
+ * Output:
+ *   - active: whether exists in /proc/interrupts
+ *   - irq_name: this irq's name, maximum length WAYCA_SC_ATTR_STRING_LEN
+ * Return: negative on error, 0 on success.
+ */
+static int topo_query_proc_interrupts(unsigned int irq, unsigned int *active,
+				      char *irq_name)
+{
+	FILE *f;
+	char *line = NULL;
+	size_t sz = 0;
+	int ret = 0;
+	char *c;
+	unsigned int this_irq;
+
+	/* initialize to inactive, unless we found differently later */
+	*active = 0;
+
+	f = fopen("/proc/interrupts", "r");
+	if (f == NULL)
+		return -errno;
+
+	/* read the first line, but ignore it since it's the header */
+	if (getline(&line, &sz, f) == -1) {
+		free(line);
+		fclose(f);
+		return -errno;
+	}
+
+	/* search the second line and all after */
+	while (!feof(f)) {
+
+		/* read one line */
+		if (getline(&line, &sz, f) == -1) {
+			ret = -errno;
+			break;
+		}
+		c = line;
+		/* skip the leading spaces */
+		while (isblank(*c))
+			c++;
+		/* a useful line should start with a series of number, then ':' */
+		if (!isdigit(*c))
+			continue;
+		c = strchr(line, ':');
+		if (c == NULL)
+			continue;
+
+		/* convert it to a number */
+		this_irq = (unsigned int)strtoul(line, NULL, 10);
+
+		if (this_irq != irq)
+			continue;	/* check next line */
+
+		/* set active */
+		*active = 1;
+		/* move along, stop at the first non-digit character
+		 * , which will be the name part of the irq
+		 */
+		c++;
+		while (isblank(*c) || isdigit(*c))
+			c++;
+
+		strncpy(irq_name, c, WAYCA_SC_ATTR_STRING_LEN);
+		sz = strlen(irq_name);
+		if (irq_name[sz - 1] == '\n')	/* remove the ending newline */
+			irq_name[sz - 1] = '\0';
+
+		irq_name[WAYCA_SC_ATTR_STRING_LEN -1] = '\0';	/* in case of truncated string */
+		break;
+	}
+
+	/* exit */
+	fclose(f);
+	free(line);
+	return ret;
+}
+
 /* parse I/O device irqs information
  * Input: device_sysfs_dir, this device's absolute pathname in /sys/devices
  * Return negative on error, 0 on success
@@ -1789,6 +1873,9 @@ static int topo_parse_device_irqs(const char *device_sysfs_dir, struct wayca_dev
 				p_irqs[i++].irq_number = atoi(entry->d_name);
 				PRINT_DBG("%u\t", p_irqs[i-1].irq_number);
 				msi_irqs_count--;
+				/* get active status and irq_name */
+				topo_query_proc_interrupts(p_irqs[i-1].irq_number,
+					&p_irqs[i-1].active, p_irqs[i-1].irq_name);
 			}
 		}
 		PRINT_DBG("\n");
@@ -1807,22 +1894,23 @@ static int topo_parse_device_irqs(const char *device_sysfs_dir, struct wayca_dev
 		for(j = 0; j < wirqs->n_irqs; j++)
 			if (wirqs->irqs[j].irq_number == irq_number)
 				break;
-		if (j == wirqs->n_irqs) {	/* doesn't exist, create a new one */
+		if (j == wirqs->n_irqs) {
+			/* doesn't exist, create a new one */
 			p_irqs = (struct wayca_irq *)realloc(wirqs->irqs,
 					(wirqs->n_irqs + 1) * sizeof(struct wayca_irq));
 			if (!p_irqs)
 				return -ENOMEM;		/* no enough memory */
 			p_irqs[wirqs->n_irqs].irq_number = irq_number;
+			p_irqs[wirqs->n_irqs].active = 0;
+			p_irqs[wirqs->n_irqs].irq_name[0] = '\0';
+			/* get active status and irq_name */
+			topo_query_proc_interrupts(p_irqs[wirqs->n_irqs].irq_number,
+				&p_irqs[wirqs->n_irqs].active,
+				p_irqs[wirqs->n_irqs].irq_name);
 			wirqs->n_irqs++;
 			wirqs->irqs = p_irqs;
 		}
 	}
-
-	/* TODO */
-	/* for each irq structure created:
-		Is the 'irq_no.' actively used in /proc/interrupts
-		if yes, read in its interrupt name and strings. i.e.
-	 */
 
 	return 0;
 }
