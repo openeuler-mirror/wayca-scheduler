@@ -30,6 +30,7 @@
 #include "common.h"
 #include "topo.h"
 #include "log.h"
+#include "wayca-scheduler.h"
 
 WAYCA_SC_INIT_PRIO(topo_init, TOPO);
 WAYCA_SC_FINI_PRIO(topo_free, TOPO);
@@ -1541,18 +1542,23 @@ int wayca_sc_get_l3_size(int cpu_id)
 	return -ENODATA;
 }
 
-/* wayca_sc_get_pcidev_irqs, given a PCI/e device name 'dev_name', return irqs infor
+/* wayca_sc_get_pcidev_irqs - given a PCI/e device name 'dev_name',
+ *			      return irqs' info
+ * Note: This routine malloc' spaces for p_irqs and irq_names on success. It
+ *       is the call's responsibility to free them.
  * Input:
  *   - dev_name: device's name. For a PCI device, it is PCI_SLOT_NAME.
  * Output:
  *   - n_irqs: number of irqs for this device
  *   - p_irqs: pointer to interrupt numbers array
- *   - irq_names: interrupt names array
+ *   - irq_names: interrupt names array. Each irq_name is a string of
+ *		  length WAYCA_SC_ATTR_STRING_LEN. Note:
  *		(only active irqs have names, as in /proc/interrupts)
  *		(inactive irqs were not listed in /proc/interrupts,
  *		  so have no names. In that case, it's filled by NULL)
  * Return: negative on error, 0 on success
- *	-ENODEV, if the named pcidev doesn't exist.
+ *	-ENODEV, the named pcidev doesn't exist
+ *	-ENOMEM, no enough memory
  */
 int wayca_sc_get_pcidev_irqs(const char *dev_name, size_t *n_irqs,
 			     unsigned int **p_irqs, char **irq_names)
@@ -1560,13 +1566,15 @@ int wayca_sc_get_pcidev_irqs(const char *dev_name, size_t *n_irqs,
 	int i, j;
 	bool found = false;
 	struct wayca_device_irqs *p_dev_irqs = NULL;
+	char (*p_irq_name)[WAYCA_SC_ATTR_STRING_LEN];
 
 	/* search for dev_name */
 	for (i = 0; i < topo.n_nodes; i++) {
 		for (j = 0; j < topo.nodes[i]->n_pcidevs; j++) {
 			/* compare dev_name with slot_name */
-			if (strcmp(dev_name,
-				   topo.nodes[i]->pcidevs[j]->slot_name) == 0) {
+			if (strncmp(dev_name,
+				   topo.nodes[i]->pcidevs[j]->slot_name,
+				   WAYCA_SC_NAME_LEN_MAX) == 0) {
 				found = true;
 				p_dev_irqs = &topo.nodes[i]->pcidevs[j]->irqs;
 				break;
@@ -1592,6 +1600,20 @@ int wayca_sc_get_pcidev_irqs(const char *dev_name, size_t *n_irqs,
 	for (i = 0; i < (*n_irqs); i++) {
 		(*p_irqs)[i] = p_dev_irqs->irqs[i].irq_number;
 	}
+	/* set interrupt names arrary. Each irq_name is a string of
+	 * length WAYCA_SC_ATTR_STRING_LEN */
+	p_irq_name = (char (*)[WAYCA_SC_ATTR_STRING_LEN])calloc(*n_irqs,
+				sizeof(char) * WAYCA_SC_ATTR_STRING_LEN);
+	if (p_irq_name == NULL) {
+		free(*p_irqs);
+		*p_irqs = NULL;
+		return -ENOMEM;		/* no enough memory */
+	}
+
+	for (i = 0; i < (*n_irqs); i++)
+		strcpy(p_irq_name[i], p_dev_irqs->irqs[i].irq_name);
+	*irq_names = (char *)p_irq_name;
+
 	return 0;
 }
 
@@ -1732,12 +1754,12 @@ int pipe_latency_NUMA[4] = {
 static int topo_query_proc_interrupts(unsigned int irq, unsigned int *active,
 				      char *irq_name)
 {
-	FILE *f;
+	unsigned int this_irq;
 	char *line = NULL;
 	size_t sz = 0;
 	int ret = 0;
 	char *c;
-	unsigned int this_irq;
+	FILE *f;
 
 	/* initialize to inactive, unless we found differently later */
 	*active = 0;

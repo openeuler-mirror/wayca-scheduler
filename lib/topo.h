@@ -23,6 +23,7 @@
 
 #include <sched.h>
 #include <linux/limits.h>
+#include "wayca-scheduler.h"
 
 #define WAYCA_SC_SYSDEV_FNAME 	"/sys/devices"
 #define WAYCA_SC_NODE_FNAME 	"/sys/devices/system/node"
@@ -33,7 +34,6 @@
 #define WAYCA_SC_NAME_LEN_MAX		(NAME_MAX)	/* maximum length of chars in a file name */
 #define WAYCA_SC_MAX_FD_RETRIES		(5)		/* maximum retries when reading from an open file */
 #define WAYCA_SC_USLEEP_DELAY_250MS	(250000)	/* 250ms */
-#define WAYCA_SC_ATTR_STRING_LEN	(256)		/* default attribute string length */
 
 #ifdef WAYCA_SC_DEBUG
 #define PRINT_DBG(fmt, args...)	printf(fmt, ## args)

@@ -158,4 +158,5 @@ int wayca_sc_group_get_cpuset(wayca_sc_group_t group, size_t cpusetsize,
 }
 #endif /* WAYCA_SC_DEBUG */
 
+#define WAYCA_SC_ATTR_STRING_LEN	(256)		/* default attribute string length */
 #endif
