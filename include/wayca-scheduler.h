@@ -78,6 +78,7 @@ int wayca_sc_thread_get_attr(wayca_sc_thread_t wthread, wayca_sc_thread_attr_t *
 int wayca_sc_thread_create(wayca_sc_thread_t *wthread, pthread_attr_t *attr, void *(*start_routine)(void *), void *arg);
 int wayca_sc_thread_join(wayca_sc_thread_t wthread, void **retval);
 
+
 typedef unsigned long long	wayca_sc_group_t;
 typedef unsigned long long	wayca_sc_group_attr_t;
 /**
@@ -105,6 +106,19 @@ int wayca_sc_group_attach_group(wayca_sc_group_t group, wayca_sc_group_t father)
 int wayca_sc_group_detach_group(wayca_sc_group_t group, wayca_sc_group_t father);
 int wayca_sc_is_thread_in_group(wayca_sc_thread_t thread, wayca_sc_group_t group);
 int wayca_sc_is_group_in_group(wayca_sc_group_t target, wayca_sc_group_t group);
+
+typedef unsigned long long	wayca_sc_threadpool_t;
+typedef void (*wayca_sc_threadpool_task_func)(void *);
+
+int wayca_sc_threadpool_create(wayca_sc_threadpool_t *threadpool, size_t num);
+int wayca_sc_threadpool_destroy(wayca_sc_threadpool_t threadpool, int force);
+int wayca_sc_threadpool_get_group(wayca_sc_threadpool_t threadpool, wayca_sc_group_t *group);
+int wayca_sc_threadpool_queue(wayca_sc_threadpool_t threadpool,
+			   wayca_sc_threadpool_task_func task_func, void *arg);
+int wayca_sc_threadpool_thread_num(wayca_sc_threadpool_t threadpool);
+/* Get the number of unqueued tasks */
+int wayca_sc_threadpool_task_num(wayca_sc_threadpool_t threadpool);
+int wayca_sc_threadpool_running_num(wayca_sc_threadpool_t threadpool);
 
 /* For debug purpose */
 #ifdef WAYCA_SC_DEBUG

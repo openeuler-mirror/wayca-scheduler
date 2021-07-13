@@ -129,4 +129,43 @@ bool is_thread_in_group(struct wayca_sc_group *group, struct wayca_thread *threa
 
 bool is_group_in_father(struct wayca_sc_group *group, struct wayca_sc_group *father);
 
+struct wayca_threadpool_task {
+	/* The wayca threadpool this task belongs to */
+	struct wayca_threadpool *pool;
+	/* The task function */
+	wayca_sc_threadpool_task_func task;
+	/* The argument of the task function */
+	void *arg;
+	/* Previous and next task in the queue of the threadpool */
+	struct wayca_threadpool_task *next, *prev;
+};
+
+struct wayca_threadpool {
+	/* The taskpool id */
+	wayca_sc_threadpool_t id;
+	/* The wayca thread list of this threadpool */
+	struct wayca_thread **workers;
+	/* Total number of worker threads available in this threadpool */
+	size_t total_worker_num;
+	/* The number of idle workers in this threadpool */
+	size_t idle_num;
+	/* The head task on the queue waiting to run */
+	struct wayca_threadpool_task *task_head;
+	/* The number of the tasks in the queue */
+	size_t task_num;
+	/* The wayca sc group that the threads in this threadpool belongs to */
+	struct wayca_sc_group *group;
+	/* The mutex to protect this structure */
+	pthread_mutex_t mutex;
+	/* Conditonal variable to wakeup threads */
+	pthread_cond_t cond;
+	/* True to Notify the workers to stop */
+	volatile bool stop;
+};
+
+static inline bool threadpool_task_is_empty(struct wayca_threadpool *pool)
+{
+	return pool->task_head == NULL;
+}
+
 #endif	/* _WAYCA_THREAD_H */
