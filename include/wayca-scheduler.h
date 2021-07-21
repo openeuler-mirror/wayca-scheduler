@@ -135,18 +135,22 @@ int wayca_sc_threadpool_running_num(wayca_sc_threadpool_t threadpool);
 /* For debug purpose */
 #ifdef WAYCA_SC_DEBUG
 void wayca_sc_topo_print(void);
-int wayca_sc_thread_get_cpuset(wayca_sc_thread_t wthread, cpu_set_t *cpuset);
-int wayca_sc_group_get_cpuset(wayca_sc_group_t group, cpu_set_t *cpuset);
+int wayca_sc_thread_get_cpuset(wayca_sc_thread_t wthread, size_t cpusetsize,
+			       cpu_set_t *cpuset);
+int wayca_sc_group_get_cpuset(wayca_sc_group_t group, size_t cpusetsize,
+			      cpu_set_t *cpuset);
 #else
 static inline
 void wayca_sc_topo_print(void) { }
 static inline
-int wayca_sc_thread_get_cpuset(wayca_sc_thread_t wthread, cpu_set_t *cpuset)
+int wayca_sc_thread_get_cpuset(wayca_sc_thread_t wthread, size_t cpusetsize,
+			       cpu_set_t *cpuset)
 {
 	return 0;
 }
 static inline
-int wayca_sc_group_get_cpuset(wayca_sc_group_t group, cpu_set_t *cpuset)
+int wayca_sc_group_get_cpuset(wayca_sc_group_t group, size_t cpusetsize,
+			      cpu_set_t *cpuset)
 {
 	return 0;
 }

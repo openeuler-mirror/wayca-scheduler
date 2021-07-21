@@ -1113,12 +1113,21 @@ int wayca_sc_threadpool_running_num(wayca_sc_threadpool_t threadpool)
 
 
 #ifdef WAYCA_SC_DEBUG
-int wayca_sc_thread_get_cpuset(wayca_sc_thread_t wthread, cpu_set_t *cpuset)
+int wayca_sc_thread_get_cpuset(wayca_sc_thread_t wthread, size_t cpusetsize,
+			       cpu_set_t *cpuset)
 {
 	struct wayca_thread *wt_p;
+	size_t valid_cpu_setsize;
+
+	if (!cpuset)
+		return -EINVAL;
 
 	if (!is_thread_id_valid(wthread))
-		return -1;
+		return -EINVAL;
+
+	valid_cpu_setsize = CPU_ALLOC_SIZE(wayca_sc_cpus_in_total());
+	if (cpusetsize < valid_cpu_setsize)
+		return -EINVAL;
 
 	wt_p = id_to_wayca_thread(wthread);
 
@@ -1128,12 +1137,21 @@ int wayca_sc_thread_get_cpuset(wayca_sc_thread_t wthread, cpu_set_t *cpuset)
 	return 0;
 }
 
-int wayca_sc_group_get_cpuset(wayca_sc_group_t group, cpu_set_t *cpuset)
+int wayca_sc_group_get_cpuset(wayca_sc_group_t group, size_t cpusetsize,
+			      cpu_set_t *cpuset)
 {
 	struct wayca_sc_group *wg_p;
+	size_t valid_cpu_setsize;
+
+	if (!cpuset)
+		return -EINVAL;
 
 	if (!is_group_id_valid(group))
-		return -1;
+		return -EINVAL;
+
+	valid_cpu_setsize = CPU_ALLOC_SIZE(wayca_sc_cpus_in_total());
+	if (cpusetsize < valid_cpu_setsize)
+		return -EINVAL;
 
 	wg_p = id_to_wayca_group(group);
 

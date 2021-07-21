@@ -54,7 +54,8 @@ void show_thread_affinity(int created)
 		pid_t pid = threads_pid[index];
 
 		// sched_getaffinity(pid, sizeof(cpuset), &cpuset);
-		wayca_sc_thread_get_cpuset(threads[index], &cpuset);
+		wayca_sc_thread_get_cpuset(threads[index], sizeof(cpu_set_t),
+					   &cpuset);
 
 		printf("index %d pid %d: ", index, pid);
 		for (int j = 0; j < (system_cpu_nr + __NCPUBITS - 1) / __NCPUBITS; j++)
