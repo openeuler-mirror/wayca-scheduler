@@ -27,7 +27,7 @@
 static inline long set_mempolicy(int mode, const unsigned long *nodemask,
 				 unsigned long maxnode)
 {
-	int ret;
+	long ret;
 
 	ret = syscall(__NR_set_mempolicy, mode, nodemask, maxnode);
 	return  ret < 0 ? -errno : ret;
@@ -37,7 +37,7 @@ static inline long get_mempolicy(int *mode, unsigned long *nodemask,
 				 unsigned long maxnode, void *addr,
 				 unsigned long flags)
 {
-	int ret;
+	long ret;
 
 	ret = syscall(__NR_get_mempolicy, mode, nodemask,
 		      maxnode, addr, flags);
@@ -48,7 +48,7 @@ static inline long migrate_pages(int pid, unsigned long maxnode,
 				 const unsigned long *frommask,
 				 const unsigned long *tomask)
 {
-	int ret;
+	long ret;
 
 	ret = syscall(__NR_migrate_pages, pid, maxnode, frommask, tomask);
 	return ret < 0 ? -errno : ret;
