@@ -12,7 +12,6 @@
  */
 
 #define _GNU_SOURCE
-#include <assert.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <string.h>
@@ -173,7 +172,8 @@ void group_thread_add_to_tail(struct wayca_sc_group *group, struct wayca_thread 
 {
 	struct wayca_thread *tail = group->threads;
 
-	assert(thread->siblings == NULL);
+	/* The thread to be added must be alone */
+	WAYCA_SC_ASSERT(thread->siblings == NULL);
 
 	/* No tail thread found, this is an empty group */
 	if (!tail) {
@@ -191,7 +191,8 @@ void group_group_add_to_tail(struct wayca_sc_group *group, struct wayca_sc_group
 {
 	struct wayca_sc_group *tail = father->groups;
 
-	assert(group->siblings == NULL);
+	/* The group to be added must be alone */
+	WAYCA_SC_ASSERT(group->siblings == NULL);
 
 	if (!tail) {
 		father->groups = group;
@@ -274,8 +275,8 @@ int wayca_group_request_resource_from_father(struct wayca_sc_group *group, cpu_s
 	struct wayca_sc_group *father;
 	cpu_set_t available_set;
 
-	assert(group->father != NULL);
-	assert(!CPU_EQUAL(&group->used, &group->total));
+	WAYCA_SC_ASSERT(group->father != NULL);
+	WAYCA_SC_ASSERT(!CPU_EQUAL(&group->used, &group->total));
 
 	father = group->father;
 
@@ -521,7 +522,7 @@ int wayca_group_delete_thread(struct wayca_sc_group *group, struct wayca_thread 
 		return -1;
 
 	if (CPU_COUNT(&group->used) == 0) {
-		assert(group->roll_over_cnts > 0);
+		WAYCA_SC_ASSERT(group->roll_over_cnts > 0);
 
 		group->roll_over_cnts--;
 		CPU_OR(&group->used, &group->used, &group->total);
@@ -597,7 +598,7 @@ int wayca_group_delete_group(struct wayca_sc_group *group, struct wayca_sc_group
 		return -1;
 
 	if (CPU_COUNT(&father->used) == 0) {
-		assert(father->roll_over_cnts > 0);
+		WAYCA_SC_ASSERT(father->roll_over_cnts > 0);
 
 		father->roll_over_cnts--;
 		CPU_OR(&father->used, &father->used, &father->total);

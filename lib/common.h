@@ -24,6 +24,13 @@
 
 extern char *wayca_scheduler_socket_path;
 
+#include <assert.h>
+#ifdef WAYCA_SC_DEBUG
+#define WAYCA_SC_ASSERT(cond)	assert(cond)
+#else
+#define WAYCA_SC_ASSERT(cond)	do { } while (0)
+#endif
+
 /* default configurations */
 #define MAX_MANAGED_MAPS	100
 #define SOCKET_PATH		wayca_scheduler_socket_path

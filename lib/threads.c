@@ -12,7 +12,6 @@
  */
 
 #define _GNU_SOURCE
-#include <assert.h>
 #include <sched.h>
 #include <limits.h>
 #include <stdbool.h>
@@ -776,13 +775,13 @@ static void threadpool_queue_task(struct wayca_threadpool *pool,
 			   struct wayca_threadpool_task *task)
 {
 	if (threadpool_task_is_empty(pool)) {
-		assert(!pool->task_num);
+		WAYCA_SC_ASSERT(!pool->task_num);
 		pool->task_head = task;
 		pool->task_head->next = task;
 		pool->task_head->prev = task;
 	} else {
 		struct wayca_threadpool_task *prev, *next;
-		assert(pool->task_num);
+		WAYCA_SC_ASSERT(pool->task_num);
 		prev = pool->task_head->prev;
 		next = pool->task_head;
 
@@ -803,14 +802,14 @@ static struct wayca_threadpool_task *threadpool_dequeue_task(struct wayca_thread
 		return NULL;
 
 	queue = pool->task_head;
-	assert(queue);
+	WAYCA_SC_ASSERT(queue);
 
 	/* If there is only one task in the queue */
 	if (queue->next == queue) {
-		assert(pool->task_num == 1);
+		WAYCA_SC_ASSERT(pool->task_num == 1);
 		pool->task_head = NULL;
 	} else {
-		assert(pool->task_num >= 2);
+		WAYCA_SC_ASSERT(pool->task_num >= 2);
 		next = queue->next;
 		prev = queue->prev;
 
@@ -842,7 +841,7 @@ static void *wayca_threadpool_worker_func(void *priv)
 			continue;
 		}
 
-		assert(pool->task_head);
+		WAYCA_SC_ASSERT(pool->task_head);
 		task = threadpool_dequeue_task(pool);
 		pool->idle_num--;
 
