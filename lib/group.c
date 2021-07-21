@@ -371,8 +371,11 @@ int wayca_group_init(struct wayca_sc_group *group)
 	CPU_ZERO(&group->used);
 	pthread_mutex_init(&group->mutex, NULL);
 
-	/* Init the group attribute, threads will compact in CCL and bind per-CPU */
-	group->attribute = (WT_GF_CCL | WT_GF_COMPACT | WT_GF_PERCPU);
+	/*
+	 * Init the group attribute, threads will be placed continuously in the
+	 * adjacent CPUs and bind per-CPU.
+	 */
+	group->attribute = (WT_GF_CPU | WT_GF_COMPACT | WT_GF_PERCPU);
 
 	return wayca_group_arrange(group);
 }
@@ -396,6 +399,16 @@ int wayca_group_arrange(struct wayca_sc_group *group)
 	case WT_GF_ALL:
 		group->nr_cpus_per_topo = wayca_sc_cpus_in_total();
 		break;
+	}
+
+	/**
+	 * If certain topology level doesn't exist, we'll fall
+	 * back to WT_GF_CPU, as it must exist.
+	 */
+	if (group->nr_cpus_per_topo < 0) {
+		group->nr_cpus_per_topo = 1;
+		group->attribute &= (~0xffff);
+		group->attribute |= WT_GF_CPU;
 	}
 
 	/**
