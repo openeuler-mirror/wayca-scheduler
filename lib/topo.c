@@ -225,7 +225,7 @@ static int topo_path_parse_meminfo(const char *base, const char *filename, struc
 			continue;
 		/* read in kB */
 		/* Note: format here is copied from [kernel]/drivers/base/node.c */
-		if (sscanf(ptr, "%*s %8lu", &p_meminfo->total_avail_kB) != 1)
+		if (sscanf(ptr, "%*s %lu", &p_meminfo->total_avail_kB) != 1)
 			break;	/* failed to parse*/
 		ret = 0;
 		break;  /* on success, break early */
