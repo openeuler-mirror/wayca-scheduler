@@ -60,30 +60,16 @@ static inline void set_node_mask(int node, node_set_t * mask)
 	NODE_SET(node, mask);
 }
 
-static inline void set_package_mask(int package, node_set_t * mask)
-{
-	int nr_in_pack = wayca_sc_nodes_in_package();
-	int node = package * nr_in_pack;
-	int i;
-
-	NODE_ZERO(mask);
-	for (i = 0; i < nr_in_pack; i++)
-		NODE_SET(node + i, mask);
-}
-
-static inline void set_all_mask(node_set_t * mask)
-{
-	int i;
-
-	NODE_ZERO(mask);
-	for (i = 0; i < wayca_sc_nodes_in_total(); i++)
-		NODE_SET(i, mask);
-}
-
 int wayca_sc_mem_interleave_in_package(int package)
 {
 	node_set_t mask;
-	set_package_mask(package, &mask);
+	int ret;
+
+	ret = wayca_sc_package_node_mask(package, sizeof(node_set_t),
+					 &mask);
+	if (ret < 0)
+		return ret;
+
 	return set_mempolicy(MPOL_INTERLEAVE, (unsigned long *)&mask,
 			     wayca_sc_nodes_in_total() + 1);
 }
@@ -91,7 +77,12 @@ int wayca_sc_mem_interleave_in_package(int package)
 int wayca_sc_mem_interleave_in_all(void)
 {
 	node_set_t mask;
-	set_all_mask(&mask);
+	int ret;
+
+	ret = wayca_sc_total_node_mask(sizeof(node_set_t), &mask);
+	if (ret < 0)
+		return ret;
+
 	return set_mempolicy(MPOL_INTERLEAVE, (unsigned long *)&mask,
 			     wayca_sc_nodes_in_total() + 1);
 }
@@ -99,14 +90,24 @@ int wayca_sc_mem_interleave_in_all(void)
 int wayca_sc_mem_bind_node(int node)
 {
 	node_set_t mask;
+
+	if (node < 0 || node >= wayca_sc_nodes_in_total())
+		return -EINVAL;
+
 	set_node_mask(node, &mask);
-	return set_mempolicy(MPOL_BIND, (unsigned long *)&mask, node + 1);
+	return set_mempolicy(MPOL_BIND, (unsigned long *)&mask, wayca_sc_nodes_in_total() + 1);
 }
 
 int wayca_sc_mem_bind_package(int package)
 {
 	node_set_t mask;
-	set_package_mask(package, &mask);
+	int ret;
+
+	ret = wayca_sc_package_node_mask(package, sizeof(node_set_t),
+					 &mask);
+	if (ret < 0)
+		return ret;
+
 	return set_mempolicy(MPOL_BIND, (unsigned long *)&mask,
 			     wayca_sc_nodes_in_total() + 1);
 }
@@ -139,7 +140,12 @@ int wayca_sc_get_mem_bind_nodes(size_t maxnode, node_set_t *mask)
 long wayca_sc_mem_migrate_to_node(pid_t pid, int node)
 {
 	node_set_t all_mask, node_mask;
-	set_all_mask(&all_mask);
+	int ret;
+
+	ret = wayca_sc_total_node_mask(sizeof(node_set_t), &all_mask);
+	if (ret < 0)
+		return ret;
+
 	set_node_mask(node, &node_mask);
 	return migrate_pages(pid, wayca_sc_nodes_in_total() + 1,
 			     (unsigned long *)&all_mask,
@@ -149,8 +155,17 @@ long wayca_sc_mem_migrate_to_node(pid_t pid, int node)
 long wayca_sc_mem_migrate_to_package(pid_t pid, int package)
 {
 	node_set_t all_mask, pack_mask;
-	set_all_mask(&all_mask);
-	set_package_mask(package, &pack_mask);
+	int ret;
+
+	ret = wayca_sc_total_node_mask(sizeof(node_set_t), &all_mask);
+	if (ret < 0)
+		return ret;
+
+	ret = wayca_sc_package_node_mask(package, sizeof(node_set_t),
+					 &pack_mask);
+	if (ret < 0)
+		return ret;
+
 	return migrate_pages(pid, wayca_sc_nodes_in_total() + 1,
 			     (unsigned long *)&all_mask,
 			     (unsigned long *)&pack_mask);
