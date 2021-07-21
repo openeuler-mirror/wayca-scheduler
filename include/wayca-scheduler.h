@@ -33,7 +33,7 @@ int wayca_sc_mem_interleave_in_all(void);
 int wayca_sc_mem_bind_node(int node);
 int wayca_sc_mem_bind_package(int node);
 int wayca_sc_mem_unbind(void);
-int wayca_sc_get_mem_bind_nodes(size_t nodesetsize, node_set_t *mask);
+int wayca_sc_get_mem_bind_nodes(size_t maxnode, node_set_t *mask);
 long wayca_sc_mem_migrate_to_node(pid_t pid, int node);
 long wayca_sc_mem_migrate_to_package(pid_t pid, int package);
 
@@ -110,7 +110,7 @@ typedef unsigned long long	wayca_sc_group_attr_t;
 int wayca_sc_group_set_attr(wayca_sc_group_t group, wayca_sc_group_attr_t *attr);
 int wayca_sc_group_get_attr(wayca_sc_group_t group, wayca_sc_group_attr_t *attr);
 
-int wayca_sc_group_create(wayca_sc_group_t* group);
+int wayca_sc_group_create(wayca_sc_group_t *group);
 int wayca_sc_group_destroy(wayca_sc_group_t group);
 int wayca_sc_thread_attach_group(wayca_sc_thread_t wthread, wayca_sc_group_t group);
 int wayca_sc_thread_detach_group(wayca_sc_thread_t wthread, wayca_sc_group_t group);

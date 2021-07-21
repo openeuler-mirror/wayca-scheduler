@@ -85,7 +85,7 @@ int wayca_sc_mem_interleave_in_package(int package)
 	node_set_t mask;
 	set_package_mask(package, &mask);
 	return set_mempolicy(MPOL_INTERLEAVE, (unsigned long *)&mask,
-			     wayca_sc_nodes_in_total());
+			     wayca_sc_nodes_in_total() + 1);
 }
 
 int wayca_sc_mem_interleave_in_all(void)
@@ -93,7 +93,7 @@ int wayca_sc_mem_interleave_in_all(void)
 	node_set_t mask;
 	set_all_mask(&mask);
 	return set_mempolicy(MPOL_INTERLEAVE, (unsigned long *)&mask,
-			     wayca_sc_nodes_in_total());
+			     wayca_sc_nodes_in_total() + 1);
 }
 
 int wayca_sc_mem_bind_node(int node)
@@ -108,7 +108,7 @@ int wayca_sc_mem_bind_package(int package)
 	node_set_t mask;
 	set_package_mask(package, &mask);
 	return set_mempolicy(MPOL_BIND, (unsigned long *)&mask,
-			     wayca_sc_nodes_in_total());
+			     wayca_sc_nodes_in_total() + 1);
 }
 
 int wayca_sc_mem_unbind(void)
@@ -116,9 +116,19 @@ int wayca_sc_mem_unbind(void)
 	return set_mempolicy(MPOL_DEFAULT, NULL, wayca_sc_nodes_in_total());
 }
 
-int wayca_sc_get_mem_bind_nodes(size_t nodesetsize, node_set_t *mask)
+int wayca_sc_get_mem_bind_nodes(size_t maxnode, node_set_t *mask)
 {
-	return get_mempolicy(NULL, (unsigned long *)mask, nodesetsize, NULL, MPOL_F_MEMS_ALLOWED);
+	int mode, ret;
+
+	ret = get_mempolicy(&mode, (unsigned long *)mask, maxnode, NULL, 0);
+
+	if (ret < 0)
+		return ret;
+
+	if (mode & (MPOL_BIND | MPOL_INTERLEAVE))
+		return 0;
+
+	return -ENODATA;
 }
 
 /*
@@ -131,7 +141,9 @@ long wayca_sc_mem_migrate_to_node(pid_t pid, int node)
 	node_set_t all_mask, node_mask;
 	set_all_mask(&all_mask);
 	set_node_mask(node, &node_mask);
-	return migrate_pages(pid, wayca_sc_nodes_in_total(), &all_mask, &node_mask);
+	return migrate_pages(pid, wayca_sc_nodes_in_total() + 1,
+			     (unsigned long *)&all_mask,
+			     (unsigned long *)&node_mask);
 }
 
 long wayca_sc_mem_migrate_to_package(pid_t pid, int package)
@@ -139,5 +151,7 @@ long wayca_sc_mem_migrate_to_package(pid_t pid, int package)
 	node_set_t all_mask, pack_mask;
 	set_all_mask(&all_mask);
 	set_package_mask(package, &pack_mask);
-	return migrate_pages(pid, wayca_sc_nodes_in_total(), &all_mask, &pack_mask);
+	return migrate_pages(pid, wayca_sc_nodes_in_total() + 1,
+			     (unsigned long *)&all_mask,
+			     (unsigned long *)&pack_mask);
 }
