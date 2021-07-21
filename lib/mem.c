@@ -24,20 +24,35 @@
 
 #include "common.h"
 
-#define set_mempolicy(mode, nodemask, maxnode) \
-	syscall(__NR_set_mempolicy, (int)mode, (unsigned long *)nodemask, (unsigned long)maxnode)
+static inline long set_mempolicy(int mode, const unsigned long *nodemask,
+				 unsigned long maxnode)
+{
+	int ret;
+
+	ret = syscall(__NR_set_mempolicy, mode, nodemask, maxnode);
+	return  ret < 0 ? -errno : ret;
+}
 
 static inline long get_mempolicy(int *mode, unsigned long *nodemask,
 				 unsigned long maxnode, void *addr,
 				 unsigned long flags)
 {
-	return syscall(__NR_get_mempolicy, mode, nodemask,
-		       maxnode, addr, flags);
+	int ret;
+
+	ret = syscall(__NR_get_mempolicy, mode, nodemask,
+		      maxnode, addr, flags);
+	return ret < 0 ? -errno : ret;
 }
 
-#define migrate_pages(pid, maxnode, frommask, tomask) \
-	syscall(__NR_migrate_pages, (int)pid, (unsigned long)maxnode, \
-		(const unsigned long *)frommask, (const unsigned long *)tomask);
+static inline long migrate_pages(int pid, unsigned long maxnode,
+				 const unsigned long *frommask,
+				 const unsigned long *tomask)
+{
+	int ret;
+
+	ret = syscall(__NR_migrate_pages, pid, maxnode, frommask, tomask);
+	return ret < 0 ? -errno : ret;
+}
 
 static inline void set_node_mask(int node, node_set_t * mask)
 {

@@ -96,7 +96,7 @@ int list_to_mask(char *s, cpu_set_t * mask)
 		    stride >= cr_in_total/2 ||
 		    errno || end >= cr_in_total) {
 			perror("bad affinity");
-			return -1;
+			return -errno;
 		}
 
 		for (int i = start; i <= end; i += stride)
@@ -154,7 +154,7 @@ int thread_bind_cpulist(pid_t pid, char *s)
 {
 	cpu_set_t mask;
 	if (list_to_mask(s, &mask))
-		return -1;
+		return -EINVAL;
 	return thread_sched_setaffinity(pid, sizeof(mask), &mask);
 }
 
@@ -162,7 +162,7 @@ int process_bind_cpulist(pid_t pid, char *s)
 {
 	cpu_set_t mask;
 	if (list_to_mask(s, &mask))
-		return -1;
+		return -EINVAL;
 	return thread_sched_setaffinity(pid, sizeof(mask), &mask);
 }
 
@@ -180,7 +180,7 @@ int process_sched_setaffinity(pid_t pid, int size, cpu_set_t * mask)
 	sprintf(buf, "/proc/%d/task/", pid);
 	d = opendir(buf);
 	if (!d)
-		return -1;
+		return -errno;
 
 	while ((de = readdir(d)) != NULL) {
 		pid_t tid;
@@ -350,7 +350,7 @@ int find_free_thread_id_locked()
 		if (!wayca_threads_array[i])
 			return i;
 
-	return -1;
+	return -EAGAIN;
 }
 
 /**
@@ -362,7 +362,7 @@ int find_free_group_id_locked()
 		if (!wayca_groups_array[i])
 			return i;
 
-	return -1;
+	return -EAGAIN;
 }
 
 /**
@@ -374,7 +374,7 @@ int find_free_threadpool_id_locked()
 		if (!wayca_threadpools_array[i])
 			return i;
 
-	return -1;
+	return -EAGAIN;
 }
 
 bool is_thread_id_valid(wayca_sc_thread_t id)
@@ -453,7 +453,7 @@ int wayca_sc_thread_set_attr(wayca_sc_thread_t wthread, wayca_sc_thread_attr_t *
 	struct wayca_thread *wt_p;
 
 	if (!is_thread_id_valid(wthread))
-		return -1;
+		return -EINVAL;
 
 	wt_p = id_to_wayca_thread(wthread);
 	wt_p->attribute = *attr;
@@ -469,7 +469,7 @@ int wayca_sc_thread_get_attr(wayca_sc_thread_t wthread, wayca_sc_thread_attr_t *
 	struct wayca_thread *wt_p;
 
 	if (!is_thread_id_valid(wthread))
-		return -1;
+		return -EINVAL;
 
 	wt_p = id_to_wayca_thread(wthread);
 	*attr = wt_p->attribute;
@@ -518,7 +518,7 @@ int wayca_sc_thread_create(wayca_sc_thread_t *wthread, pthread_attr_t *attr,
 
 	wt_p = wayca_thread_alloc();
 	if (!wt_p)
-		return -1;
+		return -ENOMEM;
 
 	wt_p->siblings = NULL;
 	wt_p->group = NULL;
@@ -547,7 +547,7 @@ int wayca_sc_thread_join(wayca_sc_thread_t id, void **retval)
 	int ret;
 
 	if (!is_thread_id_valid(id))
-		return -1; /* Invalid id */
+		return -EINVAL; /* Invalid id */
 
 	thread = id_to_wayca_thread(id);
 
@@ -569,7 +569,10 @@ int wayca_sc_group_set_attr(wayca_sc_group_t group, wayca_sc_group_attr_t *attr)
 	int ret;
 
 	if (!is_group_id_valid(group))
-		return -1;
+		return -EINVAL;
+
+	if (!attr)
+		return -EINVAL;
 
 	wg_p = id_to_wayca_group(group);
 
@@ -586,8 +589,11 @@ int wayca_sc_group_get_attr(wayca_sc_group_t group, wayca_sc_group_attr_t *attr)
 {
 	struct wayca_sc_group *wg_p;
 
+	if (!attr)
+		return -EINVAL;
+
 	if (!is_group_id_valid(group))
-		return -1;
+		return -EINVAL;
 
 	wg_p = id_to_wayca_group(group);
 
@@ -633,14 +639,16 @@ void wayca_group_free(struct wayca_sc_group *group)
 int wayca_sc_group_create(wayca_sc_group_t *group)
 {
 	struct wayca_sc_group *wg_p;
+	int ret;
 
 	wg_p = wayca_group_alloc();
 	if (!wg_p)
-		return -1;
+		return -ENOMEM;
 
-	if (wayca_group_init(wg_p)) {
+	ret = wayca_group_init(wg_p);
+	if (ret < 0) {
 		wayca_group_free(wg_p);
-		return -1;
+		return ret;
 	}
 
 	*group = wg_p->id;
@@ -652,7 +660,7 @@ int wayca_sc_group_destroy(wayca_sc_group_t group)
 	struct wayca_sc_group *wg_p;
 
 	if (!is_group_id_valid(group))
-		return -1;
+		return -EINVAL;
 
 	wg_p = id_to_wayca_group(group);
 
@@ -672,7 +680,7 @@ int wayca_sc_thread_attach_group(wayca_sc_thread_t wthread, wayca_sc_group_t gro
 	int ret;
 
 	if (!is_thread_id_valid(wthread) || !is_group_id_valid(group))
-		return -1;
+		return -EINVAL;
 
 	wt_p = id_to_wayca_thread(wthread);
 	wg_p = id_to_wayca_group(group);
@@ -696,7 +704,7 @@ int wayca_sc_thread_detach_group(wayca_sc_thread_t wthread, wayca_sc_group_t gro
 	int ret;
 
 	if (!is_thread_id_valid(wthread) || !is_group_id_valid(group))
-		return -1;
+		return -EINVAL;
 
 	wt_p = id_to_wayca_thread(wthread);
 	wg_p = id_to_wayca_group(group);
@@ -714,14 +722,14 @@ int wayca_sc_group_attach_group(wayca_sc_group_t group, wayca_sc_group_t father)
 	int ret;
 
 	if (!is_group_id_valid(group) || !is_group_id_valid(father))
-		return -1;
+		return -EINVAL;
 
 	wg_p = id_to_wayca_group(group);
 	father_p = id_to_wayca_group(father);
 
 	/* If @group already has a father, should detach first before attach to a new one. */
 	if (wg_p->father)
-		return -1;
+		return -EINVAL;
 
 	pthread_mutex_lock(&wg_p->mutex);
 	pthread_mutex_lock(&father_p->mutex);
@@ -738,7 +746,7 @@ int wayca_sc_group_detach_group(wayca_sc_group_t group, wayca_sc_group_t father)
 	int ret;
 
 	if (!is_group_id_valid(group) || !is_group_id_valid(father))
-		return -1;
+		return -EINVAL;
 
 	wg_p = id_to_wayca_group(group);
 	father_p = id_to_wayca_group(father);

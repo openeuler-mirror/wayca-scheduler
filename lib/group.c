@@ -137,7 +137,8 @@ int find_incomplete_set(struct wayca_sc_group *group, cpu_set_t *cpuset)
 		pos += stride;
 	}
 
-	return -1;
+	/* No imcomplete set is found in the @cpuset */
+	return -ENODATA;
 }
 
 bool is_thread_in_group(struct wayca_sc_group *group, struct wayca_thread *thread)
@@ -519,7 +520,7 @@ int wayca_group_add_thread(struct wayca_sc_group *group, struct wayca_thread *th
 int wayca_group_delete_thread(struct wayca_sc_group *group, struct wayca_thread *thread)
 {
 	if (!is_thread_in_group(group, thread))
-		return -1;
+		return -EINVAL;
 
 	if (CPU_COUNT(&group->used) == 0) {
 		WAYCA_SC_ASSERT(group->roll_over_cnts > 0);
@@ -552,9 +553,11 @@ int wayca_group_rearrange_thread(struct wayca_sc_group *group, struct wayca_thre
 int wayca_group_rearrange_group(struct wayca_sc_group *group)
 {
 	struct wayca_thread *thread;
+	int ret;
 
-	if (wayca_group_arrange(group))
-		return -1;
+	ret = wayca_group_arrange(group);
+	if (ret)
+		return ret;
 
 	CPU_ZERO(&group->used);
 	group->roll_over_cnts = 0;
@@ -570,23 +573,29 @@ int wayca_group_rearrange_group(struct wayca_sc_group *group)
 
 int wayca_group_add_group(struct wayca_sc_group *group, struct wayca_sc_group *father)
 {
+	int ret;
+
 	if (is_group_in_father(group, father))
-		return 0;
+		return -EINVAL;
 
 	if (group->nr_cpus_per_topo >= father->nr_cpus_per_topo)
-		return -1;
+		return -ERANGE;
+
+	if (father->nr_threads)
+		return -EINVAL;
 
 	father->nr_groups++;
 	group_group_add_to_tail(group, father);
 
 	group->father = father;
 
-	if (wayca_group_rearrange_group(group)) {
+	ret = wayca_group_rearrange_group(group);
+	if (ret < 0) {
 		group_group_delete_group(group, father);
 		father->nr_groups--;
 		group->father = NULL;
 
-		return -1;
+		return ret;
 	}
 
 	return 0;
@@ -595,7 +604,7 @@ int wayca_group_add_group(struct wayca_sc_group *group, struct wayca_sc_group *f
 int wayca_group_delete_group(struct wayca_sc_group *group, struct wayca_sc_group *father)
 {
 	if (!is_group_in_father(group, father))
-		return -1;
+		return -EINVAL;
 
 	if (CPU_COUNT(&father->used) == 0) {
 		WAYCA_SC_ASSERT(father->roll_over_cnts > 0);
