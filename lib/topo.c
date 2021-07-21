@@ -225,7 +225,7 @@ static int topo_path_parse_meminfo(const char *base, const char *filename, struc
 			continue;
 		/* read in kB */
 		/* Note: format here is copied from [kernel]/drivers/base/node.c */
-		if (sscanf(ptr, "%*s %8lu", &p_meminfo->total_avail_kB) != 1)
+		if (sscanf(ptr, "%*s %lu", &p_meminfo->total_avail_kB) != 1)
 			break;	/* failed to parse*/
 		ret = 0;
 		break;  /* on success, break early */
@@ -334,13 +334,29 @@ int cpulist_parse(const char *str, cpu_set_t *set, size_t setsize, int fail)
 /* cpu_set_t *set: can contain anything and will be zero'ed by cpulist_parse() */
 static int topo_path_read_cpulist(const char *base, const char *filename, cpu_set_t *set, int maxcpus)
 {
-	int dir_fd = open(base, O_RDONLY|O_CLOEXEC);
-	int fd = openat(dir_fd, filename, O_RDONLY);
-	FILE *f = fdopen(fd, "r");
-
 	size_t len = maxcpus * 8;	/* big enough to hold a CPU ids */
 	char buf[len];			/* dynamic allocation */
 	int ret = 0;
+	int dir_fd;
+	FILE *f;
+	int fd;
+
+	dir_fd = open(base, O_RDONLY|O_CLOEXEC);
+	if (dir_fd == -1)
+		return -errno;
+
+	fd = openat(dir_fd, filename, O_RDONLY);
+	if (fd == -1) {
+		close(dir_fd);
+		return -errno;
+	}
+
+	f = fdopen(fd, "r");
+	if (f == NULL) {
+		close(fd);
+		close(dir_fd);
+		return -errno;
+	}
 
 	if (fgets(buf, len, f) == NULL)
 		ret = -errno;
@@ -525,6 +541,11 @@ read_package_info:
 		p_topo->packages[i]->cpu_map = CPU_ALLOC(p_topo->kernel_max_cpus);
 		if (!p_topo->packages[i]->cpu_map)
 			return -ENOMEM;			/* no enough memory */
+		/* initialize this package's numa_map */
+		p_topo->packages[i]->numa_map = CPU_ALLOC(p_topo->n_cpus);
+		if (!p_topo->packages[i]->numa_map)
+			return -ENOMEM;			/* no enough memory */
+		CPU_ZERO_S(CPU_ALLOC_SIZE(p_topo->n_cpus), p_topo->packages[i]->numa_map);
 		/* read "package_cpus_list" */
 		ret = topo_path_read_cpulist(path_buffer, "package_cpus_list",
 				p_topo->packages[i]->cpu_map, p_topo->kernel_max_cpus);
@@ -782,12 +803,14 @@ static int topo_recursively_read_io_devices(const char *rootdir, struct wayca_to
 /* External callable functions */
 static void topo_init(void)
 {
+	char origin_wd[WAYCA_SC_PATH_LEN_MAX];
 	struct wayca_topo *p_topo = &topo;
 	cpu_set_t *cpuset_possible;
 	cpu_set_t *node_possible;
 	int i = 0;
 	int ret;
 
+	getcwd(origin_wd, WAYCA_SC_PATH_LEN_MAX);
 	memset(p_topo, 0, sizeof(struct wayca_topo));
 
 	/* read "cpu/kernel_max" to determine maximum size for future memory allocations */
@@ -857,12 +880,26 @@ static void topo_init(void)
 
 	/* read all node%d topology */
 	for (i = 0; i < p_topo->n_nodes; i++) {
+		cpu_set_t *res_cpu;
+		size_t setsize;
+		int j;
+
 		ret = topo_read_node_topology(i, p_topo);
 		if (ret) {
 			PRINT_ERROR("get node %d topology fail, ret = %d", i, ret);
 			goto cleanup_on_error;
 		}
+		res_cpu = CPU_ALLOC(p_topo->n_cpus);
+		setsize = CPU_ALLOC_SIZE(p_topo->n_cpus);
+		for (j = 0; j < p_topo->n_packages; j++) {
+			CPU_AND_S(setsize, res_cpu, p_topo->packages[j]->cpu_map,
+					p_topo->nodes[i]->cpu_map);
+			if (CPU_EQUAL_S(setsize, res_cpu, p_topo->nodes[i]->cpu_map))
+				CPU_SET_S(i, setsize, p_topo->packages[j]->numa_map);
+
+		}
 	}
+
 	/* at the end of the cpu%d for loop, the following has been established:
 	 *  - p_topo->nodes[]->distance
 	 */
@@ -879,6 +916,7 @@ static void topo_init(void)
 	if (topo_recursively_read_io_devices(WAYCA_SC_SYSDEV_FNAME, p_topo) != 0)
 		goto cleanup_on_error;
 
+	chdir(origin_wd);
 	return;
 
 	/* cleanup_on_error */
@@ -1049,10 +1087,8 @@ void topo_free(void)
 		free(p_topo->cores[i]);
 	free(p_topo->cores);
 
-	for (i = 0; i < p_topo->n_clusters; i++) {
+	for (i = 0; i < p_topo->n_clusters; i++)
 		CPU_FREE(p_topo->ccls[i]->cpu_map);
-		free(p_topo->cpus[i]);
-	}
 	free(p_topo->ccls);
 
 	CPU_FREE(p_topo->node_map);
@@ -1086,6 +1122,13 @@ void topo_free(void)
 	return;
 }
 
+int wayca_sc_cpus_in_core(void)
+{
+	if (topo.n_cores < 1)
+		return -ENODATA;	/* not initialized */
+	return topo.cores[0]->n_cpus;
+}
+
 int wayca_sc_cpus_in_ccl(void)
 {
 	if (topo.n_clusters < 1)
@@ -1112,6 +1155,36 @@ int wayca_sc_cpus_in_total(void)
 	if (topo.n_cpus < 1)
 		return -ENODATA;	/* not initialized */
 	return topo.n_cpus;
+}
+
+int wayca_sc_cores_in_ccl(void)
+{
+	if (topo.n_clusters < 1)
+		return -ENODATA;	/* not initialized */
+	if (topo.n_cores < 1)
+		return -ENODATA;	/* not initialized */
+	return topo.ccls[0]->n_cpus / topo.cores[0]->n_cpus;
+}
+
+int wayca_sc_cores_in_node(void)
+{
+	if (topo.n_cores < 1)
+		return -ENODATA;	/* not initialized */
+	return topo.nodes[0]->n_cpus / topo.cores[0]->n_cpus;
+}
+
+int wayca_sc_cores_in_package(void)
+{
+	if (topo.n_cores < 1)
+		return -ENODATA;	/* not initialized */
+	return topo.packages[0]->n_cpus / topo.cores[0]->n_cpus;
+}
+
+int wayca_sc_cores_in_total(void)
+{
+	if (topo.n_cores < 1)
+		return -ENODATA;	/* not initialized */
+	return topo.n_cores;
 }
 
 int wayca_sc_ccls_in_package(void)
@@ -1158,7 +1231,12 @@ int wayca_sc_packages_in_total(void)
 
 static bool topo_is_valid_cpu(int cpu_id)
 {
-	return cpu_id >= 0 && cpu_id < wayca_sc_cpus_in_total();
+	return cpu_id >= 0 && cpu_id < wayca_sc_cores_in_total();
+}
+
+static bool topo_is_valid_core(int core_id)
+{
+	return core_id >= 0 && core_id < wayca_sc_cpus_in_total();
 }
 
 static bool topo_is_valid_ccl(int ccl_id)
@@ -1176,9 +1254,31 @@ static bool topo_is_valid_package(int package_id)
 	return package_id >= 0 && package_id < wayca_sc_packages_in_total();
 }
 
+int wayca_sc_core_cpu_mask(int core_id, size_t cpusetsize, cpu_set_t *mask)
+{
+	size_t valid_cpu_setsize;
+
+	if (mask == NULL)
+		return -EINVAL;
+
+	if (!topo_is_valid_core(core_id))
+		return -EINVAL;
+
+	valid_cpu_setsize = CPU_ALLOC_SIZE(topo.n_cpus);
+	if (cpusetsize < valid_cpu_setsize)
+		return -EINVAL;
+
+	CPU_ZERO_S(cpusetsize, mask);
+	CPU_OR_S(valid_cpu_setsize, mask, mask, topo.cores[core_id]->core_cpus_map);
+	return 0;
+}
+
 int wayca_sc_ccl_cpu_mask(int ccl_id, size_t cpusetsize, cpu_set_t *mask)
 {
 	size_t valid_cpu_setsize;
+
+	if (mask == NULL)
+		return -EINVAL;
 
 	if (!topo_is_valid_ccl(ccl_id))
 		return -EINVAL;
@@ -1187,7 +1287,7 @@ int wayca_sc_ccl_cpu_mask(int ccl_id, size_t cpusetsize, cpu_set_t *mask)
 	if (cpusetsize < valid_cpu_setsize)
 		return -EINVAL;
 
-	CPU_ZERO_S(valid_cpu_setsize, mask);
+	CPU_ZERO_S(cpusetsize, mask);
 	CPU_OR_S(valid_cpu_setsize, mask, mask, topo.ccls[ccl_id]->cpu_map);
 	return 0;
 }
@@ -1195,6 +1295,8 @@ int wayca_sc_ccl_cpu_mask(int ccl_id, size_t cpusetsize, cpu_set_t *mask)
 int wayca_sc_node_cpu_mask(int node_id, size_t cpusetsize, cpu_set_t *mask)
 {
 	size_t valid_cpu_setsize;
+	if (mask == NULL)
+		return -EINVAL;
 
 	if (!topo_is_valid_node(node_id))
 		return -EINVAL;
@@ -1203,7 +1305,7 @@ int wayca_sc_node_cpu_mask(int node_id, size_t cpusetsize, cpu_set_t *mask)
 	if (cpusetsize < valid_cpu_setsize)
 		return -EINVAL;
 
-	CPU_ZERO_S(valid_cpu_setsize, mask);
+	CPU_ZERO_S(cpusetsize, mask);
 	CPU_OR_S(valid_cpu_setsize, mask, mask, topo.nodes[node_id]->cpu_map);
 	return 0;
 }
@@ -1212,6 +1314,9 @@ int wayca_sc_package_cpu_mask(int package_id, size_t cpusetsize, cpu_set_t *mask
 {
 	size_t valid_cpu_setsize;
 
+	if (mask == NULL)
+		return -EINVAL;
+
 	if (!topo_is_valid_package(package_id))
 		return -EINVAL;
 
@@ -1219,7 +1324,7 @@ int wayca_sc_package_cpu_mask(int package_id, size_t cpusetsize, cpu_set_t *mask
 	if (cpusetsize < valid_cpu_setsize)
 		return -EINVAL;
 
-	CPU_ZERO_S(valid_cpu_setsize, mask);
+	CPU_ZERO_S(cpusetsize, mask);
 	CPU_OR_S(valid_cpu_setsize, mask, mask, topo.packages[package_id]->cpu_map);
 	return 0;
 }
@@ -1228,12 +1333,50 @@ int wayca_sc_total_cpu_mask(size_t cpusetsize, cpu_set_t *mask)
 {
 	size_t valid_cpu_setsize;
 
+	if (mask == NULL)
+		return -EINVAL;
+
 	valid_cpu_setsize = CPU_ALLOC_SIZE(topo.n_cpus);
 	if (cpusetsize < valid_cpu_setsize)
 		return -EINVAL;
 
-	CPU_ZERO_S(valid_cpu_setsize, mask);
+	CPU_ZERO_S(cpusetsize, mask);
 	CPU_OR_S(valid_cpu_setsize, mask, mask, topo.cpu_map);
+	return 0;
+}
+
+int wayca_sc_package_node_mask(int package_id, size_t setsize, cpu_set_t *mask)
+{
+	size_t valid_numa_setsize;
+
+	if (mask == NULL)
+		return -EINVAL;
+
+	if (!topo_is_valid_package(package_id))
+		return -EINVAL;
+
+	valid_numa_setsize = CPU_ALLOC_SIZE(topo.n_nodes);
+	if (setsize < valid_numa_setsize)
+		return -EINVAL;
+
+	CPU_ZERO_S(setsize, mask);
+	CPU_OR_S(valid_numa_setsize, mask, mask, topo.packages[package_id]->numa_map);
+	return 0;
+}
+
+int wayca_sc_total_node_mask(size_t setsize, cpu_set_t *mask)
+{
+	size_t valid_numa_setsize;
+
+	if (mask == NULL)
+		return -EINVAL;
+
+	valid_numa_setsize = CPU_ALLOC_SIZE(topo.n_nodes);
+	if (setsize < valid_numa_setsize)
+		return -EINVAL;
+
+	CPU_ZERO_S(setsize, mask);
+	CPU_OR_S(valid_numa_setsize, mask, mask, topo.node_map);
 	return 0;
 }
 
@@ -1247,13 +1390,21 @@ int wayca_sc_get_core_id(int cpu_id)
 
 int wayca_sc_get_ccl_id(int cpu_id)
 {
+	int physical_id;
+	int i;
+
 	if (!topo_is_valid_cpu(cpu_id))
 		return -EINVAL;
 	// cluster may not exist in some version of kernel
 	if (wayca_sc_cpus_in_ccl() < 0)
 		return -EINVAL;
 
-	return topo.cpus[cpu_id]->p_cluster->cluster_id;
+	physical_id = topo.cpus[cpu_id]->p_cluster->cluster_id;
+	for (i = 0; i < topo.n_clusters; i++) {
+		if (topo.ccls[i]->cluster_id == physical_id)
+			return i;
+	}
+	return -EINVAL;
 }
 
 int wayca_sc_get_node_id(int cpu_id)
@@ -1266,18 +1417,125 @@ int wayca_sc_get_node_id(int cpu_id)
 
 int wayca_sc_get_package_id(int cpu_id)
 {
+	int physical_id;
+	int i;
+
 	if (!topo_is_valid_cpu(cpu_id))
 		return -EINVAL;
 
-	return topo.cpus[cpu_id]->p_package->physical_package_id;
+	physical_id = topo.cpus[cpu_id]->p_package->physical_package_id;
+	for (i = 0; i < topo.n_packages; i++) {
+		if (topo.packages[i]->physical_package_id == physical_id)
+			return i;
+	}
+	return -EINVAL;
 }
 
 int wayca_sc_get_node_mem_size(int node_id, unsigned long *size)
 {
+	if (size == NULL)
+		return -EINVAL;
+
 	if (!topo_is_valid_node(node_id))
 		return -EINVAL;
 	*size = topo.nodes[node_id]->p_meminfo->total_avail_kB;
 	return 0;
+}
+
+static int parse_cache_size(const char* size)
+{
+	int cache_size;
+	char *endstr;
+
+	cache_size = strtol(size, &endstr, 10);
+	if (cache_size < 0 || *endstr != 'K') {
+		return -EINVAL;
+	}
+	return cache_size;
+}
+
+int wayca_sc_get_l1i_size(int cpu_id)
+{
+	static const char *size;
+	static const char *type;
+	int level;
+	int i;
+
+	if (!topo_is_valid_cpu(cpu_id))
+		return -EINVAL;
+
+	for(i = 0; i < topo.cpus[cpu_id]->n_caches; i++) {
+		level = topo.cpus[cpu_id]->p_caches[i].level;
+		type = topo.cpus[cpu_id]->p_caches[i].type;
+		if (level == 1 && !strcmp(type, "Instruction")) {
+			size = topo.cpus[cpu_id]->p_caches[i].cache_size;
+			return parse_cache_size(size);
+		}
+	}
+	return -ENODATA;
+}
+
+int wayca_sc_get_l1d_size(int cpu_id)
+{
+	static const char *size;
+	static const char *type;
+	int level;
+	int i;
+
+	if (!topo_is_valid_cpu(cpu_id))
+		return -EINVAL;
+
+	for(i = 0; i < topo.cpus[cpu_id]->n_caches; i++) {
+		level = topo.cpus[cpu_id]->p_caches[i].level;
+		type = topo.cpus[cpu_id]->p_caches[i].type;
+		if (level == 1 && !strcmp(type, "Data")) {
+			size = topo.cpus[cpu_id]->p_caches[i].cache_size;
+			return parse_cache_size(size);
+		}
+	}
+	return -ENODATA;
+}
+
+int wayca_sc_get_l2_size(int cpu_id)
+{
+	static const char *size;
+	static const char *type;
+	int level;
+	int i;
+
+	if (!topo_is_valid_cpu(cpu_id))
+		return -EINVAL;
+
+	for(i = 0; i < topo.cpus[cpu_id]->n_caches; i++) {
+		level = topo.cpus[cpu_id]->p_caches[i].level;
+		type = topo.cpus[cpu_id]->p_caches[i].type;
+		if (level == 2 && !strcmp(type, "Unified")) {
+			size = topo.cpus[cpu_id]->p_caches[i].cache_size;
+			return parse_cache_size(size);
+		}
+	}
+	return -ENODATA;
+}
+
+int wayca_sc_get_l3_size(int cpu_id)
+{
+	static const char *size;
+	static const char *type;
+	int level;
+	int i;
+
+	if (!topo_is_valid_cpu(cpu_id))
+		return -EINVAL;
+
+	for(i = 0; i < topo.cpus[cpu_id]->n_caches; i++) {
+		level = topo.cpus[cpu_id]->p_caches[i].level;
+		type = topo.cpus[cpu_id]->p_caches[i].type;
+		if (level == 3 && !strcmp(type, "Unified")) {
+			size = topo.cpus[cpu_id]->p_caches[i].cache_size;
+			return parse_cache_size(size);
+		}
+	}
+	return -ENODATA;
 }
 
 /* memory bandwidth (relative value) of speading over multiple CCLs
