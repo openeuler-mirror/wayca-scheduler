@@ -155,6 +155,20 @@ bool is_thread_in_group(struct wayca_sc_group *group, struct wayca_thread *threa
 	return false;
 }
 
+int max_topo_cpus_in_child_groups(struct wayca_sc_group *group)
+{
+	struct wayca_sc_group *child;
+	int max_topo_cpus = 0;
+
+	if (!group->nr_groups)
+		return 0;
+
+	group_for_each_groups(child, group)
+		max_topo_cpus = max(max_topo_cpus, child->nr_cpus_per_topo);
+
+	return max_topo_cpus;
+}
+
 bool is_group_in_father(struct wayca_sc_group *group, struct wayca_sc_group *father)
 {
 	struct wayca_sc_group *member = father->groups;
@@ -284,7 +298,6 @@ static void wayca_group_request_resource_from_father(struct wayca_sc_group *grou
 	father = group->father;
 
 	WAYCA_SC_ASSERT(cnts > 0);
-	WAYCA_SC_ASSERT(cnts < father->nr_cpus_per_topo);
 
 	/**
 	 * Always assign complete topology region of CPU to the child,
@@ -583,8 +596,14 @@ int wayca_group_rearrange_thread(struct wayca_sc_group *group,
 
 int wayca_group_rearrange_group(struct wayca_sc_group *group)
 {
-	struct wayca_thread *thread;
 	int ret;
+
+	if (group->father &&
+	    group->nr_cpus_per_topo >= group->father->nr_cpus_per_topo)
+		return -ERANGE;
+
+	if (group->nr_cpus_per_topo <= max_topo_cpus_in_child_groups(group))
+		return -ERANGE;
 
 	ret = wayca_group_arrange(group);
 	if (ret)
@@ -593,10 +612,29 @@ int wayca_group_rearrange_group(struct wayca_sc_group *group)
 	CPU_ZERO(&group->used);
 	group->roll_over_cnts = 0;
 
-	group_for_each_threads(thread, group) {
-		wayca_thread_update_load(thread, false);
-		wayca_group_assign_thread_resource(group, thread);
-		wayca_group_rearrange_thread(group, thread);
+	/*
+	 * We need to check whehter this is a thread group or not.
+	 * If this is a thread group, update the resources of each
+	 * member threads; if this is a groups' group, rearrange
+	 * each member groups.
+	 *
+	 * Otherwise it's an empty group, do nothing.
+	 */
+	if (group->nr_threads) {
+		struct wayca_thread *thread;
+
+		WAYCA_SC_ASSERT(group->nr_groups == 0);
+		group_for_each_threads(thread, group) {
+			wayca_thread_update_load(thread, false);
+			wayca_group_assign_thread_resource(group, thread);
+			wayca_group_rearrange_thread(group, thread);
+		}
+	} else if (group->nr_groups) {
+		struct wayca_sc_group *child;
+
+		WAYCA_SC_ASSERT(group->nr_threads == 0);
+		group_for_each_groups(child, group)
+			wayca_group_rearrange_group(child);
 	}
 
 	return 0;
@@ -609,9 +647,6 @@ int wayca_group_add_group(struct wayca_sc_group *group,
 
 	if (is_group_in_father(group, father))
 		return -EINVAL;
-
-	if (group->nr_cpus_per_topo >= father->nr_cpus_per_topo)
-		return -ERANGE;
 
 	if (father->nr_threads)
 		return -EINVAL;

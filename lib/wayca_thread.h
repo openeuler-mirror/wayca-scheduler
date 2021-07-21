@@ -120,6 +120,9 @@ struct wayca_sc_group {
 #define group_for_each_threads(thread, group)	\
 	for (thread = group->threads; thread != NULL; thread = thread->siblings)
 
+#define group_for_each_groups(group, father)	\
+	for (group = father->groups; group != NULL; group = group->siblings)
+
 /* Do the initialization work for a new create group */
 int wayca_group_init(struct wayca_sc_group *group);
 
