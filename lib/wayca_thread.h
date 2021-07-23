@@ -21,12 +21,31 @@
 #include "common.h"
 #include "bitmap.h"
 
-#define thread_sched_setaffinity(pid, size, cpuset) \
-  syscall(__NR_sched_setaffinity, (pid_t)pid, (size_t)size, (void *)cpuset)
-#define thread_sched_getaffinity(pid, size, cpuset) \
-  syscall(__NR_sched_getaffinity, (pid_t)pid, (size_t)size, (void *)cpuset)
-#define thread_sched_gettid(void)	\
-  syscall(__NR_gettid)
+static inline int thread_sched_setaffinity(pid_t pid, size_t cpusetsize,
+					   const cpu_set_t *cpuset)
+{
+	int ret;
+
+	ret = syscall(__NR_sched_setaffinity, pid, cpusetsize, cpuset);
+	return ret < 0 ? -errno : ret;
+}
+
+static inline int thread_sched_getaffinity(pid_t pid, size_t cpusetsize,
+					   cpu_set_t cpuset)
+{
+	int ret;
+
+	ret = syscall(__NR_sched_getaffinity, pid, cpusetsize, cpuset);
+	return ret < 0 ? -errno : ret;
+}
+
+static inline pid_t thread_sched_gettid(void)
+{
+	int ret;
+
+	ret = syscall(__NR_gettid);
+	return ret < 0 ? -errno : ret;
+}
 
 /* CPU set of all the cpus in the system */
 extern cpu_set_t total_cpu_set;
@@ -100,6 +119,9 @@ struct wayca_sc_group {
 
 #define group_for_each_threads(thread, group)	\
 	for (thread = group->threads; thread != NULL; thread = thread->siblings)
+
+#define group_for_each_groups(group, father)	\
+	for (group = father->groups; group != NULL; group = group->siblings)
 
 /* Do the initialization work for a new create group */
 int wayca_group_init(struct wayca_sc_group *group);

@@ -75,9 +75,9 @@ static int bitmap_str_to_cpumask(char *start, size_t len, cpu_set_t *cpuset)
 	int i, pos, num;
 	char *c, *tmp;
 
-	c = strchr(start, '\0');
+	c = strchr(start, '\n');
 	if (!c)
-		c = start + len;
+		return -EINVAL;
 
 	CPU_ZERO(cpuset);
 
@@ -85,7 +85,7 @@ static int bitmap_str_to_cpumask(char *start, size_t len, cpu_set_t *cpuset)
 
 	while (c != start) {
 		tmp = --c;
-		if (*tmp == ',')
+		if (*tmp == ',' || *tmp == '\n')
 			continue;
 
 		num = hex_to_bin(*tmp);
@@ -113,7 +113,7 @@ int wayca_sc_irq_bind_cpu(int irq, int cpu)
 	CPU_ZERO(&mask);
 	CPU_SET(cpu, &mask);
 
-	sprintf(buf, "/proc/irq/%i/smp_affinity", irq);
+	snprintf(buf, PATH_MAX, "/proc/irq/%i/smp_affinity", irq);
 	fd = open(buf, O_WRONLY, S_IRUSR | S_IWUSR);
 	if (fd < 0)
 		return -errno;
@@ -131,12 +131,16 @@ int wayca_sc_irq_bind_cpu(int irq, int cpu)
 
 int wayca_sc_get_irq_bind_cpu(int irq, size_t cpusetsize, cpu_set_t *cpuset)
 {
-	int fd, ret, last_set;
+	size_t valid_cpu_setsize;
+	int fd, ret;
 	char buf[PATH_MAX];
 	cpu_set_t mask;
 
-	sprintf(buf, "/proc/irq/%i/smp_affinity", irq);
-	fd = open(buf, O_WRONLY, S_IRUSR | S_IWUSR);
+	if (!cpuset)
+		return -EINVAL;
+
+	snprintf(buf, PATH_MAX, "/proc/irq/%i/smp_affinity", irq);
+	fd = open(buf, O_RDONLY, S_IRUSR | S_IWUSR);
 	if (fd < 0)
 		return -errno;
 
@@ -150,8 +154,8 @@ int wayca_sc_get_irq_bind_cpu(int irq, size_t cpusetsize, cpu_set_t *cpuset)
 	if (ret)
 		return ret;
 
-	last_set = cpuset_find_last_set(&mask);
-	if (last_set < 0 || last_set > cpusetsize)
+	valid_cpu_setsize = CPU_ALLOC_SIZE(wayca_sc_cpus_in_total());
+	if (cpusetsize < valid_cpu_setsize)
 		return -EINVAL;
 
 	CPU_OR_S(cpusetsize, cpuset, cpuset, &mask);

@@ -51,7 +51,8 @@ void show_thread_affinity()
 			pid_t pid = threads_pid[i][j];
 
 			// sched_getaffinity(pid, sizeof(cpuset), &cpuset);
-			wayca_sc_thread_get_cpuset(threads[i][j], &cpuset);
+			wayca_sc_thread_get_cpuset(threads[i][j],
+					sizeof(cpu_set_t), &cpuset);
 
 			printf("group %d thread %d pid %d:\t", i, j, pid);
 			for (int b = 0; b < (system_cpu_nr + __NCPUBITS - 1) / __NCPUBITS; b++)

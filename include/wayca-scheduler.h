@@ -33,7 +33,7 @@ int wayca_sc_mem_interleave_in_all(void);
 int wayca_sc_mem_bind_node(int node);
 int wayca_sc_mem_bind_package(int node);
 int wayca_sc_mem_unbind(void);
-int wayca_sc_get_mem_bind_nodes(size_t nodesetsize, node_set_t *mask);
+int wayca_sc_get_mem_bind_nodes(size_t maxnode, node_set_t *mask);
 long wayca_sc_mem_migrate_to_node(pid_t pid, int node);
 long wayca_sc_mem_migrate_to_package(pid_t pid, int package);
 
@@ -110,7 +110,7 @@ typedef unsigned long long	wayca_sc_group_attr_t;
 int wayca_sc_group_set_attr(wayca_sc_group_t group, wayca_sc_group_attr_t *attr);
 int wayca_sc_group_get_attr(wayca_sc_group_t group, wayca_sc_group_attr_t *attr);
 
-int wayca_sc_group_create(wayca_sc_group_t* group);
+int wayca_sc_group_create(wayca_sc_group_t *group);
 int wayca_sc_group_destroy(wayca_sc_group_t group);
 int wayca_sc_thread_attach_group(wayca_sc_thread_t wthread, wayca_sc_group_t group);
 int wayca_sc_thread_detach_group(wayca_sc_thread_t wthread, wayca_sc_group_t group);
@@ -135,18 +135,22 @@ int wayca_sc_threadpool_running_num(wayca_sc_threadpool_t threadpool);
 /* For debug purpose */
 #ifdef WAYCA_SC_DEBUG
 void wayca_sc_topo_print(void);
-int wayca_sc_thread_get_cpuset(wayca_sc_thread_t wthread, cpu_set_t *cpuset);
-int wayca_sc_group_get_cpuset(wayca_sc_group_t group, cpu_set_t *cpuset);
+int wayca_sc_thread_get_cpuset(wayca_sc_thread_t wthread, size_t cpusetsize,
+			       cpu_set_t *cpuset);
+int wayca_sc_group_get_cpuset(wayca_sc_group_t group, size_t cpusetsize,
+			      cpu_set_t *cpuset);
 #else
 static inline
 void wayca_sc_topo_print(void) { }
 static inline
-int wayca_sc_thread_get_cpuset(wayca_sc_thread_t wthread, cpu_set_t *cpuset)
+int wayca_sc_thread_get_cpuset(wayca_sc_thread_t wthread, size_t cpusetsize,
+			       cpu_set_t *cpuset)
 {
 	return 0;
 }
 static inline
-int wayca_sc_group_get_cpuset(wayca_sc_group_t group, cpu_set_t *cpuset)
+int wayca_sc_group_get_cpuset(wayca_sc_group_t group, size_t cpusetsize,
+			      cpu_set_t *cpuset)
 {
 	return 0;
 }
