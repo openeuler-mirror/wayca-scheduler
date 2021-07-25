@@ -34,7 +34,7 @@ wayca_topo: libwaycadeployer.so.1.0 test/wayca_topo.c
 wayca_bitmap: test/wayca_bitmap.c
 	$(CC) $(CFLAGS) test/wayca_bitmap.c -I./lib -I./include -o test/$@
 
-CFLAGS += -Wall -fPIC -DWAYCA_DEPLOY_VERSION=\"0.1\"
+CFLAGS += -Wall -fPIC -DWAYCA_SCHEDULER_VERSION=\"0.1\"
 ifeq ($(DEBUG), 1)
   CFLAGS += -g -DWAYCA_SC_DEBUG
 endif

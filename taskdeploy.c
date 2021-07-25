@@ -47,7 +47,7 @@ static void usage(void)
 static void version(void)
 {
 	printf("wayca-taskdeploy in wayca-deployer toolset:%s\n",
-	       WAYCA_DEPLOY_VERSION);
+	       WAYCA_SCHEDULER_VERSION);
 }
 
 static void parse_command_line(int argc, char **argv)

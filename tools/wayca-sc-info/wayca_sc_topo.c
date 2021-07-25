@@ -13,6 +13,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 #include "wayca-scheduler.h"
 #include "wayca_sc_info.h"
