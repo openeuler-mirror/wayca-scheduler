@@ -30,6 +30,7 @@
 #include "common.h"
 #include "topo.h"
 #include "log.h"
+#include "wayca-scheduler.h"
 
 WAYCA_SC_INIT_PRIO(topo_init, TOPO);
 WAYCA_SC_FINI_PRIO(topo_free, TOPO);
@@ -955,14 +956,17 @@ void topo_print_wayca_node(size_t setsize, struct wayca_node *p_node, size_t dis
 		PRINT_DBG("\t\t number of local CPUs: %d\n",
 				CPU_COUNT_S(setsize, p_node->pcidevs[i]->local_cpu_map));
 		PRINT_DBG("\t\t absolute_path: %s\n", p_node->pcidevs[i]->absolute_path);
+		PRINT_DBG("\t\t PCI_SLOT_NAME: %s\n", p_node->pcidevs[i]->slot_name);
 		/* print irqs */
 		int j;
 		PRINT_DBG("\t\t count of irqs (inc. msi_irqs): %d\n", j = p_node->pcidevs[i]->irqs.n_irqs);
-		PRINT_DBG("\t\t\t List of IRQs: ");
+		PRINT_DBG("\t\t\t List of IRQs (irq_number:activeness:\"irq_name)\"\n");
 		for (j = 0; j < p_node->pcidevs[i]->irqs.n_irqs; j++) {
-			PRINT_DBG("%u\t", p_node->pcidevs[i]->irqs.irqs[j].irq_number);
+			PRINT_DBG("\t\t\t\t %u:%u:\"%s\"\n",
+				  p_node->pcidevs[i]->irqs.irqs[j].irq_number,
+				  p_node->pcidevs[i]->irqs.irqs[j].active,
+				  p_node->pcidevs[i]->irqs.irqs[j].irq_name);
 		}
-		PRINT_DBG("\n");
 	}
 	PRINT_DBG("n_smmus: %lu\n", p_node->n_smmus);
 	for (int i = 0; i < p_node->n_smmus; i++) {
@@ -1538,6 +1542,81 @@ int wayca_sc_get_l3_size(int cpu_id)
 	return -ENODATA;
 }
 
+/* wayca_sc_get_pcidev_irqs - given a PCI/e device name 'dev_name',
+ *			      return irqs' info
+ * Note: This routine malloc' spaces for p_irqs and irq_names on success. It
+ *       is the call's responsibility to free them.
+ * Input:
+ *   - dev_name: device's name. For a PCI device, it is PCI_SLOT_NAME.
+ * Output:
+ *   - n_irqs: number of irqs for this device
+ *   - p_irqs: pointer to interrupt numbers array
+ *   - irq_names: interrupt names array. Each irq_name is a string of
+ *		  length WAYCA_SC_ATTR_STRING_LEN. Note:
+ *		(only active irqs have names, as in /proc/interrupts)
+ *		(inactive irqs were not listed in /proc/interrupts,
+ *		  so have no names. In that case, it's filled by NULL)
+ * Return: negative on error, 0 on success
+ *	-ENODEV, the named pcidev doesn't exist
+ *	-ENOMEM, no enough memory
+ */
+int wayca_sc_get_pcidev_irqs(const char *dev_name, size_t *n_irqs,
+			     unsigned int **p_irqs, char **irq_names)
+{
+	int i, j;
+	bool found = false;
+	struct wayca_device_irqs *p_dev_irqs = NULL;
+	char (*p_irq_name)[WAYCA_SC_ATTR_STRING_LEN];
+
+	/* search for dev_name */
+	for (i = 0; i < topo.n_nodes; i++) {
+		for (j = 0; j < topo.nodes[i]->n_pcidevs; j++) {
+			/* compare dev_name with slot_name */
+			if (strncmp(dev_name,
+				   topo.nodes[i]->pcidevs[j]->slot_name,
+				   WAYCA_SC_NAME_LEN_MAX) == 0) {
+				found = true;
+				p_dev_irqs = &topo.nodes[i]->pcidevs[j]->irqs;
+				break;
+			}
+		}
+		if (found == true) break;
+	}
+
+	/* return early if not found */
+	if (found == false) {
+		*n_irqs = 0;
+		*p_irqs = NULL;
+		return -ENODEV;
+	}
+
+	/* output */
+	*n_irqs = p_dev_irqs->n_irqs;
+	/* set interrupt numbers arrary */
+	*p_irqs = (unsigned int *)calloc(1, sizeof(unsigned int) * (*n_irqs));
+	if (p_irqs == NULL)
+		return -ENOMEM;		/* no enough memory */
+
+	for (i = 0; i < (*n_irqs); i++) {
+		(*p_irqs)[i] = p_dev_irqs->irqs[i].irq_number;
+	}
+	/* set interrupt names arrary. Each irq_name is a string of
+	 * length WAYCA_SC_ATTR_STRING_LEN */
+	p_irq_name = (char (*)[WAYCA_SC_ATTR_STRING_LEN])calloc(*n_irqs,
+				sizeof(char) * WAYCA_SC_ATTR_STRING_LEN);
+	if (p_irq_name == NULL) {
+		free(*p_irqs);
+		*p_irqs = NULL;
+		return -ENOMEM;		/* no enough memory */
+	}
+
+	for (i = 0; i < (*n_irqs); i++)
+		strcpy(p_irq_name[i], p_dev_irqs->irqs[i].irq_name);
+	*irq_names = (char *)p_irq_name;
+
+	return 0;
+}
+
 /* memory bandwidth (relative value) of speading over multiple CCLs
  *
  * Measured with: bw_mem bcopy
@@ -1663,6 +1742,88 @@ int pipe_latency_NUMA[4] = {
 	 * diff CCLs |  NUMAs   | NUMA0  | NUMA1  */
 };
 
+/* topo_query_proc_interrupts - find whether an irq is active in /proc/interrupts
+ *   and get the irq_name
+ * Input:
+ *   - irq: the irq number to query
+ * Output:
+ *   - active: whether exists in /proc/interrupts
+ *   - irq_name: this irq's name, maximum length WAYCA_SC_ATTR_STRING_LEN
+ * Return: negative on error, 0 on success.
+ */
+static int topo_query_proc_interrupts(unsigned int irq, unsigned int *active,
+				      char *irq_name)
+{
+	unsigned int this_irq;
+	char *line = NULL;
+	size_t sz = 0;
+	int ret = 0;
+	char *c;
+	FILE *f;
+
+	/* initialize to inactive, unless we found differently later */
+	*active = 0;
+
+	f = fopen("/proc/interrupts", "r");
+	if (f == NULL)
+		return -errno;
+
+	/* read the first line, but ignore it since it's the header */
+	if (getline(&line, &sz, f) == -1) {
+		free(line);
+		fclose(f);
+		return -errno;
+	}
+
+	/* search the second line and all after */
+	while (!feof(f)) {
+
+		/* read one line */
+		if (getline(&line, &sz, f) == -1) {
+			ret = -errno;
+			break;
+		}
+		c = line;
+		/* skip the leading spaces */
+		while (isblank(*c))
+			c++;
+		/* a useful line should start with a series of number, then ':' */
+		if (!isdigit(*c))
+			continue;
+		c = strchr(line, ':');
+		if (c == NULL)
+			continue;
+
+		/* convert it to a number */
+		this_irq = (unsigned int)strtoul(line, NULL, 10);
+
+		if (this_irq != irq)
+			continue;	/* check next line */
+
+		/* set active */
+		*active = 1;
+		/* move along, stop at the first non-digit character
+		 * , which will be the name part of the irq
+		 */
+		c++;
+		while (isblank(*c) || isdigit(*c))
+			c++;
+
+		strncpy(irq_name, c, WAYCA_SC_ATTR_STRING_LEN);
+		sz = strlen(irq_name);
+		if (irq_name[sz - 1] == '\n')	/* remove the ending newline */
+			irq_name[sz - 1] = '\0';
+
+		irq_name[WAYCA_SC_ATTR_STRING_LEN -1] = '\0';	/* in case of truncated string */
+		break;
+	}
+
+	/* exit */
+	fclose(f);
+	free(line);
+	return ret;
+}
+
 /* parse I/O device irqs information
  * Input: device_sysfs_dir, this device's absolute pathname in /sys/devices
  * Return negative on error, 0 on success
@@ -1734,6 +1895,9 @@ static int topo_parse_device_irqs(const char *device_sysfs_dir, struct wayca_dev
 				p_irqs[i++].irq_number = atoi(entry->d_name);
 				PRINT_DBG("%u\t", p_irqs[i-1].irq_number);
 				msi_irqs_count--;
+				/* get active status and irq_name */
+				topo_query_proc_interrupts(p_irqs[i-1].irq_number,
+					&p_irqs[i-1].active, p_irqs[i-1].irq_name);
 			}
 		}
 		PRINT_DBG("\n");
@@ -1752,22 +1916,23 @@ static int topo_parse_device_irqs(const char *device_sysfs_dir, struct wayca_dev
 		for(j = 0; j < wirqs->n_irqs; j++)
 			if (wirqs->irqs[j].irq_number == irq_number)
 				break;
-		if (j == wirqs->n_irqs) {	/* doesn't exist, create a new one */
+		if (j == wirqs->n_irqs) {
+			/* doesn't exist, create a new one */
 			p_irqs = (struct wayca_irq *)realloc(wirqs->irqs,
 					(wirqs->n_irqs + 1) * sizeof(struct wayca_irq));
 			if (!p_irqs)
 				return -ENOMEM;		/* no enough memory */
 			p_irqs[wirqs->n_irqs].irq_number = irq_number;
+			p_irqs[wirqs->n_irqs].active = 0;
+			p_irqs[wirqs->n_irqs].irq_name[0] = '\0';
+			/* get active status and irq_name */
+			topo_query_proc_interrupts(p_irqs[wirqs->n_irqs].irq_number,
+				&p_irqs[wirqs->n_irqs].active,
+				p_irqs[wirqs->n_irqs].irq_name);
 			wirqs->n_irqs++;
 			wirqs->irqs = p_irqs;
 		}
 	}
-
-	/* TODO */
-	/* for each irq structure created:
-		Is the 'irq_no.' actively used in /proc/interrupts
-		if yes, read in its interrupt name and strings. i.e.
-	 */
 
 	return 0;
 }
@@ -1798,6 +1963,12 @@ static int topo_parse_io_device(const char *dir, struct wayca_topo *p_topo)
 		/* store dir full path */
 		strcpy(p_pcidev->absolute_path, dir);
 		PRINT_DBG("absolute path: %s\n", p_pcidev->absolute_path);
+
+		/* cut out PCI_SLOT_NAME from the absolute path, which is last part of the path */
+		if ((p_index = rindex(dir, '/')) != NULL) {
+			strncpy(p_pcidev->slot_name, p_index + 1, WAYCA_SC_NAME_LEN_MAX - 1);
+			PRINT_DBG("slot_name : %s\n", p_pcidev->slot_name);
+		}
 
 		/* read 'numa_node' */
 		topo_path_read_s32(dir, "numa_node", &node_nb);

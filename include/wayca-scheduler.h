@@ -72,6 +72,8 @@ int wayca_sc_get_l2_size(int cpu_id);
 int wayca_sc_get_l3_size(int cpu_id);
 
 int wayca_sc_get_node_mem_size(int node, unsigned long *size);
+int wayca_sc_get_pcidev_irqs(const char *dev_name, size_t *n_irqs,
+			     unsigned int **p_irqs, char **irq_names);
 
 int wayca_managed_thread_create(int id, pthread_t *thread, const pthread_attr_t *attr,
 				void *(*start_routine) (void *), void *arg);
@@ -156,4 +158,5 @@ int wayca_sc_group_get_cpuset(wayca_sc_group_t group, size_t cpusetsize,
 }
 #endif /* WAYCA_SC_DEBUG */
 
+#define WAYCA_SC_ATTR_STRING_LEN	(256)		/* default attribute string length */
 #endif
