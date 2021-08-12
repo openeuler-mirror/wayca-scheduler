@@ -44,13 +44,19 @@ static struct wayca_topo topo;
 static int topo_path_read_buffer(const char *base, const char *filename,
 				 char *buf, size_t count)
 {
+	char *real_path = NULL;
+	int c = 0, tries = 0;
 	int dir_fd;
 	int fd;
 	FILE *f;
 	int ret;
-	int c = 0, tries = 0;
 
-	dir_fd = open(base, O_RDONLY | O_CLOEXEC);
+	real_path = realpath(base, NULL);
+	if (!real_path)
+		return -errno;
+
+	dir_fd = open(real_path, O_RDONLY | O_CLOEXEC);
+	free(real_path);
 	if (dir_fd == -1)
 		return -errno;
 
@@ -100,12 +106,18 @@ static int topo_path_read_buffer(const char *base, const char *filename,
 static int topo_path_read_s32(const char *base, const char *filename,
 			      int *result)
 {
+	char *real_path = NULL;
 	int dir_fd;
 	int fd;
 	FILE *f;
 	int ret, t;
 
-	dir_fd = open(base, O_RDONLY | O_CLOEXEC);
+	real_path = realpath(base, NULL);
+	if (!real_path)
+		return -errno;
+
+	dir_fd = open(real_path, O_RDONLY | O_CLOEXEC);
+	free(real_path);
 	if (dir_fd == -1)
 		return -errno;
 
@@ -147,13 +159,19 @@ static int topo_path_read_s32(const char *base, const char *filename,
 static int topo_path_read_multi_s32(const char *base, const char *filename,
 				    size_t nmemb, int array[])
 {
+	char *real_path = NULL;
 	int dir_fd;
 	int fd;
 	FILE *f;
 	int i, t;
 	int ret = 0;
 
-	dir_fd = open(base, O_RDONLY | O_CLOEXEC);
+	real_path = realpath(base, NULL);
+	if (!real_path)
+		return -errno;
+
+	dir_fd = open(real_path, O_RDONLY | O_CLOEXEC);
+	free(real_path);
 	if (dir_fd == -1)
 		return -errno;
 
@@ -197,14 +215,20 @@ static int topo_path_read_multi_s32(const char *base, const char *filename,
 static int topo_path_parse_meminfo(struct wayca_meminfo *p_meminfo,
 					const char *base, const char *filename)
 {
-	int dir_fd;
-	int fd;
-	FILE *f;
+	char *real_path = NULL;
 	char buf[BUFSIZ];
-	char *ptr;
 	int ret = -1;
+	int dir_fd;
+	char *ptr;
+	FILE *f;
+	int fd;
 
-	dir_fd = open(base, O_RDONLY | O_CLOEXEC);
+	real_path = realpath(base, NULL);
+	if (!real_path)
+		return -errno;
+
+	dir_fd = open(real_path, O_RDONLY | O_CLOEXEC);
+	free(real_path);
 	if (dir_fd == -1)
 		return -errno;
 
@@ -335,13 +359,19 @@ static int topo_path_read_cpulist(const char *base, const char *filename,
 				  cpu_set_t *set, int maxcpus)
 {
 	size_t len = maxcpus * 8; /* big enough to hold a CPU ids */
+	char *real_path = NULL;
 	char buf[len]; /* dynamic allocation */
 	int ret = 0;
 	int dir_fd;
 	FILE *f;
 	int fd;
 
-	dir_fd = open(base, O_RDONLY | O_CLOEXEC);
+	real_path = realpath(base, NULL);
+	if (!real_path)
+		return -errno;
+
+	dir_fd = open(real_path, O_RDONLY | O_CLOEXEC);
+	free(real_path);
 	if (dir_fd == -1)
 		return -errno;
 
@@ -398,7 +428,10 @@ static int topo_parse_cpu_node_info(struct wayca_topo *p_topo, int cpu_index)
 		if (strncmp(dirent->d_name, "node", 4))
 			continue;
 		/* read node_index, the sysfs format is "node[0-9]" */
-		node_index = strtol(dirent->d_name + 4, &endptr, 0);
+		errno = 0;
+		node_index = strtoul(dirent->d_name + 4, &endptr, 0);
+		if (errno)
+			continue;
 		if (endptr == dirent->d_name + 4)
 			continue;
 		/* check whether need more node space */
@@ -406,6 +439,11 @@ static int topo_parse_cpu_node_info(struct wayca_topo *p_topo, int cpu_index)
 			struct wayca_node **p_temp;
 
 			max_node_index = node_index;
+			/*
+			 * Unnecessary to check the overflow of the
+			 * realloc(), max_node_index cannot be that
+			 * large.
+			 */
 			p_temp = (struct wayca_node **)realloc(
 				p_topo->nodes, (max_node_index + 1) *
 				sizeof(struct wayca_node *));
@@ -585,7 +623,8 @@ static int topo_parse_cpu_core_info(struct wayca_topo *p_topo,
 	/* read "core_id" */
 	if (topo_path_read_s32(path_buffer, "core_id", &core_id) != 0)
 		p_topo->cpus[cpu_index]->core_id = -1;
-	p_topo->cpus[cpu_index]->core_id = core_id;
+	else
+		p_topo->cpus[cpu_index]->core_id = core_id;
 
 	/* read core_cpus_list, (SMT: simultaneous multi-threading) */
 	p_topo->cpus[cpu_index]->core_cpus_map =
@@ -617,7 +656,8 @@ static int topo_parse_cache_info(struct wayca_cache *cache, const char *path,
 	if (topo_path_read_s32(path, "level", &cache->level) != 0)
 		cache->level = -1;
 	type_len = topo_path_read_buffer(path, "type", cache->type,
-					 WAYCA_SC_ATTR_STRING_LEN);
+					 WAYCA_SC_ATTR_STRING_LEN - 1);
+	cache->type[WAYCA_SC_ATTR_STRING_LEN - 1] = '\0';
 	real_len = strlen(cache->type);
 
 	/* remove trailing newline and nonsense chars on success */
@@ -629,7 +669,8 @@ static int topo_parse_cache_info(struct wayca_cache *cache, const char *path,
 	/* read cache: allocation_policy */
 	type_len = topo_path_read_buffer(path, "allocation_policy",
 			      cache->allocation_policy,
-			      WAYCA_SC_ATTR_STRING_LEN);
+			      WAYCA_SC_ATTR_STRING_LEN - 1);
+	cache->allocation_policy[WAYCA_SC_ATTR_STRING_LEN - 1] = '\0';
 	real_len = strlen(cache->allocation_policy);
 	if (type_len <= 0)
 		cache->allocation_policy[0] = '\0';
@@ -639,7 +680,8 @@ static int topo_parse_cache_info(struct wayca_cache *cache, const char *path,
 	/* read cache: write_policy */
 	type_len = topo_path_read_buffer(path, "write_policy",
 					 cache->write_policy,
-					 WAYCA_SC_ATTR_STRING_LEN);
+					 WAYCA_SC_ATTR_STRING_LEN - 1);
+	cache->write_policy[WAYCA_SC_ATTR_STRING_LEN - 1] = '\0';
 	real_len = strlen(cache->write_policy);
 	if (type_len <= 0)
 		cache->write_policy[0] = '\0';
@@ -658,7 +700,7 @@ static int topo_parse_cache_info(struct wayca_cache *cache, const char *path,
 
 	/* read cache size */
 	type_len = topo_path_read_buffer(path, "size", cache->cache_size,
-					 WAYCA_SC_ATTR_STRING_LEN);
+					 WAYCA_SC_ATTR_STRING_LEN - 1);
 	real_len = strlen(cache->cache_size);
 	if (type_len <= 0)
 		cache->cache_size[0] = '\0';
@@ -1040,7 +1082,6 @@ static int topo_construct_numa_topology(struct wayca_topo *p_topo)
 					p_topo->nodes[i]->cpu_map))
 				CPU_SET_S(i, setsize,
 					  p_topo->packages[j]->numa_map);
-
 		}
 	}
 cleanup:
@@ -1087,7 +1128,6 @@ static void topo_init(void)
 		goto cleanup_on_error;
 	}
 
-	/* read I/O devices topology */
 	if (topo_recursively_read_io_devices(p_topo, WAYCA_SC_SYSDEV_FNAME) !=
 	    0) {
 		PRINT_ERROR("failed to construct io device topology, ret = %d",
@@ -1114,7 +1154,7 @@ void topo_print_wayca_cluster(size_t setsize, struct wayca_cluster *p_cluster)
 }
 
 void topo_print_wayca_node(size_t setsize, struct wayca_node *p_node,
-			size_t distance_size)
+			   size_t distance_size)
 {
 	int i, j;
 
@@ -1157,7 +1197,7 @@ void topo_print_wayca_node(size_t setsize, struct wayca_node *p_node,
 		}
 	}
 	PRINT_DBG("n_smmus: %lu\n", p_node->n_smmus);
-	for (int i = 0; i < p_node->n_smmus; i++) {
+	for (i = 0; i < p_node->n_smmus; i++) {
 		PRINT_DBG("\tSMMU.%d:\n", p_node->smmus[i]->smmu_idx);
 		PRINT_DBG("\t\t numa_node: %d\n", p_node->smmus[i]->numa_node);
 		PRINT_DBG("\t\t base address : 0x%016llx\n",
@@ -1441,12 +1481,12 @@ int wayca_sc_packages_in_total(void)
 
 static bool topo_is_valid_cpu(int cpu_id)
 {
-	return cpu_id >= 0 && cpu_id < wayca_sc_cores_in_total();
+	return cpu_id >= 0 && cpu_id < wayca_sc_cpus_in_total();
 }
 
 static bool topo_is_valid_core(int core_id)
 {
-	return core_id >= 0 && core_id < wayca_sc_cpus_in_total();
+	return core_id >= 0 && core_id < wayca_sc_cores_in_total();
 }
 
 static bool topo_is_valid_ccl(int ccl_id)
@@ -2124,19 +2164,25 @@ static int topo_parse_device_irqs(struct wayca_device_irqs *wirqs,
 	if (!dp)
 		return -errno;
 	while (((msi_irqs_exist == 0) || (irq_file_exist == 0)) &&
-		(entry = readdir(dp)) != NULL) {
-		lstat(entry->d_name, &statbuf);
+	       (entry = readdir(dp)) != NULL) {
+		ret = lstat(entry->d_name, &statbuf);
+		if (ret < 0) {
+			PRINT_ERROR("fail to get directory %s stat, ret = %d.",
+					entry->d_name, -errno);
+			continue;
+		}
+
 		if ((msi_irqs_exist == 0) && S_ISDIR(statbuf.st_mode)) {
 			if (strcmp("msi_irqs", entry->d_name) == 0) {
 				msi_irqs_exist = 1;
-				PRINT_DBG("fOUND msi_irqs directory under %s\n",
+				PRINT_DBG("found msi_irqs directory under %s\n",
 					  device_sysfs_dir);
 				continue;
 			}
 		} else if ((irq_file_exist == 0) &&
 			   (strcmp("irq", entry->d_name) == 0)) {
 			irq_file_exist = 1;
-			PRINT_DBG("fOUND irq file under %s\n",
+			PRINT_DBG("found irq file under %s\n",
 				  device_sysfs_dir);
 			continue;
 		}
@@ -2164,14 +2210,14 @@ static int topo_parse_device_irqs(struct wayca_device_irqs *wirqs,
 static int topo_parse_pci_smmu(struct wayca_pci_device *p_pcidev,
 				const char *dir)
 {
-	char path_buffer[WAYCA_SC_PATH_LEN_MAX];
-	char buf_link[WAYCA_SC_PATH_LEN_MAX];
+	char path_buffer[WAYCA_SC_PATH_LEN_MAX] = {0};
+	char buf_link[WAYCA_SC_PATH_LEN_MAX] = {0};
 	char *p_index;
 
 	p_pcidev->smmu_idx = -1; /* initialize */
 	snprintf(path_buffer, sizeof(path_buffer), "%s/iommu", dir);
 	/* read smmu link */
-	if (readlink(path_buffer, buf_link, WAYCA_SC_PATH_LEN_MAX) == -1) {
+	if (readlink(path_buffer, buf_link, WAYCA_SC_PATH_LEN_MAX - 1) == -1) {
 		if (errno == ENOENT)
 			PRINT_DBG(" No IOMMU\n");
 		else {
@@ -2205,7 +2251,7 @@ static int topo_parse_pci_smmu(struct wayca_pci_device *p_pcidev,
 static int topo_parse_pci_info(struct wayca_topo *p_topo,
 			struct wayca_pci_device *pcidev, const char *dir)
 {
-	char buf[WAYCA_SC_ATTR_STRING_LEN];
+	char buf[WAYCA_SC_ATTR_STRING_LEN] = {0};
 	int ret;
 
 	/*
@@ -2215,7 +2261,7 @@ static int topo_parse_pci_info(struct wayca_topo *p_topo,
 	 * The format is class:vendor:device
 	 */
 	ret = topo_path_read_buffer(dir, "class", buf,
-				    WAYCA_SC_ATTR_STRING_LEN);
+				    WAYCA_SC_ATTR_STRING_LEN - 1);
 	if (ret <= 0)
 		pcidev->class = 0;
 	else {
@@ -2224,7 +2270,7 @@ static int topo_parse_pci_info(struct wayca_topo *p_topo,
 		PRINT_DBG("class: 0x%06x\n", pcidev->class);
 	}
 	ret = topo_path_read_buffer(dir, "vendor", buf,
-				    WAYCA_SC_ATTR_STRING_LEN);
+				    WAYCA_SC_ATTR_STRING_LEN - 1);
 	if (ret <= 0)
 		pcidev->vendor = 0;
 	else {
@@ -2233,7 +2279,7 @@ static int topo_parse_pci_info(struct wayca_topo *p_topo,
 		PRINT_DBG("vendor: 0x%04x\n", pcidev->vendor);
 	}
 	ret = topo_path_read_buffer(dir, "device", buf,
-				    WAYCA_SC_ATTR_STRING_LEN);
+				    WAYCA_SC_ATTR_STRING_LEN - 1);
 	if (ret <= 0)
 		pcidev->device = 0;
 	else {
@@ -2271,7 +2317,7 @@ static int topo_parse_pci_numa_node(struct wayca_topo *p_topo,
 			struct wayca_pci_device *p_pcidev, const char *dir,
 			int *numa_id)
 {
-	int node_nb;
+	int node_nb = -1;
 	int i;
 
 	/* read 'numa_node' */
@@ -2312,7 +2358,7 @@ static int topo_parse_pci_device(struct wayca_topo *p_topo, const char *dir)
 	if (!p_pcidev)
 		return -ENOMEM;
 	/* store dir full path */
-	strcpy(p_pcidev->absolute_path, dir);
+	strncpy(p_pcidev->absolute_path, dir, WAYCA_SC_PATH_LEN_MAX);
 	PRINT_DBG("absolute path: %s\n", p_pcidev->absolute_path);
 
 	/*
@@ -2360,7 +2406,7 @@ static int topo_parse_pci_device(struct wayca_topo *p_topo, const char *dir)
 
 static int topo_parse_smmu_info(struct wayca_smmu *p_smmu, const char *dir)
 {
-	char path_buffer[WAYCA_SC_PATH_LEN_MAX];
+	char path_buffer[WAYCA_SC_PATH_LEN_MAX] = {0};
 	struct dirent *entry;
 	char *p_index;
 	int ret;
@@ -2368,7 +2414,8 @@ static int topo_parse_smmu_info(struct wayca_smmu *p_smmu, const char *dir)
 
 	/* read type (modalias) */
 	ret = topo_path_read_buffer(dir, "modalias", p_smmu->modalias,
-				    WAYCA_SC_ATTR_STRING_LEN);
+				    WAYCA_SC_ATTR_STRING_LEN - 1);
+	p_smmu->modalias[WAYCA_SC_ATTR_STRING_LEN - 1] = '\0';
 	if (ret <= 0)
 		p_smmu->modalias[0] = '\0';
 	else if (p_smmu->modalias[strlen(p_smmu->modalias) - 1] == '\n')
@@ -2407,6 +2454,8 @@ static int topo_parse_smmu_info(struct wayca_smmu *p_smmu, const char *dir)
 			break;
 		}
 	}
+
+	closedir(dp);
 	return 0;
 }
 
@@ -2414,7 +2463,7 @@ static int topo_parse_smmu(struct wayca_topo *p_topo, const char *dir)
 {
 	struct wayca_smmu **p_temp;
 	struct wayca_smmu *p_smmu;
-	int node_nb;
+	int node_nb = -1;
 	int ret;
 	int i;
 
@@ -2441,6 +2490,7 @@ static int topo_parse_smmu(struct wayca_topo *p_topo, const char *dir)
 		free(p_smmu);
 		return -EINVAL;
 	}
+
 	p_temp = (struct wayca_smmu **)realloc(p_topo->nodes[i]->smmus,
 			(p_topo->nodes[i]->n_smmus + 1) *
 			sizeof(struct wayca_smmu *));
@@ -2466,6 +2516,9 @@ static int topo_parse_smmu(struct wayca_topo *p_topo, const char *dir)
 static int topo_parse_io_device(struct wayca_topo *p_topo, const char *dir)
 {
 	int ret;
+
+	if (!dir)
+		return -EINVAL;
 
 	if (strstr(dir, "pci")) {
 		ret = topo_parse_pci_device(p_topo, dir);
@@ -2496,6 +2549,7 @@ static int topo_recursively_read_io_devices(struct wayca_topo *p_topo,
 	struct dirent *entry;
 	struct stat statbuf;
 	char cwd[WAYCA_SC_PATH_LEN_MAX];
+	int ret = 0;
 
 	dp = opendir(rootdir);
 	if (!dp)
@@ -2503,7 +2557,12 @@ static int topo_recursively_read_io_devices(struct wayca_topo *p_topo,
 
 	chdir(rootdir);
 	while ((entry = readdir(dp)) != NULL) {
-		lstat(entry->d_name, &statbuf);
+		ret = lstat(entry->d_name, &statbuf);
+		if (ret < 0) {
+			ret = -errno;
+			goto out;
+		}
+
 		if (S_ISDIR(statbuf.st_mode)) {
 			/* Found a directory, but ignore . and .. */
 			if (strcmp(".", entry->d_name) == 0 ||
@@ -2523,7 +2582,8 @@ static int topo_recursively_read_io_devices(struct wayca_topo *p_topo,
 		}
 	}
 
+out:
 	chdir("..");
 	closedir(dp);
-	return 0;
+	return ret;
 }

@@ -608,7 +608,7 @@ static int build_topo(xmlNodePtr node)
 			break;
 	}
 
-	if (!topo_elem[i].elem_build)
+	if (i >= ARRAY_SIZE(topo_elem) || !topo_elem[i].elem_build)
 		return 0;
 
 	for (cur_node = node; cur_node;
