@@ -194,8 +194,8 @@ static int topo_path_read_multi_s32(const char *base, const char *filename,
  *
  * return negative on error, 0 on success
  */
-static int topo_path_parse_meminfo(const char *base, const char *filename,
-				   struct wayca_meminfo *p_meminfo)
+static int topo_path_parse_meminfo(struct wayca_meminfo *p_meminfo,
+					const char *base, const char *filename)
 {
 	int dir_fd;
 	int fd;
@@ -378,34 +378,17 @@ static int topo_path_read_cpulist(const char *base, const char *filename,
 	return 0;
 }
 
-/* topo_read_cpu_topology() - read cpu%d topoloy, where %d is cpu_index
- *
- * Return negative on error, 0 on success
- */
-static int topo_read_cpu_topology(int cpu_index, struct wayca_topo *p_topo)
+static int topo_parse_cpu_node_info(struct wayca_topo *p_topo, int cpu_index)
 {
+	char path_buffer[WAYCA_SC_PATH_LEN_MAX];
 	static int max_node_index = -1; /* actual node_index starts from 0 */
-
-	DIR *dir;
 	struct dirent *dirent;
 	long node_index;
 	char *endptr;
-	char path_buffer[WAYCA_SC_PATH_LEN_MAX];
+	DIR *dir;
 
-	int core_id, cluster_id, ppkg_id;
-	int ret;
-	int i;
-
-	/* allocate a new struct wayca_cpu */
-	p_topo->cpus[cpu_index] =
-		(struct wayca_cpu *)calloc(1, sizeof(struct wayca_cpu));
-	if (!p_topo->cpus[cpu_index])
-		return -ENOMEM;
-
-	p_topo->cpus[cpu_index]->cpu_id = cpu_index;
-
-	sprintf(path_buffer, "%s/cpu%d", WAYCA_SC_CPU_FNAME, cpu_index);
-
+	snprintf(path_buffer, sizeof(path_buffer), "%s/cpu%d",
+			WAYCA_SC_CPU_FNAME, cpu_index);
 	/* read cpu%d/node* to learn which numa node this cpu belongs to */
 	dir = opendir(path_buffer);
 	if (!dir)
@@ -414,9 +397,8 @@ static int topo_read_cpu_topology(int cpu_index, struct wayca_topo *p_topo)
 	while ((dirent = readdir(dir)) != NULL) {
 		if (strncmp(dirent->d_name, "node", 4))
 			continue;
-		/* read node_index */
+		/* read node_index, the sysfs format is "node[0-9]" */
 		node_index = strtol(dirent->d_name + 4, &endptr, 0);
-		/* the right format is "node[0-9]" */
 		if (endptr == dirent->d_name + 4)
 			continue;
 		/* check whether need more node space */
@@ -424,7 +406,6 @@ static int topo_read_cpu_topology(int cpu_index, struct wayca_topo *p_topo)
 			struct wayca_node **p_temp;
 
 			max_node_index = node_index;
-			/* re-allocate for more space */
 			p_temp = (struct wayca_node **)realloc(
 				p_topo->nodes, (max_node_index + 1) *
 				sizeof(struct wayca_node *));
@@ -435,8 +416,7 @@ static int topo_read_cpu_topology(int cpu_index, struct wayca_topo *p_topo)
 			p_topo->nodes = p_temp;
 		}
 		/*
-		 * check this 'node_index' node exist or not if not, create one
-		 * TODO: refactor wayca_node_create into a new function
+		 * check this 'node_index' node exist or not. if not, create one
 		 */
 		if (!CPU_ISSET_S(node_index, CPU_ALLOC_SIZE(p_topo->n_cpus),
 				 p_topo->node_map)) {
@@ -471,20 +451,21 @@ static int topo_read_cpu_topology(int cpu_index, struct wayca_topo *p_topo)
 		break; /* found one "node" entry, no need to check any more */
 	}
 	closedir(dir);
+	return 0;
+}
 
-	/* move the base to "cpu%d/topology" */
-	sprintf(path_buffer, "%s/cpu%d/topology", WAYCA_SC_CPU_FNAME,
-		cpu_index);
+static int topo_parse_cpu_cluster_info(struct wayca_topo *p_topo,
+			const char *path_buffer, int cpu_index)
+{
+	struct wayca_cluster **p_temp;
+	int cluster_id;
+	int ret;
+	int i;
 
-	/* read "core_id" */
-	if (topo_path_read_s32(path_buffer, "core_id", &core_id) != 0)
-		p_topo->cpus[cpu_index]->core_id = -1;
-	p_topo->cpus[cpu_index]->core_id = core_id;
-
-	/* read "cluster_id" */
+	/* cluster level may not set */
 	if (topo_path_read_s32(path_buffer, "cluster_id", &cluster_id) != 0) {
 		p_topo->cpus[cpu_index]->p_cluster = NULL;
-		goto read_package_info;
+		return 0;
 	}
 
 	/* check this "cluster_id" exists or not */
@@ -494,8 +475,6 @@ static int topo_read_cpu_topology(int cpu_index, struct wayca_topo *p_topo)
 	}
 	/* need to create a new wayca_cluster */
 	if (i == p_topo->n_clusters) {
-		struct wayca_cluster **p_temp;
-		/* TODO: refactor this into a new funcion */
 		p_topo->n_clusters++;
 		/* increase p_topo->ccls array */
 		p_temp = (struct wayca_cluster **)realloc(
@@ -530,15 +509,22 @@ static int topo_read_cpu_topology(int cpu_index, struct wayca_topo *p_topo)
 	}
 	/* link this cluster back to current CPU */
 	p_topo->cpus[cpu_index]->p_cluster = p_topo->ccls[i];
+	return 0;
+}
 
-read_package_info:
+static int topo_parse_cpu_pkg_info(struct wayca_topo *p_topo,
+			const char *path_buffer, int cpu_index)
+{
+	int ppkg_id;
+	int ret;
+	int i;
+
 	/* read "physical_package_id" */
 	ret = topo_path_read_s32(path_buffer, "physical_package_id", &ppkg_id);
 	if (ret) {
 		PRINT_ERROR("get physical_package_id fail, ret = %d\n", ret);
 		return ret;
 	}
-
 	/* check this "physical_package_id" exists or not */
 	for (i = 0; i < p_topo->n_packages; i++)
 		if (p_topo->packages[i]->physical_package_id == ppkg_id)
@@ -546,9 +532,8 @@ read_package_info:
 	/* need to create a new wayca_package */
 	if (i == p_topo->n_packages) {
 		struct wayca_package **p_temp;
-		/* TODO: refactor this into a new funcion */
+
 		p_topo->n_packages++;
-		/* increase p_topo->packages array */
 		p_temp = (struct wayca_package **)realloc(
 			p_topo->packages,
 			p_topo->n_packages * sizeof(struct wayca_package *));
@@ -588,12 +573,26 @@ read_package_info:
 	}
 	/* link this package back to current CPU */
 	p_topo->cpus[cpu_index]->p_package = p_topo->packages[i];
+	return 0;
+}
+
+static int topo_parse_cpu_core_info(struct wayca_topo *p_topo,
+			const char *path_buffer, int cpu_index)
+{
+	int core_id;
+	int ret;
+
+	/* read "core_id" */
+	if (topo_path_read_s32(path_buffer, "core_id", &core_id) != 0)
+		p_topo->cpus[cpu_index]->core_id = -1;
+	p_topo->cpus[cpu_index]->core_id = core_id;
 
 	/* read core_cpus_list, (SMT: simultaneous multi-threading) */
 	p_topo->cpus[cpu_index]->core_cpus_map =
 		CPU_ALLOC(p_topo->kernel_max_cpus);
 	if (!p_topo->cpus[cpu_index]->core_cpus_map)
 		return -ENOMEM;
+
 	/* read "core_cpus_list" */
 	ret = topo_path_read_cpulist(path_buffer, "core_cpus_list",
 				     p_topo->cpus[cpu_index]->core_cpus_map,
@@ -603,17 +602,97 @@ read_package_info:
 			    cpu_index, ret);
 		return ret;
 	}
+	return 0;
+}
 
-	/* read caches information */
-	size_t n_caches = 0;
-	struct wayca_cache *p_caches;
+static int topo_parse_cache_info(struct wayca_cache *cache, const char *path,
+				int max_cpus)
+{
 	int type_len, real_len;
+	int ret;
+
+	/* read cache: id, level, type. default set to -1 on failure */
+	if (topo_path_read_s32(path, "id", &cache->id) != 0)
+		cache->id = -1;
+	if (topo_path_read_s32(path, "level", &cache->level) != 0)
+		cache->level = -1;
+	type_len = topo_path_read_buffer(path, "type", cache->type,
+					 WAYCA_SC_ATTR_STRING_LEN);
+	real_len = strlen(cache->type);
+
+	/* remove trailing newline and nonsense chars on success */
+	if (type_len <= 0)
+		cache->type[0] = '\0';
+	else if (cache->type[real_len - 1] == '\n')
+		cache->type[real_len - 1] = '\0';
+
+	/* read cache: allocation_policy */
+	type_len = topo_path_read_buffer(path, "allocation_policy",
+			      cache->allocation_policy,
+			      WAYCA_SC_ATTR_STRING_LEN);
+	real_len = strlen(cache->allocation_policy);
+	if (type_len <= 0)
+		cache->allocation_policy[0] = '\0';
+	else if (cache->allocation_policy[real_len - 1] == '\n')
+		cache->allocation_policy[real_len - 1] = '\0';
+
+	/* read cache: write_policy */
+	type_len = topo_path_read_buffer(path, "write_policy",
+					 cache->write_policy,
+					 WAYCA_SC_ATTR_STRING_LEN);
+	real_len = strlen(cache->write_policy);
+	if (type_len <= 0)
+		cache->write_policy[0] = '\0';
+	else if (cache->write_policy[real_len - 1] == '\n')
+		cache->write_policy[real_len - 1] = '\0';
+
+	/* read cache: ways_of_associativity, etc. */
+	topo_path_read_s32(path, "ways_of_associativity",
+			   (int *)&cache->ways_of_associativity);
+	topo_path_read_s32(path, "physical_line_partition",
+			   (int *)&cache->physical_line_partition);
+	topo_path_read_s32(path, "number_of_sets",
+			   (int *)&cache->number_of_sets);
+	topo_path_read_s32(path, "coherency_line_size",
+			   (int *)&cache->coherency_line_size);
+
+	/* read cache size */
+	type_len = topo_path_read_buffer(path, "size", cache->cache_size,
+					 WAYCA_SC_ATTR_STRING_LEN);
+	real_len = strlen(cache->cache_size);
+	if (type_len <= 0)
+		cache->cache_size[0] = '\0';
+	else if (cache->cache_size[real_len - 1] == '\n')
+		cache->cache_size[real_len - 1] = '\0';
+
+	/* read cache: shared_cpu_list */
+	cache->shared_cpu_map = CPU_ALLOC(max_cpus);
+	if (!cache->shared_cpu_map)
+		return -ENOMEM;
+	ret = topo_path_read_cpulist(path, "shared_cpu_list",
+				     cache->shared_cpu_map, max_cpus);
+	if (ret) {
+		PRINT_ERROR("failed to read %s/shared_cpu_list, Error code: %d\n",
+			    path, ret);
+		return ret;
+	}
+	return 0;
+}
+
+static int topo_parse_cpu_cache_info(struct wayca_topo *p_topo, int cpu_index)
+{
+	char path_buffer[WAYCA_SC_PATH_LEN_MAX];
+	struct wayca_cache *p_caches;
+	size_t n_caches = 0;
+	int ret;
+	int i;
 
 	/* count the number of caches exists */
 	do {
 		/* move the base to "cpu%d/cache/index%zu" */
-		sprintf(path_buffer, "%s/cpu%d/cache/index%zu",
-			WAYCA_SC_CPU_FNAME, cpu_index, n_caches);
+		snprintf(path_buffer, sizeof(path_buffer),
+			 "%s/cpu%d/cache/index%zu", WAYCA_SC_CPU_FNAME,
+			 cpu_index, n_caches);
 		/* check access */
 		if (access(path_buffer, F_OK) != 0) /* doesn't exist */
 			break;
@@ -636,90 +715,82 @@ read_package_info:
 
 	for (i = 0; i < n_caches; i++) {
 		/* move the base to "cpu%d/cache/index%zu" */
-		sprintf(path_buffer, "%s/cpu%d/cache/index%d",
-			WAYCA_SC_CPU_FNAME, cpu_index, i);
+		snprintf(path_buffer, sizeof(path_buffer),
+			"%s/cpu%d/cache/index%d", WAYCA_SC_CPU_FNAME,
+			cpu_index, i);
 
-		/* read cache: id, level, type. default set to -1 on failure */
-		if (topo_path_read_s32(path_buffer, "id", &p_caches[i].id) != 0)
-			p_caches[i].id = -1;
-		if (topo_path_read_s32(path_buffer, "level",
-				       &p_caches[i].level) != 0)
-			p_caches[i].level = -1;
-		type_len = topo_path_read_buffer(path_buffer, "type",
-						 p_caches[i].type,
-						 WAYCA_SC_ATTR_STRING_LEN);
-		real_len = strlen(p_caches[i].type);
-
-		/* remove trailing newline and nonsense chars on success */
-		if (type_len <= 0)
-			p_caches[i].type[0] = '\0';
-		else if (p_caches[i].type[real_len - 1] == '\n')
-			p_caches[i].type[real_len - 1] = '\0';
-
-		/* read cache: allocation_policy */
-		type_len =
-			topo_path_read_buffer(path_buffer, "allocation_policy",
-					      p_caches[i].allocation_policy,
-					      WAYCA_SC_ATTR_STRING_LEN);
-		real_len = strlen(p_caches[i].allocation_policy);
-		if (type_len <= 0)
-			p_caches[i].allocation_policy[0] = '\0';
-		else if (p_caches[i].allocation_policy[real_len - 1] == '\n')
-			p_caches[i].allocation_policy[real_len - 1] = '\0';
-
-		/* read cache: write_policy */
-		type_len = topo_path_read_buffer(path_buffer, "write_policy",
-						 p_caches[i].write_policy,
-						 WAYCA_SC_ATTR_STRING_LEN);
-		real_len = strlen(p_caches[i].write_policy);
-		if (type_len <= 0)
-			p_caches[i].write_policy[0] = '\0';
-		else if (p_caches[i].write_policy[real_len - 1] == '\n')
-			p_caches[i].write_policy[real_len - 1] = '\0';
-
-		/* read cache: ways_of_associativity, etc. */
-		topo_path_read_s32(path_buffer, "ways_of_associativity",
-				   (int *)&p_caches[i].ways_of_associativity);
-		topo_path_read_s32(path_buffer, "physical_line_partition",
-				   (int *)&p_caches[i].physical_line_partition);
-		topo_path_read_s32(path_buffer, "number_of_sets",
-				   (int *)&p_caches[i].number_of_sets);
-		topo_path_read_s32(path_buffer, "coherency_line_size",
-				   (int *)&p_caches[i].coherency_line_size);
-
-		/* read cache size */
-		type_len = topo_path_read_buffer(path_buffer, "size",
-						 p_caches[i].cache_size,
-						 WAYCA_SC_ATTR_STRING_LEN);
-		real_len = strlen(p_caches[i].cache_size);
-		if (type_len <= 0)
-			p_caches[i].cache_size[0] = '\0';
-		/* TODO: parse size from string to unsigned long int */
-		else if (p_caches[i].cache_size[real_len - 1] == '\n')
-			p_caches[i].cache_size[real_len - 1] = '\0';
-
-		/* read cache: shared_cpu_list */
-		p_caches[i].shared_cpu_map = CPU_ALLOC(p_topo->kernel_max_cpus);
-		if (!p_caches[i].shared_cpu_map)
-			return -ENOMEM;
-		ret = topo_path_read_cpulist(path_buffer, "shared_cpu_list",
-					     p_caches[i].shared_cpu_map,
-					     p_topo->kernel_max_cpus);
+		ret = topo_parse_cache_info(&p_caches[i], path_buffer,
+				p_topo->kernel_max_cpus);
 		if (ret) {
-			PRINT_ERROR("Failed to read %s/shared_cpu_list, Error code: %d\n",
-				    path_buffer, ret);
+			PRINT_ERROR("failed to read cpu cache info, ret = %d\n",
+				    ret);
 			return ret;
 		}
 	}
-
 	return 0;
+}
+
+/* topo_read_cpu_topology() - read cpu%d topoloy, where %d is cpu_index
+ *
+ * Return negative on error, 0 on success
+ */
+static int topo_read_cpu_topology(struct wayca_topo *p_topo, int cpu_index)
+{
+	char path_buffer[WAYCA_SC_PATH_LEN_MAX];
+	int ret;
+
+	/* allocate a new struct wayca_cpu */
+	p_topo->cpus[cpu_index] =
+		(struct wayca_cpu *)calloc(1, sizeof(struct wayca_cpu));
+	if (!p_topo->cpus[cpu_index])
+		return -ENOMEM;
+
+	p_topo->cpus[cpu_index]->cpu_id = cpu_index;
+	ret = topo_parse_cpu_node_info(p_topo, cpu_index);
+	if (ret) {
+		PRINT_ERROR("parse CPU%d numa information failed, ret = %d\n",
+				cpu_index, ret);
+		return ret;
+	}
+	/* move the base to "cpu%d/topology" */
+	snprintf(path_buffer, sizeof(path_buffer), "%s/cpu%d/topology",
+			WAYCA_SC_CPU_FNAME, cpu_index);
+
+	ret = topo_parse_cpu_core_info(p_topo, path_buffer, cpu_index);
+	if (ret) {
+		PRINT_ERROR("parse CPU%d core information failed, ret = %d\n",
+				cpu_index, ret);
+		return ret;
+	}
+
+	ret = topo_parse_cpu_cluster_info(p_topo, path_buffer, cpu_index);
+	if (ret) {
+		PRINT_ERROR("parse CPU%d ccl information failed, ret = %d\n",
+				cpu_index, ret);
+		return ret;
+	}
+
+	ret = topo_parse_cpu_pkg_info(p_topo, path_buffer, cpu_index);
+	if (ret) {
+		PRINT_ERROR("parse CPU%d pkg information failed, ret = %d\n",
+				cpu_index, ret);
+		return ret;
+	}
+
+	ret = topo_parse_cpu_cache_info(p_topo, cpu_index);
+	if (ret) {
+		PRINT_ERROR("parse CPU%d cache information failed, ret = %d\n",
+				cpu_index, ret);
+		return ret;
+	}
+	return ret;
 }
 
 /* topo_read_node_topology() - read node%d topoloy, where %d is node_index
  *
  * Return negative on error, 0 on success
  */
-static int topo_read_node_topology(int node_index, struct wayca_topo *p_topo)
+static int topo_read_node_topology(struct wayca_topo *p_topo, int node_index)
 {
 	cpu_set_t *node_cpu_map;
 	char path_buffer[WAYCA_SC_PATH_LEN_MAX];
@@ -727,7 +798,8 @@ static int topo_read_node_topology(int node_index, struct wayca_topo *p_topo)
 	int *distance_array;
 	int ret;
 
-	sprintf(path_buffer, "%s/node%d", WAYCA_SC_NODE_FNAME, node_index);
+	snprintf(path_buffer, sizeof(path_buffer), "%s/node%d",
+			WAYCA_SC_NODE_FNAME, node_index);
 
 	/* read node's cpulist */
 	node_cpu_map = CPU_ALLOC(p_topo->kernel_max_cpus);
@@ -767,7 +839,7 @@ static int topo_read_node_topology(int node_index, struct wayca_topo *p_topo)
 		(struct wayca_meminfo *)calloc(1, sizeof(struct wayca_meminfo));
 	if (!meminfo_tmp)
 		return -ENOMEM;
-	ret = topo_path_parse_meminfo(path_buffer, "meminfo", meminfo_tmp);
+	ret = topo_path_parse_meminfo(meminfo_tmp, path_buffer, "meminfo");
 	if (ret) {
 		PRINT_ERROR("get node meminfo fail, ret = %d\n", ret);
 		free(meminfo_tmp);
@@ -793,7 +865,7 @@ static int topo_construct_core_topology(struct wayca_topo *p_topo)
 	/* initialization */
 	if (p_topo->cores != NULL || p_topo->n_cores != 0) {
 		WAYCA_SC_LOG_ERR(
-			"Duplicated call, wayca_cores has been established\n");
+			"duplicated call, wayca_cores has been established\n");
 		return -1;
 	}
 
@@ -813,7 +885,7 @@ static int topo_construct_core_topology(struct wayca_topo *p_topo)
 		if (j < p_topo->n_cores)
 			continue;
 
-		/* allocate a new wayca_core if cur_core_id inexist */
+		/* allocate a new wayca_core if cur_core_id does not exist */
 		pp_core = (struct wayca_core **)realloc(
 			p_topo->cores,
 			(p_topo->n_cores + 1) * sizeof(struct wayca_core *));
@@ -845,21 +917,12 @@ static int topo_construct_core_topology(struct wayca_topo *p_topo)
 	return 0;
 }
 
-static int topo_recursively_read_io_devices(const char *rootdir,
-					    struct wayca_topo *p_topo);
+static int topo_recursively_read_io_devices(struct wayca_topo *p_topo,
+						const char *rootdir);
 
-/* External callable functions */
-static void topo_init(void)
+static int topo_alloc_cpu(struct wayca_topo *p_topo)
 {
-	char origin_wd[WAYCA_SC_PATH_LEN_MAX];
-	struct wayca_topo *p_topo = &topo;
 	cpu_set_t *cpuset_possible;
-	cpu_set_t *node_possible;
-	int i = 0;
-	int ret;
-
-	getcwd(origin_wd, WAYCA_SC_PATH_LEN_MAX);
-	memset(p_topo, 0, sizeof(struct wayca_topo));
 
 	/*
 	 * read "cpu/kernel_max" to determine maximum size for future memory
@@ -875,7 +938,7 @@ static void topo_init(void)
 	/* read "cpu/possible" to determine number of CPUs */
 	cpuset_possible = CPU_ALLOC(p_topo->kernel_max_cpus);
 	if (!cpuset_possible)
-		return;
+		return -ENOMEM;
 
 	if (topo_path_read_cpulist(WAYCA_SC_CPU_FNAME, "possible",
 				   cpuset_possible,
@@ -887,28 +950,31 @@ static void topo_init(void)
 		p_topo->cpus = (struct wayca_cpu **)calloc(
 			p_topo->n_cpus, sizeof(struct wayca_cpu *));
 		if (!p_topo->cpus)
-			goto cleanup_on_error;
+			return -ENOMEM;
 	} else {
 		PRINT_ERROR("failed to read possible CPUs");
-		goto cleanup_on_error;
+		return -EINVAL;
 	}
+	return 0;
+}
 
-	/* initialize node_map */
+static int topo_alloc_node_map(struct wayca_topo *p_topo)
+{
 	p_topo->node_map = CPU_ALLOC(p_topo->n_cpus);
 	if (!p_topo->node_map)
-		goto cleanup_on_error;
+		return -ENOMEM;
 	CPU_ZERO_S(CPU_ALLOC_SIZE(p_topo->n_cpus), p_topo->node_map);
+	return 0;
+}
 
-	/* read all cpu%d topology */
-	for (i = 0; i < p_topo->n_cpus; i++) {
-		ret = topo_read_cpu_topology(i, p_topo);
-		if (ret) {
-			PRINT_ERROR("get cpu %d topology fail, ret = %d\n", i,
-				    ret);
-			goto cleanup_on_error;
-		}
-	}
-	/* at the end of the cpu%d for loop, the following has been established:
+static int topo_construct_cpu_topology(struct wayca_topo *p_topo)
+{
+	int ret;
+	int i;
+
+	/*
+	 * read all cpu%d topology, after the loop, following topology has been
+	 * established:
 	 *  - p_topo->n_nodes
 	 *  - p_topo->node_map
 	 *  - p_topo->nodes[]
@@ -917,70 +983,118 @@ static void topo_init(void)
 	 *  - p_topo->n_packages
 	 *  - p_topo->packages[]
 	 */
-
-	node_possible = CPU_ALLOC(p_topo->n_cpus);
-	if (!node_possible)
-		goto cleanup_on_error;
-
-	/* read "node/possible" to determine number of numa nodes */
-	if (topo_path_read_cpulist(WAYCA_SC_NODE_FNAME, "possible",
-				   node_possible, p_topo->n_cpus) == 0) {
-		if (!CPU_EQUAL_S(CPU_ALLOC_SIZE(p_topo->n_cpus), node_possible,
-				 p_topo->node_map) ||
-		    CPU_COUNT_S(CPU_ALLOC_SIZE(p_topo->n_cpus),
-				node_possible) != p_topo->n_nodes) {
-			/* mismatch with what cpu topology shows */
-			PRINT_ERROR(
-				"node/possible mismatch with what cpu topology shows");
-			goto cleanup_on_error;
+	for (i = 0; i < p_topo->n_cpus; i++) {
+		ret = topo_read_cpu_topology(p_topo, i);
+		if (ret) {
+			PRINT_ERROR("get cpu %d topology fail, ret = %d\n", i,
+				    ret);
+			return ret;
 		}
-	} else {
+	}
+	return 0;
+}
+
+static int topo_construct_numa_topology(struct wayca_topo *p_topo)
+{
+	cpu_set_t *bitmask;
+	size_t setsize;
+	int i, j;
+	int ret;
+
+	setsize = CPU_ALLOC_SIZE(p_topo->n_cpus);
+	bitmask = CPU_ALLOC(p_topo->n_cpus);
+	if (!bitmask) {
+		ret = -ENOMEM;
+		goto cleanup;
+	}
+	/* read "node/possible" to determine number of numa nodes */
+	ret = topo_path_read_cpulist(WAYCA_SC_NODE_FNAME, "possible",
+					bitmask, p_topo->n_cpus);
+	if (ret) {
 		PRINT_ERROR("failed to read possible NODEs");
-		goto cleanup_on_error;
+		goto cleanup;
 	}
 
-	/* read all node%d topology */
+	/* check the n_nodes and node_map in p_topo */
+	if (!CPU_EQUAL_S(setsize, bitmask, p_topo->node_map) ||
+		CPU_COUNT_S(setsize, bitmask) != p_topo->n_nodes) {
+		PRINT_ERROR(
+			 "node/possible mismatch with what cpu topology shows");
+		goto cleanup;
+	}
+	/* read all node%d topology, and it will establish the distance info */
 	for (i = 0; i < p_topo->n_nodes; i++) {
-		cpu_set_t *res_cpu;
-		size_t setsize;
-		int j;
-
-		ret = topo_read_node_topology(i, p_topo);
+		ret = topo_read_node_topology(p_topo, i);
 		if (ret) {
 			PRINT_ERROR("get node %d topology fail, ret = %d", i,
 				    ret);
-			goto cleanup_on_error;
+			goto cleanup;
 		}
-		res_cpu = CPU_ALLOC(p_topo->n_cpus);
-		setsize = CPU_ALLOC_SIZE(p_topo->n_cpus);
+		/* build the package numa map */
+		CPU_ZERO_S(setsize, bitmask);
 		for (j = 0; j < p_topo->n_packages; j++) {
-			CPU_AND_S(setsize, res_cpu,
+			CPU_AND_S(setsize, bitmask,
 				  p_topo->packages[j]->cpu_map,
 				  p_topo->nodes[i]->cpu_map);
-			if (CPU_EQUAL_S(setsize, res_cpu,
+			if (CPU_EQUAL_S(setsize, bitmask,
 					p_topo->nodes[i]->cpu_map))
 				CPU_SET_S(i, setsize,
 					  p_topo->packages[j]->numa_map);
 
 		}
 	}
+cleanup:
+	CPU_FREE(bitmask);
+	return ret;
+}
 
-	/* at the end of the cpu%d for loop, the following has been established:
-	 *  - p_topo->nodes[]->distance
-	 */
+static void topo_init(void)
+{
+	char origin_wd[WAYCA_SC_PATH_LEN_MAX];
+	struct wayca_topo *p_topo = &topo;
+	int ret;
 
+	getcwd(origin_wd, WAYCA_SC_PATH_LEN_MAX);
+	memset(p_topo, 0, sizeof(struct wayca_topo));
+
+	ret = topo_alloc_cpu(p_topo);
+	if (ret) {
+		PRINT_ERROR("failed to alloc cpu, ret = %d", ret);
+		goto cleanup_on_error;
+	}
+
+	ret = topo_alloc_node_map(p_topo);
+	if (ret) {
+		PRINT_ERROR("failed to alloc numa node map, ret = %d", ret);
+		goto cleanup_on_error;
+	}
+
+	ret = topo_construct_cpu_topology(p_topo);
+	if (ret) {
+		PRINT_ERROR("failed to construct cpu topology, ret = %d", ret);
+		goto cleanup_on_error;
+	}
+
+	ret = topo_construct_numa_topology(p_topo);
+	if (ret) {
+		PRINT_ERROR("failed to construct numa topology, ret = %d", ret);
+		goto cleanup_on_error;
+	}
 	/* Construct wayca_cores topology from wayca_cpus */
 	ret = topo_construct_core_topology(p_topo);
 	if (ret) {
-		PRINT_ERROR("Failed to construct core topology, ret = %d", ret);
+		PRINT_ERROR("failed to construct core topology, ret = %d", ret);
 		goto cleanup_on_error;
 	}
 
 	/* read I/O devices topology */
-	if (topo_recursively_read_io_devices(WAYCA_SC_SYSDEV_FNAME, p_topo) !=
-	    0)
+	if (topo_recursively_read_io_devices(p_topo, WAYCA_SC_SYSDEV_FNAME) !=
+	    0) {
+		PRINT_ERROR("failed to construct io device topology, ret = %d",
+				ret);
 		goto cleanup_on_error;
-
+	}
+	/* the working dir may be changed, restore thie working dir */
 	chdir(origin_wd);
 	return;
 
@@ -1121,7 +1235,7 @@ void wayca_sc_topo_print(void)
 	PRINT_DBG("setsize: %lu\n", p_topo->setsize);
 
 	PRINT_DBG("n_cpus: %lu\n", p_topo->n_cpus);
-	PRINT_DBG("\tCpu count in cpu_map: %d\n",
+	PRINT_DBG("\tCPU count in cpu_map: %d\n",
 		  CPU_COUNT_S(p_topo->setsize, p_topo->cpu_map));
 	for (i = 0; i < p_topo->n_cpus; i++) {
 		if (p_topo->cpus[i] == NULL)
@@ -1134,7 +1248,7 @@ void wayca_sc_topo_print(void)
 	for (i = 0; i < p_topo->n_cores; i++) {
 		if (p_topo->cores[i] == NULL)
 			continue;
-		PRINT_DBG("Core %d information:\n", i);
+		PRINT_DBG("core %d information:\n", i);
 		topo_print_wayca_core(p_topo->setsize, p_topo->cores[i]);
 	}
 
@@ -1142,18 +1256,18 @@ void wayca_sc_topo_print(void)
 	for (i = 0; i < p_topo->n_clusters; i++) {
 		if (p_topo->ccls[i] == NULL)
 			continue;
-		PRINT_DBG("Cluster %d information:\n", i);
+		PRINT_DBG("cluster %d information:\n", i);
 		topo_print_wayca_cluster(p_topo->setsize, p_topo->ccls[i]);
 	}
 
 	PRINT_DBG("n_nodes: %lu\n", p_topo->n_nodes);
-	PRINT_DBG("\tNode count in node_map: %d\n",
+	PRINT_DBG("\tnode count in node_map: %d\n",
 		  CPU_COUNT_S(CPU_ALLOC_SIZE(p_topo->n_cpus),
 			      p_topo->node_map));
 	for (i = 0; i < p_topo->n_nodes; i++) {
 		if (p_topo->nodes[i] == NULL)
 			continue;
-		PRINT_DBG("NODE%d information:\n", i);
+		PRINT_DBG("node%d information:\n", i);
 		topo_print_wayca_node(p_topo->setsize, p_topo->nodes[i],
 				      p_topo->n_nodes);
 	}
@@ -1641,10 +1755,10 @@ int wayca_sc_get_l3_size(int cpu_id)
 int wayca_sc_get_pcidev_irqs(const char *dev_name, size_t *n_irqs,
 			     unsigned int **p_irqs, char **irq_names)
 {
-	int i, j;
-	bool found = false;
-	struct wayca_device_irqs *p_dev_irqs = NULL;
 	char (*p_irq_name)[WAYCA_SC_ATTR_STRING_LEN];
+	struct wayca_device_irqs *p_dev_irqs = NULL;
+	bool found = false;
+	int i, j;
 
 	/* search for dev_name */
 	for (i = 0; i < topo.n_nodes; i++) {
@@ -1658,26 +1772,23 @@ int wayca_sc_get_pcidev_irqs(const char *dev_name, size_t *n_irqs,
 				break;
 			}
 		}
-		if (found == true) break;
+		if (found == true)
+			break;
 	}
 
-	/* return early if not found */
 	if (found == false) {
 		*n_irqs = 0;
 		*p_irqs = NULL;
 		return -ENODEV;
 	}
 
-	/* output */
 	*n_irqs = p_dev_irqs->n_irqs;
-	/* set interrupt numbers arrary */
 	*p_irqs = (unsigned int *)calloc(1, sizeof(unsigned int) * (*n_irqs));
 	if (p_irqs == NULL)
-		return -ENOMEM;		/* no enough memory */
+		return -ENOMEM;
 
-	for (i = 0; i < (*n_irqs); i++) {
+	for (i = 0; i < (*n_irqs); i++)
 		(*p_irqs)[i] = p_dev_irqs->irqs[i].irq_number;
-	}
 	/* set interrupt names arrary. Each irq_name is a string of
 	 * length WAYCA_SC_ATTR_STRING_LEN */
 	p_irq_name = (char (*)[WAYCA_SC_ATTR_STRING_LEN])calloc(*n_irqs,
@@ -1685,7 +1796,7 @@ int wayca_sc_get_pcidev_irqs(const char *dev_name, size_t *n_irqs,
 	if (p_irq_name == NULL) {
 		free(*p_irqs);
 		*p_irqs = NULL;
-		return -ENOMEM;		/* no enough memory */
+		return -ENOMEM;
 	}
 
 	for (i = 0; i < (*n_irqs); i++)
@@ -1843,7 +1954,7 @@ static int topo_query_proc_interrupts(unsigned int irq, unsigned int *active,
 	*active = 0;
 
 	f = fopen("/proc/interrupts", "r");
-	if (f == NULL)
+	if (!f)
 		return -errno;
 
 	/* read the first line, but ignore it since it's the header */
@@ -1855,7 +1966,6 @@ static int topo_query_proc_interrupts(unsigned int irq, unsigned int *active,
 
 	/* search the second line and all after */
 	while (!feof(f)) {
-
 		/* read one line */
 		if (getline(&line, &sz, f) == -1) {
 			ret = -errno;
@@ -1869,16 +1979,14 @@ static int topo_query_proc_interrupts(unsigned int irq, unsigned int *active,
 		if (!isdigit(*c))
 			continue;
 		c = strchr(line, ':');
-		if (c == NULL)
+		if (!c)
 			continue;
 
-		/* convert it to a number */
 		this_irq = (unsigned int)strtoul(line, NULL, 10);
 
 		if (this_irq != irq)
-			continue;	/* check next line */
+			continue; /* check next line */
 
-		/* set active */
 		*active = 1;
 		/* move along, stop at the first non-digit character
 		 * , which will be the name part of the irq
@@ -1888,35 +1996,126 @@ static int topo_query_proc_interrupts(unsigned int irq, unsigned int *active,
 			c++;
 
 		strncpy(irq_name, c, WAYCA_SC_ATTR_STRING_LEN);
+		/* remove the ending newline */
 		sz = strlen(irq_name);
-		if (irq_name[sz - 1] == '\n')	/* remove the ending newline */
+		if (irq_name[sz - 1] == '\n')
 			irq_name[sz - 1] = '\0';
 
-		irq_name[WAYCA_SC_ATTR_STRING_LEN -1] = '\0';	/* in case of truncated string */
+		/* in case of truncated string */
+		irq_name[WAYCA_SC_ATTR_STRING_LEN -1] = '\0';
 		break;
 	}
 
-	/* exit */
 	fclose(f);
 	free(line);
 	return ret;
+}
+
+static int topo_parse_msi_irq(struct wayca_device_irqs *wirqs,
+				const char *device_sysfs_dir)
+{
+	char path_buffer[WAYCA_SC_PATH_LEN_MAX];
+	struct wayca_irq *p_irqs;
+	int msi_irqs_count = 0;
+	struct dirent *entry;
+	int i = 0;
+	DIR *dp;
+
+	snprintf(path_buffer, sizeof(path_buffer),
+			"%s/msi_irqs", device_sysfs_dir);
+
+	dp = opendir(path_buffer);
+	if (dp == NULL)
+		return -errno;
+	while ((entry = readdir(dp)) != NULL) {
+		/* If the entry is a regular file */
+		if (entry->d_type == DT_REG)
+			msi_irqs_count++;
+	}
+	wirqs->n_irqs = msi_irqs_count;
+	PRINT_DBG("found %d interrupts in msi_irqs\n", msi_irqs_count);
+
+	/* allocate irq structs */
+	p_irqs = (struct wayca_irq *)calloc(msi_irqs_count,
+				    sizeof(struct wayca_irq));
+	if (!p_irqs) {
+		closedir(dp);
+		return -ENOMEM;
+	}
+	wirqs->irqs = p_irqs;
+
+	/* fill in irq_number */
+	rewinddir(dp);
+
+	PRINT_DBG("\tinterrupt numbers: ");
+	while ((msi_irqs_count != 0) && (entry = readdir(dp)) != NULL) {
+		/* If the entry is a regular file */
+		if (entry->d_type == DT_REG) {
+			p_irqs[i].irq_number = atoi(entry->d_name);
+			i++;
+			PRINT_DBG("%u\t", p_irqs[i - 1].irq_number);
+			msi_irqs_count--;
+			/* get active status and irq_name */
+			topo_query_proc_interrupts(
+				p_irqs[i - 1].irq_number,
+				&p_irqs[i - 1].active,
+				p_irqs[i - 1].irq_name);
+		}
+	}
+	PRINT_DBG("\n");
+	closedir(dp);
+	return 0;
+}
+
+static int topo_parse_irq(struct wayca_device_irqs *wirqs,
+				const char *device_sysfs_dir)
+{
+	struct wayca_irq *p_irqs;
+	int irq_number = 0;
+	int j;
+
+	topo_path_read_s32(device_sysfs_dir, "irq", &irq_number);
+	PRINT_DBG("irq file exists, irq number is: %d\n", irq_number);
+	if (irq_number < 0)
+		irq_number = 0; /* on failure, default to set 0 */
+	/* check it exists in wirqs or not */
+	for (j = 0; j < wirqs->n_irqs; j++)
+		if (wirqs->irqs[j].irq_number == irq_number)
+			break;
+
+	/* doesn't exist, create a new one */
+	if (j == wirqs->n_irqs) {
+		p_irqs = (struct wayca_irq *)realloc(
+			  wirqs->irqs,
+			  (wirqs->n_irqs + 1) * sizeof(struct wayca_irq));
+		if (!p_irqs)
+			return -ENOMEM;
+		p_irqs[wirqs->n_irqs].irq_number = irq_number;
+		p_irqs[wirqs->n_irqs].active = 0;
+		p_irqs[wirqs->n_irqs].irq_name[0] = '\0';
+		/* get active status and irq_name */
+		topo_query_proc_interrupts(p_irqs[wirqs->n_irqs].irq_number,
+			&p_irqs[wirqs->n_irqs].active,
+			p_irqs[wirqs->n_irqs].irq_name);
+		wirqs->n_irqs++;
+		wirqs->irqs = p_irqs;
+	}
+	return 0;
 }
 
 /* parse I/O device irqs information
  * Input: device_sysfs_dir, this device's absolute pathname in /sys/devices
  * Return negative on error, 0 on success
  */
-static int topo_parse_device_irqs(const char *device_sysfs_dir,
-				  struct wayca_device_irqs *wirqs)
+static int topo_parse_device_irqs(struct wayca_device_irqs *wirqs,
+					const char *device_sysfs_dir)
 {
-	DIR *dp;
-	struct dirent *entry;
-	struct stat statbuf;
 	int msi_irqs_exist = 0;
 	int irq_file_exist = 0;
-	int msi_irqs_count = 0;
-	char path_buffer[WAYCA_SC_PATH_LEN_MAX];
-	struct wayca_irq *p_irqs;
+	struct dirent *entry;
+	struct stat statbuf;
+	int ret = 0;
+	DIR *dp;
 
 	wirqs->n_irqs = 0;
 
@@ -1930,357 +2129,356 @@ static int topo_parse_device_irqs(const char *device_sysfs_dir,
 		if ((msi_irqs_exist == 0) && S_ISDIR(statbuf.st_mode)) {
 			if (strcmp("msi_irqs", entry->d_name) == 0) {
 				msi_irqs_exist = 1;
-				PRINT_DBG("FOUND msi_irqs directory under %s\n",
+				PRINT_DBG("fOUND msi_irqs directory under %s\n",
 					  device_sysfs_dir);
 				continue;
 			}
 		} else if ((irq_file_exist == 0) &&
 			   (strcmp("irq", entry->d_name) == 0)) {
 			irq_file_exist = 1;
-			PRINT_DBG("FOUND irq file under %s\n",
+			PRINT_DBG("fOUND irq file under %s\n",
 				  device_sysfs_dir);
 			continue;
 		}
 	}
 	closedir(dp);
 
-	if (msi_irqs_exist == 1) {
-		int i = 0;
+	if (msi_irqs_exist) {
+		ret = topo_parse_msi_irq(wirqs, device_sysfs_dir);
+		if (ret) {
+			PRINT_ERROR("failed to parse msi irq");
+			return ret;
+		}
+	}
 
-		sprintf(path_buffer, "%s/msi_irqs", device_sysfs_dir);
+	if (irq_file_exist) {
+		ret = topo_parse_irq(wirqs, device_sysfs_dir);
+		if (ret) {
+			PRINT_ERROR("failed to parse irq");
+			return ret;
+		}
+	}
+	return ret;
+}
 
-		dp = opendir(path_buffer);
-		if (dp == NULL)
+static int topo_parse_pci_smmu(struct wayca_pci_device *p_pcidev,
+				const char *dir)
+{
+	char path_buffer[WAYCA_SC_PATH_LEN_MAX];
+	char buf_link[WAYCA_SC_PATH_LEN_MAX];
+	char *p_index;
+
+	p_pcidev->smmu_idx = -1; /* initialize */
+	snprintf(path_buffer, sizeof(path_buffer), "%s/iommu", dir);
+	/* read smmu link */
+	if (readlink(path_buffer, buf_link, WAYCA_SC_PATH_LEN_MAX) == -1) {
+		if (errno == ENOENT)
+			PRINT_DBG(" No IOMMU\n");
+		else {
+			PRINT_ERROR(
+				"failed to read iommu. Error code: %d\n",
+				-errno);
 			return -errno;
-		while ((entry = readdir(dp)) != NULL) {
-			/* If the entry is a regular file */
-			if (entry->d_type == DT_REG)
-				msi_irqs_count++;
 		}
-		wirqs->n_irqs = msi_irqs_count;
-		PRINT_DBG("Found %d interrupts in msi_irqs\n", msi_irqs_count);
+	} else {
+		PRINT_DBG("iommu link: %s\n", buf_link);
+		/* extract smmu index from buf_link.
+		 * the directory is like:
+		 * platform/arm-smmu-v3.3.auto/iommu/smmu3.0x0000000140000000
+		 * TODO: here is hard-coded name, can not support for different
+		 * version of smmu.
+		 */
+		p_index = strstr(buf_link, "arm-smmu-v3");
 
-		/* allocate irq structs */
-		p_irqs = (struct wayca_irq *)calloc(msi_irqs_count,
-						    sizeof(struct wayca_irq));
-		if (!p_irqs) {
-			closedir(dp);
-			return -ENOMEM;
-		}
-		wirqs->irqs = p_irqs;
-
-		/* fill in irq_number */
-		rewinddir(dp);
-
-		PRINT_DBG("\tInterrupt numbers: ");
-		while ((msi_irqs_count != 0) && (entry = readdir(dp)) != NULL) {
-			/* If the entry is a regular file */
-			if (entry->d_type == DT_REG) {
-				p_irqs[i++].irq_number = atoi(entry->d_name);
-				PRINT_DBG("%u\t", p_irqs[i - 1].irq_number);
-				msi_irqs_count--;
-				/* get active status and irq_name */
-				topo_query_proc_interrupts(
-					p_irqs[i - 1].irq_number,
-					&p_irqs[i - 1].active,
-					p_irqs[i - 1].irq_name);
-			}
-		}
-		PRINT_DBG("\n");
-		closedir(dp);
-	}
-
-	if (irq_file_exist == 1) {
-		int irq_number = 0;
-		int j;
-
-		topo_path_read_s32(device_sysfs_dir, "irq", &irq_number);
-		PRINT_DBG("irq file exists, irq number is: %d\n", irq_number);
-		if (irq_number < 0)
-			irq_number = 0;	/* on failure, default to set 0 */
-		/* check it exists in wirqs or not */
-		for (j = 0; j < wirqs->n_irqs; j++)
-			if (wirqs->irqs[j].irq_number == irq_number)
-				break;
-
-		/* doesn't exist, create a new one */
-		if (j == wirqs->n_irqs) {
-			p_irqs = (struct wayca_irq *)realloc(
-				wirqs->irqs,
-				(wirqs->n_irqs + 1) * sizeof(struct wayca_irq));
-			if (!p_irqs)
-				return -ENOMEM;
-			p_irqs[wirqs->n_irqs].irq_number = irq_number;
-			p_irqs[wirqs->n_irqs].active = 0;
-			p_irqs[wirqs->n_irqs].irq_name[0] = '\0';
-			/* get active status and irq_name */
-			topo_query_proc_interrupts(p_irqs[wirqs->n_irqs].irq_number,
-				&p_irqs[wirqs->n_irqs].active,
-				p_irqs[wirqs->n_irqs].irq_name);
-			wirqs->n_irqs++;
-			wirqs->irqs = p_irqs;
+		if (p_index == NULL)
+			PRINT_ERROR("failed to parse iommu link: %s\n",
+					buf_link);
+		else {
+			p_pcidev->smmu_idx = strtol(
+				p_index + strlen("arm-smmu-v3") + 1, NULL, 0);
+			PRINT_DBG("smmu index: %d\n", p_pcidev->smmu_idx);
 		}
 	}
-
 	return 0;
+}
+
+static int topo_parse_pci_info(struct wayca_topo *p_topo,
+			struct wayca_pci_device *pcidev, const char *dir)
+{
+	char buf[WAYCA_SC_ATTR_STRING_LEN];
+	int ret;
+
+	/*
+	 * read PCI information into: pcidev.
+	 * Sysfs data output format is defined in linux kernel code:
+	 * [linux.kernel]/drivers/pci/pci-sysfs.c
+	 * The format is class:vendor:device
+	 */
+	ret = topo_path_read_buffer(dir, "class", buf,
+				    WAYCA_SC_ATTR_STRING_LEN);
+	if (ret <= 0)
+		pcidev->class = 0;
+	else {
+		if (sscanf(buf, "%x", &pcidev->class) != 1)
+			pcidev->class = 0;
+		PRINT_DBG("class: 0x%06x\n", pcidev->class);
+	}
+	ret = topo_path_read_buffer(dir, "vendor", buf,
+				    WAYCA_SC_ATTR_STRING_LEN);
+	if (ret <= 0)
+		pcidev->vendor = 0;
+	else {
+		if (sscanf(buf, "%hx", &pcidev->vendor) != 1)
+			pcidev->vendor = 0;
+		PRINT_DBG("vendor: 0x%04x\n", pcidev->vendor);
+	}
+	ret = topo_path_read_buffer(dir, "device", buf,
+				    WAYCA_SC_ATTR_STRING_LEN);
+	if (ret <= 0)
+		pcidev->device = 0;
+	else {
+		if (sscanf(buf, "%hx", &pcidev->device) != 1)
+			pcidev->device = 0;
+		PRINT_DBG("device: 0x%04x\n", pcidev->device);
+	}
+	/* read local_cpulist */
+	pcidev->local_cpu_map = CPU_ALLOC(p_topo->kernel_max_cpus);
+	if (!pcidev->local_cpu_map)
+		return -ENOMEM;
+	ret = topo_path_read_cpulist(dir, "local_cpulist",
+				     pcidev->local_cpu_map,
+				     p_topo->kernel_max_cpus);
+	if (ret != 0) {
+		PRINT_ERROR("failed to get local_cpulist, ret = %d\n", ret);
+		return ret;
+	}
+	/* read irqs */
+	ret = topo_parse_device_irqs(&pcidev->irqs, dir);
+	if (ret < 0) {
+		PRINT_ERROR("failed to parse irq %s, ret = %d\n", dir, ret);
+		return ret;
+	}
+	/* read enable */
+	ret = topo_path_read_s32(dir, "enable", &pcidev->enable);
+	if (ret < 0) {
+		PRINT_ERROR("failed to read %s/enable, ret = %d\n", dir, ret);
+		return ret;
+	}
+	return 0;
+}
+
+static int topo_parse_pci_numa_node(struct wayca_topo *p_topo,
+			struct wayca_pci_device *p_pcidev, const char *dir,
+			int *numa_id)
+{
+	int node_nb;
+	int i;
+
+	/* read 'numa_node' */
+	topo_path_read_s32(dir, "numa_node", &node_nb);
+	PRINT_DBG("numa_node: %d\n", node_nb);
+	if (node_nb < 0)
+		node_nb = 0; /* on failure, default to node #0 */
+	p_pcidev->numa_node = node_nb;
+
+	/* get the 'wayca_node *' whoes node_idx == this 'node_nb' */
+	for (i = 0; i < p_topo->n_nodes; i++) {
+		if (p_topo->nodes[i]->node_idx == node_nb)
+			break;
+	}
+	if (i == p_topo->n_nodes) {
+		PRINT_ERROR(
+			"failed to match this PCI device to any numa node: %s",
+			dir);
+		free(p_pcidev);
+		return -EINVAL;
+	}
+	*numa_id = i;
+	return 0;
+}
+
+static int topo_parse_pci_device(struct wayca_topo *p_topo, const char *dir)
+{
+	struct wayca_pci_device *p_pcidev;
+	struct wayca_pci_device **p_temp;
+	char *p_index;
+	int ret;
+	int i;
+
+	PRINT_DBG("PCI full path: %s\n", dir);
+	/* allocate struct wayca_pci_device */
+	p_pcidev = (struct wayca_pci_device *)calloc(
+			1, sizeof(struct wayca_pci_device));
+	if (!p_pcidev)
+		return -ENOMEM;
+	/* store dir full path */
+	strcpy(p_pcidev->absolute_path, dir);
+	PRINT_DBG("absolute path: %s\n", p_pcidev->absolute_path);
+
+	/*
+	 * cut out PCI_SLOT_NAME from the absolute path, which is last part
+	 * of the path
+	 */
+	p_index = rindex(dir, '/');
+	if (p_index) {
+		strncpy(p_pcidev->slot_name, p_index + 1,
+				WAYCA_SC_NAME_LEN_MAX - 1);
+		PRINT_DBG("slot_name : %s\n", p_pcidev->slot_name);
+	}
+
+	ret = topo_parse_pci_numa_node(p_topo, p_pcidev, dir, &i);
+	if (ret < 0) {
+		PRINT_ERROR("failed to get pci device node id, ret = %d", ret);
+		return ret;
+	}
+	/* append p_pcidev to wayca node[]->pcidevs */
+	p_temp = (struct wayca_pci_device **)realloc(p_topo->nodes[i]->pcidevs,
+		(p_topo->nodes[i]->n_pcidevs + 1) *
+		sizeof(struct wayca_pci_device *));
+	if (!p_temp) {
+		free(p_pcidev);
+		return -ENOMEM;
+	}
+	p_topo->nodes[i]->pcidevs = p_temp;
+	p_topo->nodes[i]->pcidevs[p_topo->nodes[i]->n_pcidevs] = p_pcidev;
+	p_topo->nodes[i]->n_pcidevs++;
+	PRINT_DBG("n_pcidevs = %zu\n", p_topo->nodes[i]->n_pcidevs);
+
+	ret = topo_parse_pci_info(p_topo, p_pcidev, dir);
+	if (ret) {
+		PRINT_ERROR("read pci information fail, ret = %d\n", ret);
+		return ret;
+	}
+
+	ret = topo_parse_pci_smmu(p_pcidev, dir);
+	if (ret) {
+		PRINT_ERROR("read pci smmu fail, ret = %d\n", ret);
+		return ret;
+	}
+	return ret;
+}
+
+static int topo_parse_smmu_info(struct wayca_smmu *p_smmu, const char *dir)
+{
+	char path_buffer[WAYCA_SC_PATH_LEN_MAX];
+	struct dirent *entry;
+	char *p_index;
+	int ret;
+	DIR *dp;
+
+	/* read type (modalias) */
+	ret = topo_path_read_buffer(dir, "modalias", p_smmu->modalias,
+				    WAYCA_SC_ATTR_STRING_LEN);
+	if (ret <= 0)
+		p_smmu->modalias[0] = '\0';
+	else if (p_smmu->modalias[strlen(p_smmu->modalias) - 1] == '\n')
+		p_smmu->modalias[strlen(p_smmu->modalias) - 1] = '\0';
+	PRINT_DBG("modalias = %s\n", p_smmu->modalias);
+	/*
+	 * identify smmu_idx from the 'dir' string
+	 * e.g. SMMU full path: /sys/devices/platform/arm-smmu-v3.4.auto
+	 * TODO: fix hard-coded name to support different versions of smmu
+	 */
+	p_index = strstr(dir, "arm-smmu-v3");
+	if (p_index == NULL)
+		PRINT_ERROR("failed to parse smmu_idx : %s\n", dir);
+	else {
+		p_smmu->smmu_idx = strtol(
+			p_index + strlen("arm-smmu-v3") + 1, NULL, 0);
+		PRINT_DBG("smmu index: %d\n", p_smmu->smmu_idx);
+	}
+	/* read base address */
+	snprintf(path_buffer, sizeof(path_buffer), "%s/iommu", dir);
+	dp = opendir(path_buffer);
+	if (!dp)
+		return -errno;
+
+	while ((entry = readdir(dp)) != NULL) {
+		/*
+		 * Found directory, e.g. iommu/smmu3.0x0000000140000000 to get
+		 * smmu base address.
+		 */
+		p_index = strstr(entry->d_name, "smmu3");
+		if (p_index) {
+			p_smmu->base_addr = strtoull(
+			p_index + strlen("smmu3") + 1, NULL, 0);
+			PRINT_DBG("base address : 0x%016llx\n",
+					p_smmu->base_addr);
+			break;
+		}
+	}
+	return 0;
+}
+
+static int topo_parse_smmu(struct wayca_topo *p_topo, const char *dir)
+{
+	struct wayca_smmu **p_temp;
+	struct wayca_smmu *p_smmu;
+	int node_nb;
+	int ret;
+	int i;
+
+	PRINT_DBG("SMMU full path: %s\n", dir);
+	p_smmu = (struct wayca_smmu *)calloc(1, sizeof(struct wayca_smmu));
+	if (!p_smmu)
+		return -ENOMEM;
+	/* read numa_node */
+	topo_path_read_s32(dir, "numa_node", &node_nb);
+	PRINT_DBG("numa_node: %d\n", node_nb);
+	if (node_nb < 0)
+		node_nb = 0; /* on failure, default to node #0 */
+	p_smmu->numa_node = node_nb;
+
+	/* get the 'wayca_node *' whoes node_idx == this 'node_nb' */
+	for (i = 0; i < p_topo->n_nodes; i++) {
+		if (p_topo->nodes[i]->node_idx == node_nb)
+			break;
+	}
+	if (i == p_topo->n_nodes) {
+		PRINT_ERROR(
+			"failed to match this PCI device to any numa node: %s",
+			dir);
+		free(p_smmu);
+		return -EINVAL;
+	}
+	p_temp = (struct wayca_smmu **)realloc(p_topo->nodes[i]->smmus,
+			(p_topo->nodes[i]->n_smmus + 1) *
+			sizeof(struct wayca_smmu *));
+	if (!p_temp) {
+		free(p_smmu);
+		return -ENOMEM;
+	}
+	p_topo->nodes[i]->smmus = p_temp;
+	p_topo->nodes[i]->smmus[p_topo->nodes[i]->n_smmus] = p_smmu;
+	p_topo->nodes[i]->n_smmus++; /* incement number of SMMU devices */
+	PRINT_DBG("n_smmus = %zu\n", p_topo->nodes[i]->n_smmus);
+
+	ret = topo_parse_smmu_info(p_smmu, dir);
+	if (ret) {
+		PRINT_ERROR("failed to parse smmu information, ret = %d", ret);
+		return ret;
+	}
+	return ret;
 }
 
 /* Return negative on error, 0 on success
  */
-static int topo_parse_io_device(const char *dir, struct wayca_topo *p_topo)
+static int topo_parse_io_device(struct wayca_topo *p_topo, const char *dir)
 {
-	DIR *dp;
-	struct dirent *entry;
-
-	int node_nb;
-	int i;
 	int ret;
-	char *p_index;
-	char buf[WAYCA_SC_ATTR_STRING_LEN];
-	char path_buffer[WAYCA_SC_PATH_LEN_MAX];
-	struct wayca_pci_device *p_pcidev;
-	struct wayca_smmu *p_smmu;
 
 	if (strstr(dir, "pci")) {
-		PRINT_DBG("PCI full path: %s\n", dir);
-		/* allocate struct wayca_pci_device */
-		p_pcidev = (struct wayca_pci_device *)calloc(
-			1, sizeof(struct wayca_pci_device));
-		if (!p_pcidev)
-			return -ENOMEM;
-
-		/* store dir full path */
-		strcpy(p_pcidev->absolute_path, dir);
-		PRINT_DBG("absolute path: %s\n", p_pcidev->absolute_path);
-
-		/* cut out PCI_SLOT_NAME from the absolute path, which is last part of the path */
-		if ((p_index = rindex(dir, '/')) != NULL) {
-			strncpy(p_pcidev->slot_name, p_index + 1, WAYCA_SC_NAME_LEN_MAX - 1);
-			PRINT_DBG("slot_name : %s\n", p_pcidev->slot_name);
-		}
-
-		/* read 'numa_node' */
-		topo_path_read_s32(dir, "numa_node", &node_nb);
-		PRINT_DBG("numa_node: %d\n", node_nb);
-		if (node_nb < 0)
-			node_nb = 0; /* on failure, default to node #0 */
-		p_pcidev->numa_node = node_nb;
-
-		/* get the 'wayca_node *' whoes node_idx == this 'node_nb' */
-		for (i = 0; i < p_topo->n_nodes; i++) {
-			if (p_topo->nodes[i]->node_idx == node_nb)
-				break;
-		}
-		if (i == p_topo->n_nodes) {
-			PRINT_ERROR(
-				"failed to match this PCI device to any numa node: %s",
-				dir);
-			free(p_pcidev);
-			return -1;
-		}
-		/* append p_pcidev to 'wayca node *'->pcidevs */
-		struct wayca_pci_device **p_temp;
-
-		p_temp = (struct wayca_pci_device **)realloc(
-			p_topo->nodes[i]->pcidevs,
-			(p_topo->nodes[i]->n_pcidevs + 1) *
-				sizeof(struct wayca_pci_device *));
-		if (!p_temp) {
-			free(p_pcidev);
-			return -ENOMEM;
-		}
-		p_topo->nodes[i]->pcidevs = p_temp;
-		p_topo->nodes[i]->pcidevs[p_topo->nodes[i]->n_pcidevs] =
-			p_pcidev;
-		p_topo->nodes[i]
-			->n_pcidevs++; /* incement number of PCI devices */
-		PRINT_DBG("n_pcidevs = %zu\n", p_topo->nodes[i]->n_pcidevs);
-
-		/*
-		 * read PCI information into: p_pcidev.
-		 * Sysfs data output format is defined in linux kernel code:
-		 * [linux.kernel]/drivers/pci/pci-sysfs.c
-		 * The format is class:vendor:device
-		 */
-		ret = topo_path_read_buffer(dir, "class", buf,
-					    WAYCA_SC_ATTR_STRING_LEN);
-		if (ret <= 0)
-			p_pcidev->class = 0;
-		else {
-			if (sscanf(buf, "%x", &p_pcidev->class) != 1)
-				p_pcidev->class = 0;
-			PRINT_DBG("class: 0x%06x\n", p_pcidev->class);
-		}
-		ret = topo_path_read_buffer(dir, "vendor", buf,
-					    WAYCA_SC_ATTR_STRING_LEN);
-		if (ret <= 0)
-			p_pcidev->vendor = 0;
-		else {
-			if (sscanf(buf, "%hx", &p_pcidev->vendor) != 1)
-				p_pcidev->vendor = 0;
-			PRINT_DBG("vendor: 0x%04x\n", p_pcidev->vendor);
-		}
-		ret = topo_path_read_buffer(dir, "device", buf,
-					    WAYCA_SC_ATTR_STRING_LEN);
-		if (ret <= 0)
-			p_pcidev->device = 0;
-		else {
-			if (sscanf(buf, "%hx", &p_pcidev->device) != 1)
-				p_pcidev->device = 0;
-			PRINT_DBG("device: 0x%04x\n", p_pcidev->device);
-		}
-		/* read local_cpulist */
-		p_pcidev->local_cpu_map = CPU_ALLOC(p_topo->kernel_max_cpus);
-		if (!p_pcidev->local_cpu_map)
-			return -ENOMEM;
-		ret = topo_path_read_cpulist(dir, "local_cpulist",
-					     p_pcidev->local_cpu_map,
-					     p_topo->kernel_max_cpus);
-		if (ret != 0) {
-			PRINT_ERROR("Failed to get local_cpulist, ret = %d\n",
-				    ret);
+		ret = topo_parse_pci_device(p_topo, dir);
+		if (ret) {
+			PRINT_ERROR("parse pci device fail, ret = %d", ret);
 			return ret;
 		}
-
-		/* read irqs */
-		ret = topo_parse_device_irqs(dir, &p_pcidev->irqs);
-		if (ret < 0) {
-			PRINT_ERROR("Failed in topo_parse_device_irqs: %s\n",
-				    dir);
-			PRINT_ERROR("\t Error code: %d\n", ret);
-			return ret;
-		}
-
-		/* read enable */
-		ret = topo_path_read_s32(dir, "enable", &p_pcidev->enable);
-		if (ret < 0) {
-			PRINT_ERROR("Failed to read %s/enable\n", dir);
-			PRINT_ERROR("\t Error code: %d\n", ret);
-			return ret;
-		}
-		/* read smmu link */
-		char buf_link[WAYCA_SC_PATH_LEN_MAX];
-		char path_buffer[WAYCA_SC_PATH_LEN_MAX];
-
-		p_pcidev->smmu_idx = -1; /* initialize */
-		sprintf(path_buffer, "%s/iommu", dir);
-		if (readlink(path_buffer, buf_link, WAYCA_SC_PATH_LEN_MAX) ==
-		    -1) {
-			if (errno == ENOENT)
-				PRINT_DBG(" No IOMMU\n");
-			else {
-				PRINT_ERROR(
-					"Failed to read iommu. Error code: %d\n",
-					-errno);
-				return -errno;
-			}
-		} else {
-			/* extract smmu index from buf_link */
-			PRINT_DBG("iommu link: %s\n", buf_link);
-			/* example:
-			 * ../../platform/arm-smmu-v3.3.auto/iommu/smmu3.0x0000000140000000 */
-			/* TODO: here is hard-coded name */
-			p_index = strstr(buf_link, "arm-smmu-v3");
-
-			/* what to do in other versions of smmu? */
-			if (p_index == NULL)
-				PRINT_ERROR("Failed to parse iommu link: %s\n",
-					    buf_link);
-			else {
-				p_pcidev->smmu_idx = strtol(
-					p_index + strlen("arm-smmu-v3") + 1,
-					NULL, 0);
-				PRINT_DBG("smmu index: %d\n",
-					  p_pcidev->smmu_idx);
-			}
-		}
-		return 0;
 	} else if (strstr(dir, "smmu")) {
-		PRINT_DBG("SMMU full path: %s\n", dir);
-		p_smmu = (struct wayca_smmu *)calloc(1,
-						     sizeof(struct wayca_smmu));
-		if (!p_smmu)
-			return -ENOMEM;
-
-		/* read numa_node */
-		topo_path_read_s32(dir, "numa_node", &node_nb);
-		PRINT_DBG("numa_node: %d\n", node_nb);
-		if (node_nb < 0)
-			node_nb = 0; /* on failure, default to node #0 */
-		p_smmu->numa_node = node_nb;
-
-		/* get the 'wayca_node *' whoes node_idx == this 'node_nb' */
-		for (i = 0; i < p_topo->n_nodes; i++) {
-			if (p_topo->nodes[i]->node_idx == node_nb)
-				break;
+		ret = topo_parse_smmu(p_topo, dir);
+		if (ret) {
+			PRINT_ERROR("parse smmu fail, ret = %d", ret);
+			return ret;
 		}
-		if (i == p_topo->n_nodes) {
-			PRINT_ERROR(
-				"Failed to match this PCI device to any numa node: %s",
-				dir);
-			free(p_smmu);
-			return -1;
-		}
-		/* append p_smmu to 'wayca node *'->smmus */
-		struct wayca_smmu **p_temp;
-
-		p_temp = (struct wayca_smmu **)realloc(
-			p_topo->nodes[i]->smmus,
-			(p_topo->nodes[i]->n_smmus + 1) *
-				sizeof(struct wayca_smmu *));
-		if (!p_temp) {
-			free(p_smmu);
-			return -ENOMEM;
-		}
-		p_topo->nodes[i]->smmus = p_temp;
-		p_topo->nodes[i]->smmus[p_topo->nodes[i]->n_smmus] = p_smmu;
-		p_topo->nodes[i]
-			->n_smmus++; /* incement number of SMMU devices */
-		PRINT_DBG("n_smmus = %zu\n", p_topo->nodes[i]->n_smmus);
-
-		/* read SMMU information into: p_smmu */
-		/* read type (modalias) */
-		ret = topo_path_read_buffer(dir, "modalias", p_smmu->modalias,
-					    WAYCA_SC_ATTR_STRING_LEN);
-		if (ret <= 0)
-			p_smmu->modalias[0] = '\0';
-		else if (p_smmu->modalias[strlen(p_smmu->modalias) - 1] == '\n')
-			p_smmu->modalias[strlen(p_smmu->modalias) - 1] = '\0';
-		PRINT_DBG("modalias = %s\n", p_smmu->modalias);
-
-		/* identify smmu_idx from the 'dir' string */
-		/*  Eg. SMMU full path: /sys/devices/platform/arm-smmu-v3.4.auto */
-		/* TODO: here is hard-coded name */
-		p_index = strstr(dir, "arm-smmu-v3");
-		/* what to do in other versions of smmu? */
-		if (p_index == NULL)
-			PRINT_ERROR("Failed to parse smmu_idx : %s\n", dir);
-		else {
-			p_smmu->smmu_idx = strtol(
-				p_index + strlen("arm-smmu-v3") + 1, NULL, 0);
-			PRINT_DBG("smmu index: %d\n", p_smmu->smmu_idx);
-		}
-		/* read base address */
-		sprintf(path_buffer, "%s/iommu", dir);
-		dp = opendir(path_buffer);
-		if (!dp)
-			return -errno;
-
-		while ((entry = readdir(dp)) != NULL) {
-			/*
-			 * Found a directory, eg. iommu/smmu3.0x0000000140000000
-			 */
-			p_index = strstr(entry->d_name, "smmu3");
-			if (p_index) {
-				p_smmu->base_addr = strtoull(
-					p_index + strlen("smmu3") + 1, NULL, 0);
-				PRINT_DBG("base address : 0x%016llx\n",
-					  p_smmu->base_addr);
-				break;
-			}
-			continue;
-		}
-		return 0;
 	} else {
 		/* TODO: support for other device */
 		PRINT_DBG("other IO device at full path: %s\n", dir);
@@ -2291,8 +2489,8 @@ static int topo_parse_io_device(const char *dir, struct wayca_topo *p_topo)
 
 /* Return negative on error, 0 on success
  */
-static int topo_recursively_read_io_devices(const char *rootdir,
-					    struct wayca_topo *p_topo)
+static int topo_recursively_read_io_devices(struct wayca_topo *p_topo,
+						const char *rootdir)
 {
 	DIR *dp;
 	struct dirent *entry;
@@ -2311,7 +2509,7 @@ static int topo_recursively_read_io_devices(const char *rootdir,
 			if (strcmp(".", entry->d_name) == 0 ||
 			    strcmp("..", entry->d_name) == 0)
 				continue;
-			topo_recursively_read_io_devices(entry->d_name, p_topo);
+			topo_recursively_read_io_devices(p_topo, entry->d_name);
 		} else {
 			/*
 			 * TODO: We rely on 'numa_node' to represent a
@@ -2319,11 +2517,9 @@ static int topo_recursively_read_io_devices(const char *rootdir,
 			 * only when NUMA is enabled in kernel. So, we Need to
 			 * consider a better idea of identifying i/o device.
 			 */
-			if (strcmp("numa_node", entry->d_name) == 0) {
-				topo_parse_io_device(
-					getcwd(cwd, WAYCA_SC_PATH_LEN_MAX),
-					p_topo);
-			}
+			if (strcmp("numa_node", entry->d_name) == 0)
+				topo_parse_io_device(p_topo,
+					getcwd(cwd, WAYCA_SC_PATH_LEN_MAX));
 		}
 	}
 
