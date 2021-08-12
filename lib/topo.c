@@ -1317,56 +1317,155 @@ void wayca_sc_topo_print(void)
 }
 #endif /* WAYCA_SC_DEBUG */
 
-/* topo_free - free up memories */
-void topo_free(void)
+static void topo_cache_free(struct wayca_cache *caches, size_t n_caches)
 {
-	struct wayca_topo *p_topo = &topo;
-	int i, j;
+	int i;
 
-	CPU_FREE(p_topo->cpu_map);
-	for (i = 0; i < p_topo->n_cpus; i++) {
-		CPU_FREE(p_topo->cpus[i]->core_cpus_map);
-		free(p_topo->cpus[i]->p_caches);
-		free(p_topo->cpus[i]);
+	if (!caches)
+		return;
+
+	for (i = 0; i < n_caches; i++)
+		CPU_FREE(caches[i].shared_cpu_map);
+
+	free(caches);
+}
+
+static void topo_cpu_free(struct wayca_cpu **cpus, size_t n_cpus)
+{
+	int i;
+
+	if (!cpus)
+		return;
+
+	for (i = 0; i < n_cpus; i++) {
+		if (!cpus[i])
+			continue;
+
+		CPU_FREE(cpus[i]->core_cpus_map);
+		topo_cache_free(cpus[i]->p_caches, cpus[i]->n_caches);
+		free(cpus[i]);
 	}
-	free(p_topo->cpus);
+	free(cpus);
+}
+
+static void topo_core_free(struct wayca_core **cores, size_t n_cores)
+{
+	int i;
 
 	/* NOTE: pointers inside wayca_core are freed by wayca_cpu
 	 * So, here we only need to free the top-level wayca_core structure
 	 */
-	for (i = 0; i < p_topo->n_cores; i++)
-		free(p_topo->cores[i]);
-	free(p_topo->cores);
+	if (!cores)
+		return;
 
-	for (i = 0; i < p_topo->n_clusters; i++)
-		CPU_FREE(p_topo->ccls[i]->cpu_map);
-	free(p_topo->ccls);
+	for (i = 0; i < n_cores; i++)
+		free(cores[i]);
+	free(cores);
+}
+
+static void topo_ccl_free(struct wayca_cluster **ccls, size_t n_clusters)
+{
+	int i;
+
+	if (!ccls)
+		return;
+
+	for (i = 0; i < n_clusters; i++) {
+		if (!ccls[i])
+			continue;
+
+		CPU_FREE(ccls[i]->cpu_map);
+		free(ccls[i]);
+	}
+	free(ccls);
+}
+
+static void topo_pcidev_free(struct wayca_pci_device **pcidevs,
+		size_t n_pcidevs)
+{
+	int i;
+
+	if (!pcidevs)
+		return;
+
+	for (i = 0; i < n_pcidevs; i++) {
+		if (!pcidevs[i])
+			continue;
+
+		CPU_FREE(pcidevs[i]->local_cpu_map);
+		free(pcidevs[i]->irqs.irqs);
+		free(pcidevs[i]);
+	}
+	free(pcidevs);
+}
+
+static void topo_smmu_free(struct wayca_smmu **smmus, size_t n_smmus)
+{
+	int i;
+
+	if (!smmus)
+		return;
+
+	for (i = 0; i < n_smmus; i++)
+		free(smmus[i]);
+	free(smmus);
+}
+
+static void topo_node_free(struct wayca_node **nodes, size_t n_nodes)
+{
+	int i;
+
+	if (!nodes)
+		return;
+
+	for (i = 0; i < n_nodes; i++) {
+		if (!nodes[i])
+			continue;
+
+		CPU_FREE(nodes[i]->cpu_map);
+		CPU_FREE(nodes[i]->cluster_map);
+		free(nodes[i]->distance);
+		free(nodes[i]->p_meminfo);
+		topo_pcidev_free(nodes[i]->pcidevs, nodes[i]->n_pcidevs);
+		topo_smmu_free(nodes[i]->smmus, nodes[i]->n_smmus);
+		free(nodes[i]);
+	}
+	free(nodes);
+}
+
+static void topo_package_free(struct wayca_package **packages,
+		size_t n_packages)
+{
+	int i;
+
+	if (!packages)
+		return;
+
+	for (i = 0; i < n_packages; i++) {
+		if (!packages[i])
+			continue;
+
+		CPU_FREE(packages[i]->cpu_map);
+		CPU_FREE(packages[i]->numa_map);
+		free(packages[i]);
+	}
+	free(packages);
+}
+
+/* topo_free - free up memories */
+void topo_free(void)
+{
+	struct wayca_topo *p_topo = &topo;
+
+	CPU_FREE(p_topo->cpu_map);
+	topo_cpu_free(p_topo->cpus, p_topo->n_cpus);
+
+	topo_core_free(p_topo->cores, p_topo->n_cores);
+	topo_ccl_free(p_topo->ccls, p_topo->n_clusters);
 
 	CPU_FREE(p_topo->node_map);
-	for (i = 0; i < p_topo->n_nodes; i++) {
-		CPU_FREE(p_topo->nodes[i]->cpu_map);
-		CPU_FREE(p_topo->nodes[i]->cluster_map);
-		free(p_topo->nodes[i]->distance);
-		free(p_topo->nodes[i]->p_meminfo);
-		for (j = 0; j < p_topo->nodes[i]->n_pcidevs; j++) {
-			CPU_FREE(p_topo->nodes[i]->pcidevs[j]->local_cpu_map);
-			free(p_topo->nodes[i]->pcidevs[j]->irqs.irqs);
-			free(p_topo->nodes[i]->pcidevs[j]);
-		}
-		free(p_topo->nodes[i]->pcidevs);
-		for (j = 0; j < p_topo->nodes[i]->n_smmus; j++)
-			free(p_topo->nodes[i]->smmus[j]);
-		free(p_topo->nodes[i]->smmus);
-		free(p_topo->nodes[i]);
-	}
-	free(p_topo->nodes);
-
-	for (i = 0; i < p_topo->n_packages; i++) {
-		CPU_FREE(p_topo->packages[i]->cpu_map);
-		CPU_FREE(p_topo->packages[i]->numa_map);
-		free(p_topo->packages[i]);
-	}
-	free(p_topo->packages);
+	topo_node_free(p_topo->nodes, p_topo->n_nodes);
+	topo_package_free(p_topo->packages, p_topo->n_packages);
 
 	memset(p_topo, 0, sizeof(struct wayca_topo));
 	return;
