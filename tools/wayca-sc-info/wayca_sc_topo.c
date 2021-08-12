@@ -55,9 +55,11 @@ static struct {
 } topo_elem[] = {
 	{"System", system_elem_build, sys_format, NULL, NULL},
 	{"Package", package_elem_build, pkg_format, NULL, NULL},
-	{"NUMANode", numa_elem_build, numa_format, numa_prop_verify, numa_prop_print},
+	{"NUMANode", numa_elem_build, numa_format, numa_prop_verify,
+		numa_prop_print},
 	{"Cluster", ccl_elem_build, ccl_format, NULL, NULL},
-	{"Core", core_elem_build, core_format, core_prop_verify, core_prop_print},
+	{"Core", core_elem_build, core_format, core_prop_verify,
+		core_prop_print},
 	{"CPU", cpu_elem_build, cpu_format, NULL, NULL},
 };
 
@@ -79,7 +81,7 @@ enum topo_level {
  *   negative on error
  */
 static int add_elem_formater(xmlDocPtr doc, xmlValidCtxtPtr ctxt,
-		xmlDtdPtr topo_dtd, const char** elem_list, size_t size)
+		xmlDtdPtr topo_dtd, const char **elem_list, size_t size)
 {
 
 	xmlElementContentPtr ancestor_cont;
@@ -92,7 +94,7 @@ static int add_elem_formater(xmlDocPtr doc, xmlValidCtxtPtr ctxt,
 		return -EINVAL;
 	}
 
-	if (elem_list[1] == NULL) {
+	if (!elem_list[1]) {
 		xmlAddElementDecl(ctxt, topo_dtd, BAD_CAST elem_list[0],
 					XML_ELEMENT_TYPE_EMPTY, NULL);
 		return 0;
@@ -127,13 +129,13 @@ static int build_prop_index(xmlNodePtr node, int id)
 
 	sprintf(index, "%d", id);
 	prop = xmlNewProp(node, BAD_CAST "index", BAD_CAST index);
-	if (prop == NULL)
+	if (!prop)
 		return -ENOMEM;
 	return 0;
 }
 
 static int topo_build_next_elem(xmlNodePtr node, int index, int c_elem_nr,
-		const xmlChar* next_elem)
+		const xmlChar *next_elem)
 {
 	xmlNodePtr c_node;
 	int ret;
@@ -141,7 +143,7 @@ static int topo_build_next_elem(xmlNodePtr node, int index, int c_elem_nr,
 
 	for (i = index * c_elem_nr; i < (index + 1) * c_elem_nr; i++) {
 		c_node = xmlNewChild(node, NULL, next_elem, NULL);
-		if (c_node == NULL) {
+		if (!c_node) {
 			topo_err("fail to create sub node %d", i);
 			return -ENOMEM;
 		}
@@ -156,7 +158,7 @@ static int topo_build_next_elem(xmlNodePtr node, int index, int c_elem_nr,
 static bool is_valid_idx(const char *num)
 {
 #define MAX_CPUS 1280 // kunpeng930 support 16 packects interconnected
-	long int ret;
+	long ret;
 	char *endstr;
 
 	ret = strtol(num, &endstr, 10);
@@ -166,7 +168,8 @@ static bool is_valid_idx(const char *num)
 static bool is_valid_memory_size(const char *mem_size, const char *need_endstr)
 {
 	char *real_endstr;
-	long int ret;
+	long ret;
+
 	ret = strtol(mem_size, &real_endstr, 10);
 	return ret >= 0 && !strcmp(need_endstr, real_endstr);
 }
@@ -179,7 +182,7 @@ static int cpu_elem_build(xmlNodePtr node)
 
 static int cpu_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd)
 {
-	const char* cpu_elem_list[] = {
+	const char *cpu_elem_list[] = {
 		"CPU", NULL,
 	};
 
@@ -196,8 +199,10 @@ static int cpu_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd)
 
 static int core_prop_print(xmlNodePtr node)
 {
-	printf("   L1i_cache %s", (char *)xmlGetProp(node, BAD_CAST "L1i_cache"));
-	printf("   L1d_cache %s", (char *)xmlGetProp(node, BAD_CAST "L1d_cache"));
+	printf("   L1i_cache %s", (char *)xmlGetProp(node,
+						BAD_CAST "L1i_cache"));
+	printf("   L1d_cache %s", (char *)xmlGetProp(node,
+						BAD_CAST "L1d_cache"));
 	printf("   L2_cache %s", (char *)xmlGetProp(node, BAD_CAST "L2_cache"));
 	return 0;
 }
@@ -211,21 +216,21 @@ static int core_prop_build(xmlNodePtr numa_node, int core_id)
 	cache_size = wayca_sc_get_l1i_size(core_id);
 	sprintf(content, "%dKB", cache_size);
 	prop = xmlNewProp(numa_node, BAD_CAST"L1i_cache", BAD_CAST content);
-	if (prop == NULL)
+	if (!prop)
 		return -ENOMEM;
 
 	cache_size = wayca_sc_get_l1d_size(core_id);
 	memset(content, 0, sizeof(content));
 	sprintf(content, "%dKB", cache_size);
 	prop = xmlNewProp(numa_node, BAD_CAST"L1d_cache", BAD_CAST content);
-	if (prop == NULL)
+	if (!prop)
 		return -ENOMEM;
 
 	cache_size = wayca_sc_get_l2_size(core_id);
 	memset(content, 0, sizeof(content));
 	sprintf(content, "%dKB", cache_size);
 	prop = xmlNewProp(numa_node, BAD_CAST"L2_cache", BAD_CAST content);
-	if (prop == NULL)
+	if (!prop)
 		return -ENOMEM;
 
 	return 0;
@@ -233,7 +238,7 @@ static int core_prop_build(xmlNodePtr numa_node, int core_id)
 
 static int core_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd)
 {
-	const char* core_elem_list[] = {
+	const char *core_elem_list[] = {
 		"Core", "CPU",
 	};
 	int ret;
@@ -306,7 +311,7 @@ static int core_elem_build(xmlNodePtr node)
 
 static int ccl_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd)
 {
-	const char* ccl_elem_list[] = {
+	const char *ccl_elem_list[] = {
 		"Cluster", "Core",
 	};
 	int ret;
@@ -344,7 +349,7 @@ static int ccl_elem_build(xmlNodePtr node)
 
 static int numa_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd)
 {
-	const char* numa_elem_list[] = {
+	const char *numa_elem_list[] = {
 		"NUMANode", "Cluster", "Core"
 	};
 	xmlAttributePtr attr;
@@ -361,7 +366,7 @@ static int numa_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd)
 			BAD_CAST "mem_size", NULL, XML_ATTRIBUTE_CDATA,
 			XML_ATTRIBUTE_REQUIRED, NULL, NULL);
 
-	if (attr == NULL) {
+	if (!attr) {
 		topo_err("add mem_size prop formater fail.");
 		return -ENOMEM;
 	}
@@ -369,7 +374,7 @@ static int numa_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd)
 	attr = xmlAddAttributeDecl(ctxt, topo_dtd, BAD_CAST "NUMANode",
 			BAD_CAST "L3_cache", NULL, XML_ATTRIBUTE_CDATA,
 			XML_ATTRIBUTE_REQUIRED, NULL, NULL);
-	if (attr == NULL) {
+	if (!attr) {
 		topo_err("add L3 cache prop formater fail.");
 		return -ENOMEM;
 	}
@@ -393,13 +398,13 @@ static int numa_prop_build(xmlNodePtr numa_node, int numa_id)
 
 	sprintf(content, "%luKB", mem_size);
 	prop = xmlNewProp(numa_node, BAD_CAST"mem_size", BAD_CAST content);
-	if (prop == NULL)
+	if (!prop)
 		return -ENOMEM;
 
 	cache_size = wayca_sc_get_l3_size(numa_id);
 	sprintf(content, "%dKB", cache_size);
 	prop = xmlNewProp(numa_node, BAD_CAST"L3_cache", BAD_CAST content);
-	if (prop == NULL)
+	if (!prop)
 		return -ENOMEM;
 
 	return ret;
@@ -441,7 +446,7 @@ static int numa_elem_build(xmlNodePtr node)
 static int pkg_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt,
 		xmlDtdPtr topo_dtd)
 {
-	const char* pkg_elem_list[] = {
+	const char *pkg_elem_list[] = {
 		"Package", "NUMANode",
 	};
 	int ret;
@@ -479,7 +484,7 @@ static int package_elem_build(xmlNodePtr node)
 
 static int sys_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd)
 {
-	const char* sys_elem_list[] = {
+	const char *sys_elem_list[] = {
 		"System", "Package",
 	};
 	int ret;
@@ -524,18 +529,17 @@ static int build_topo(xmlNodePtr node)
 			break;
 	}
 
-	if (topo_elem[i].elem_build == NULL) {
+	if (!topo_elem[i].elem_build)
 		return 0;
-	}
 
-	for (cur_node = node; cur_node != NULL;
+	for (cur_node = node; cur_node;
 				cur_node = xmlNextElementSibling(cur_node)) {
 		ret = topo_elem[i].elem_build(cur_node);
 		if (ret)
 			return ret;
 
 		child_node = xmlFirstElementChild(cur_node);
-		if (child_node == NULL)
+		if (!child_node)
 			continue;
 
 		ret = build_topo(child_node);
@@ -558,11 +562,11 @@ static int build_topo_info(xmlDocPtr *topo_doc)
 	 */
 	LIBXML_TEST_VERSION;
 	doc = xmlNewDoc(BAD_CAST "1.0");
-	if (doc == NULL)
+	if (!doc)
 		return -ENOMEM;
 
 	sys_node = xmlNewNode(NULL, BAD_CAST topo_elem[TOPO_SYS].name);
-	if (sys_node == NULL) {
+	if (!sys_node) {
 		topo_err("fail to create root node.");
 		ret = -ENOMEM;
 		goto build_fail;
@@ -595,7 +599,7 @@ static int xml_import_topo_info(const char *filename, xmlDocPtr *topo_doc)
 	}
 
 	*topo_doc = xmlReadFile(filename, "UTF-8", 1);
-	if (*topo_doc == NULL) {
+	if (!*topo_doc) {
 		topo_err("parse xml file fail.");
 		return -ENOENT;
 	}
@@ -631,7 +635,7 @@ static int print_prop(xmlNodePtr node)
 	for (i = 0; i < ARRAY_SIZE(topo_elem); i++) {
 		if (strcmp((char *)node->name, topo_elem[i].name))
 			continue;
-		if (topo_elem[i].prop_print == NULL)
+		if (!topo_elem[i].prop_print)
 			continue;
 
 		ret = topo_elem[i].prop_print(node);
@@ -653,7 +657,7 @@ static int print_topo_info(int level, xmlNodePtr topo_node)
 		i++;
 	}
 
-	for (cur_node = topo_node; cur_node != NULL;
+	for (cur_node = topo_node; cur_node;
 				cur_node = xmlNextElementSibling(cur_node)) {
 		printf("%s", align_space);
 		printf("%s", cur_node->name);
@@ -663,7 +667,7 @@ static int print_topo_info(int level, xmlNodePtr topo_node)
 
 		printf("\n");
 		child_node = xmlFirstElementChild(cur_node);
-		if (child_node == NULL)
+		if (!child_node)
 			continue;
 
 		ret = print_topo_info(level + 1, child_node);
@@ -699,8 +703,9 @@ int put_topo_info(struct topo_info_args *args, xmlDocPtr topo_doc)
 		ret = xml_export_topo_info(args->output_file_name, topo_doc);
 	else {
 		xmlNodePtr root_node;
+
 		root_node = xmlDocGetRootElement(topo_doc);
-		if (root_node == NULL)
+		if (!root_node)
 			return -ENOENT;
 		ret = print_topo_info(0, root_node);
 	}
@@ -718,7 +723,7 @@ static int validate_format(xmlDocPtr topo_doc)
 	topo_dtd = xmlNewDtd(NULL, BAD_CAST "Topo_info", NULL, NULL);
 
 	for (i = 0; i < ARRAY_SIZE(topo_elem); i++) {
-		if (topo_elem[i].format == NULL)
+		if (!topo_elem[i].format)
 			continue;
 		ret = topo_elem[i].format(topo_doc, ctxt, topo_dtd);
 		if (ret)
@@ -765,7 +770,7 @@ static int verify_prop(xmlNodePtr node)
 	int i;
 
 	prop = xmlHasProp(node, BAD_CAST "index");
-	if (prop != NULL) {
+	if (prop) {
 		index = (char *)xmlGetProp(node, BAD_CAST "index");
 		if (!is_valid_idx(index)) {
 			topo_err("%s: invalid index: %s.", node->name, index);
@@ -776,7 +781,7 @@ static int verify_prop(xmlNodePtr node)
 	for (i = 0; i < ARRAY_SIZE(topo_elem); i++) {
 		if (strcmp((char *)node->name, topo_elem[i].name))
 			continue;
-		if (topo_elem[i].prop_verify == NULL)
+		if (!topo_elem[i].prop_verify)
 			continue;
 
 		ret = topo_elem[i].prop_verify(node);
@@ -791,14 +796,14 @@ static int verify_topo_value(xmlNodePtr topo_node)
 	xmlNodePtr cur_node;
 	int ret;
 
-	for (cur_node = topo_node; cur_node != NULL;
+	for (cur_node = topo_node; cur_node;
 			cur_node = xmlNextElementSibling(cur_node)) {
 		ret = verify_prop(cur_node);
 		if (ret)
 			return ret;
 
 		child_node = xmlFirstElementChild(cur_node);
-		if (child_node == NULL)
+		if (!child_node)
 			continue;
 
 		ret = verify_topo_value(child_node);
@@ -814,7 +819,7 @@ static int validate_value(xmlDocPtr topo_doc)
 	int ret;
 
 	root_node = xmlDocGetRootElement(topo_doc);
-	if (root_node == NULL)
+	if (!root_node)
 		return -ENOENT;
 
 	ret = verify_topo_value(root_node);
