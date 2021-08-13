@@ -62,7 +62,7 @@ parse_args(int argc, char **argv)
 			}
 			info_args.has_input_file = true;
 			strncpy(info_args.input_file_name, optarg,
-					strlen(optarg));
+					sizeof(info_args.input_file_name));
 			topo_info("input xml file name: %s.",
 					info_args.input_file_name);
 			break;
@@ -73,7 +73,7 @@ parse_args(int argc, char **argv)
 				return -EINVAL;
 			}
 			strncpy(info_args.output_file_name, optarg,
-					strlen(optarg));
+					sizeof(info_args.output_file_name));
 			info_args.has_output_file = true;
 			topo_info("output xml file name: %s.",
 					info_args.output_file_name);
