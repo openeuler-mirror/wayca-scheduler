@@ -9,7 +9,7 @@
 #
 # See the Mulan PSL v2 for more details.
 
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.5)
 project(WaycaScheduler)
 set(WAYCA_SCHEDULER_VERSION 0.1)
 
