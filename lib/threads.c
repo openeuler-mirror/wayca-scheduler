@@ -663,6 +663,78 @@ int wayca_sc_thread_join(wayca_sc_thread_t id, void **retval)
 	return ret;
 }
 
+int wayca_sc_pid_attach_thread(wayca_sc_thread_t *wthread, pid_t pid)
+{
+	struct wayca_thread *wt_p;
+	cpu_set_t cpuset;
+	int retval;
+
+	if (!wthread || pid < 0)
+		return -EINVAL;
+
+	wt_p = wayca_thread_alloc();
+	if (!wt_p)
+		return -ENOMEM;
+
+	wt_p->siblings = NULL;
+	wt_p->group = NULL;
+	wt_p->start_routine = NULL;
+	wt_p->arg = NULL;
+
+	/*
+	 * If pid is 0, the user wants to create a wayca sc thread
+	 * of current running thread or process. But we need to
+	 * cache the exact pid so find it first.
+	 */
+	if (pid == 0)
+		pid = syscall(SYS_gettid);
+
+	wt_p->pid = pid;
+
+	CPU_ZERO(&cpuset);
+	retval = sched_getaffinity(wt_p->pid, sizeof(cpu_set_t), &cpuset);
+
+	/* if taget pid not exists */
+	if (retval < 0) {
+		wayca_thread_free(wt_p);
+		return -errno;
+	}
+
+	CPU_ZERO(&wt_p->cur_set);
+	CPU_ZERO(&wt_p->allowed_set);
+	CPU_OR(&wt_p->cur_set, &wt_p->cur_set, &cpuset);
+	CPU_OR(&wt_p->allowed_set, &wt_p->allowed_set, &cpuset);
+
+	wayca_thread_update_load(wt_p, true);
+
+	wt_p->start = true;
+	*wthread = wt_p->id;
+	return 0;
+}
+
+int wayca_sc_pid_detach_thread(wayca_sc_thread_t id)
+{
+	struct wayca_thread *thread;
+
+	if (!is_thread_id_valid(id))
+		return -EINVAL;
+
+	thread = id_to_wayca_thread(id);
+
+	/* If the wayca thread is not created from an existed PID */
+	if (!thread->start_routine)
+		return -EINVAL;
+
+	if (thread->group)
+		wayca_sc_thread_detach_group(id, thread->group->id);
+
+	wayca_thread_update_load(thread, false);
+
+	wayca_thread_free(thread);
+
+	return 0;
+}
+
 int wayca_sc_group_set_attr(wayca_sc_group_t group, wayca_sc_group_attr_t *attr)
 {
 	wayca_sc_group_attr_t old_attr;
