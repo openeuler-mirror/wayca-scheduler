@@ -64,7 +64,7 @@ struct task_cpu_map
 	int cpu_util;
 };
 
-int list_to_mask(char *s, cpu_set_t *mask);
+int list_to_mask(char *s, size_t cpusetsize, cpu_set_t *mask);
 int to_task_cpu_map(char *cpu_list, struct task_cpu_map maps[]);
 int process_bind_cpulist(pid_t pid, char *s);
 int thread_bind_cpulist(pid_t pid, char *s);
@@ -72,14 +72,14 @@ int process_bind_cpumask(pid_t pid, cpu_set_t *cpumask, size_t maxCpus);
 int thread_bind_cpumask(pid_t pid, cpu_set_t *cpumask, size_t maxCpus);
 
 int thread_bind_cpu(pid_t pid, int cpu);
-int thread_bind_ccl(pid_t pid, int cpu);
+int thread_bind_ccl(pid_t pid, int ccl);
 int thread_bind_node(pid_t pid, int node);
-int thread_bind_package(pid_t pid, int node);
+int thread_bind_package(pid_t pid, int package);
 int thread_unbind(pid_t pid);
 int process_bind_cpu(pid_t pid, int cpu);
-int process_bind_ccl(pid_t pid, int cpu);
+int process_bind_ccl(pid_t pid, int ccl);
 int process_bind_node(pid_t pid, int node);
-int process_bind_package(pid_t pid, int node);
+int process_bind_package(pid_t pid, int package);
 int process_unbind(pid_t pid);
 
 #endif

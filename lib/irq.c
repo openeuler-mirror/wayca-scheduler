@@ -42,10 +42,11 @@
 static int bitmap_scnprintf(char *buf, unsigned int buflen,
 			    const unsigned long *maskp, int nmaskbits)
 {
-	int i, word, bit, len = 0;
-	unsigned long val;
+	int i, word, len = 0;
 	const char *sep = "";
-	int chunksz;
+	unsigned int chunksz;
+	unsigned long val;
+	unsigned int bit;
 	uint32_t chunkmask;
 	int first = 1;
 
@@ -70,7 +71,8 @@ static int bitmap_scnprintf(char *buf, unsigned int buflen,
 	return len;
 }
 
-static int bitmap_str_to_cpumask(char *start, size_t len, cpu_set_t *cpuset)
+static int bitmap_str_to_cpumask(const char *start, size_t len,
+				 cpu_set_t *cpuset)
 {
 	int i, pos, num;
 	char *c, *tmp;
@@ -144,7 +146,8 @@ int wayca_sc_get_irq_bind_cpu(int irq, size_t cpusetsize, cpu_set_t *cpuset)
 	if (fd < 0)
 		return -errno;
 
-	ret = read(fd, buf, PATH_MAX);
+	memset(buf, 0, PATH_MAX);
+	ret = read(fd, buf, PATH_MAX - 1);
 	close(fd);
 
 	if (ret < 0)

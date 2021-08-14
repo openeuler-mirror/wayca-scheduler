@@ -21,6 +21,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <dirent.h>
+#include <limits.h>
 #include <string.h>
 #include <ctype.h>
 #include <stdio.h>

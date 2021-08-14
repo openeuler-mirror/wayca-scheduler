@@ -61,7 +61,7 @@ static int process_cpulist_bind(struct program *prog)
 	int cr_in_ccl = wayca_sc_cpus_in_ccl();
 	int cr_in_node = wayca_sc_cpus_in_node();
 
-	list_to_mask(prog->cpu_list, &mask);
+	list_to_mask(prog->cpu_list, sizeof(cpu_set_t), &mask);
 	for (int i = 0; i < cr_in_total; i++) {
 		if (CPU_ISSET(i, &mask)) {
 			ccl_cpus_load[i / cr_in_ccl]++;
@@ -120,7 +120,7 @@ static int occupied_cpu_to_load(char *s)
 	int cr_in_ccl = wayca_sc_cpus_in_ccl();
 	int cr_in_node = wayca_sc_cpus_in_node();
 
-	list_to_mask(s, &mask);
+	list_to_mask(s, sizeof(cpu_set_t), &mask);
 	for (int i = 0; i < cr_in_total; i++) {
 		if (CPU_ISSET(i, &mask)) {
 			ccl_cpus_load[i / cr_in_ccl]++;

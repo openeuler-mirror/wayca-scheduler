@@ -53,6 +53,10 @@ static inline void logTimeStamp(FILE *file)
 	time(&rawtime);
 	tm = gmtime(&rawtime);
 
+	/* Probably will never enter this branch */
+	if (!tm)
+		return;
+
 	fprintf(file, "[%04d-%02d-%02d %02d:%02d:%02d]",
 		tm->tm_year + 1900, tm->tm_mon, tm->tm_mday,
 		tm->tm_hour, tm->tm_min, tm->tm_sec);
