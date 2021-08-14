@@ -589,6 +589,7 @@ err:
 
 static void wayca_thread_free(struct wayca_thread *thread)
 {
+	wayca_thread_update_load(thread, false);
 	pthread_mutex_lock(&wayca_threads_array_mutex);
 	wayca_threads_array[thread->id] = NULL;
 	free(thread);
@@ -618,9 +619,15 @@ int wayca_sc_thread_create(wayca_sc_thread_t *wthread, pthread_attr_t *attr,
 
 	retval = pthread_create(pthread_ptr, attr,
 				wayca_thread_start_routine, wt_p);
-	if (retval < 0) {
+
+	/*
+	 * Pthread returns an error number rather than -1. Do the
+	 * correct check and convert to a negative error number
+	 * following the wayca scheduler's convention.
+	 */
+	if (retval) {
 		wayca_thread_free(wt_p);
-		return retval;
+		return -retval;
 	}
 
 	/**
@@ -645,11 +652,11 @@ int wayca_sc_thread_join(wayca_sc_thread_t id, void **retval)
 	thread = id_to_wayca_thread(id);
 
 	ret = pthread_join(thread->thread, retval);
+	if (ret)
+		ret = -ret;
 
 	if (thread->group)
 		wayca_sc_thread_detach_group(id, thread->group->id);
-
-	wayca_thread_update_load(thread, false);
 
 	wayca_thread_free(thread);
 
