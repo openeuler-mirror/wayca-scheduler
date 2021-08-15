@@ -77,6 +77,9 @@ install(
 	PUBLIC_HEADER DESTINATION ${WAYCA_SC_INSTALL_PREFIX}/include/
 )
 
+add_custom_target(uninstall "${CMAKE_COMMAND}" -P
+		  "${PROJECT_SOURCE_DIR}/cmake_uninstall.cmake")
+
 if(WAYCA_SC_BUILD_TOOLS)
 	add_subdirectory(tools)
 endif(WAYCA_SC_BUILD_TOOLS)
