@@ -68,6 +68,12 @@ struct wayca_thread {
 	/* Wayca group this thread directly belongs to */
 	struct wayca_sc_group *group;
 
+	/*
+	 * Following fields will be meaningful only if the thread is
+	 * created by us, rather than attached by an existed thread
+	 * or process.
+	 */
+
 	/* Internal pthread_t for this thread */
 	pthread_t thread;
 	/* The routine this thread going to perform */

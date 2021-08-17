@@ -406,6 +406,9 @@ int wayca_group_arrange(struct wayca_sc_group *group)
 	case WT_GF_ALL:
 		group->nr_cpus_per_topo = wayca_sc_cpus_in_total();
 		break;
+	default:
+		/* The topology attribute is not valid */
+		return -EINVAL;
 	}
 
 	/**

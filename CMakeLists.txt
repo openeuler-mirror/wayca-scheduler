@@ -9,7 +9,7 @@
 #
 # See the Mulan PSL v2 for more details.
 
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.5)
 project(WaycaScheduler)
 set(WAYCA_SCHEDULER_VERSION 0.1)
 
@@ -76,6 +76,9 @@ install(
 	LIBRARY DESTINATION ${WAYCA_SC_INSTALL_PREFIX}/lib/
 	PUBLIC_HEADER DESTINATION ${WAYCA_SC_INSTALL_PREFIX}/include/
 )
+
+add_custom_target(uninstall "${CMAKE_COMMAND}" -P
+		  "${PROJECT_SOURCE_DIR}/cmake_uninstall.cmake")
 
 if(WAYCA_SC_BUILD_TOOLS)
 	add_subdirectory(tools)

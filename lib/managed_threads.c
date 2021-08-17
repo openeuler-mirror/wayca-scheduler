@@ -52,7 +52,7 @@ int to_task_cpu_map(char *cpu_list, struct task_cpu_map maps[])
 		if (!q)
 			break;
 		*q++ = 0;
-		list_to_mask(p, &maps[i].tasks);
+		list_to_mask(p, sizeof(maps[i].tasks), &maps[i].tasks);
 
 		p = strchr(q, ' ');
 		if (p)
@@ -65,9 +65,9 @@ int to_task_cpu_map(char *cpu_list, struct task_cpu_map maps[])
 		}
 
 		if (*q == 'c') {
-			list_to_mask(q + 1, &maps[i].cpus);
+			list_to_mask(q + 1, sizeof(maps[i].cpus), &maps[i].cpus);
 		} else if (*q == 'n') {
-			list_to_mask(q + 1, &maps[i].nodes);
+			list_to_mask(q + 1, sizeof(maps[i].nodes), &maps[i].nodes);
 			nodemask_to_cpumask(&maps[i].nodes, &maps[i].cpus);
 		} else {
 			perror("Bad cpu_bind");

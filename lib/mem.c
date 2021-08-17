@@ -126,7 +126,7 @@ int wayca_sc_get_mem_bind_nodes(size_t maxnode, node_set_t *mask)
 	if (ret < 0)
 		return ret;
 
-	if (mode & (MPOL_BIND | MPOL_INTERLEAVE))
+	if ((unsigned int)mode & (MPOL_BIND | MPOL_INTERLEAVE))
 		return 0;
 
 	return -ENODATA;

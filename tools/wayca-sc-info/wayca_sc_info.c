@@ -38,7 +38,7 @@ print_usage()
 }
 
 static bool
-check_invalid_file_name(char *file_name)
+check_invalid_file_name(const char *file_name)
 {
 	if (strlen(file_name) >= WAYCA_INFO_MAX_FILE_NAME)
 		return true;

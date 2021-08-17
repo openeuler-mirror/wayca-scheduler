@@ -20,7 +20,7 @@ add_executable(${WAYCA_SC_INFO_NAME} ${WAYCA_SC_INFO_SRCS})
 
 find_package(LibXml2 REQUIRED)
 if(LibXml2_FOUND)
-	include_directories(${LIBXML2_INCLUDE_DIRS})
+	include_directories(${LIBXML2_INCLUDE_DIR})
 	target_link_libraries(${WAYCA_SC_INFO_NAME} xml2 ${WAYCA_SC_LIB_NAME})
 else(LibXml2_FOUND)
 	message(FATAL_ERROR "LibXml2 not found")

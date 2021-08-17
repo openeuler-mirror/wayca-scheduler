@@ -28,10 +28,10 @@ int wayca_sc_get_irq_bind_cpu(int irq, size_t cpusetsize, cpu_set_t *cpuset);
 #define NODE_SET  CPU_SET
 #define NODE_ISSET CPU_ISSET
 
-int wayca_sc_mem_interleave_in_package(int node);
+int wayca_sc_mem_interleave_in_package(int package);
 int wayca_sc_mem_interleave_in_all(void);
 int wayca_sc_mem_bind_node(int node);
-int wayca_sc_mem_bind_package(int node);
+int wayca_sc_mem_bind_package(int package);
 int wayca_sc_mem_unbind(void);
 int wayca_sc_get_mem_bind_nodes(size_t maxnode, node_set_t *mask);
 long wayca_sc_mem_migrate_to_node(pid_t pid, int node);
@@ -91,6 +91,8 @@ int wayca_sc_thread_get_attr(wayca_sc_thread_t wthread, wayca_sc_thread_attr_t *
 
 int wayca_sc_thread_create(wayca_sc_thread_t *wthread, pthread_attr_t *attr, void *(*start_routine)(void *), void *arg);
 int wayca_sc_thread_join(wayca_sc_thread_t wthread, void **retval);
+int wayca_sc_pid_attach_thread(wayca_sc_thread_t *wthread, pid_t pid);
+int wayca_sc_pid_detach_thread(wayca_sc_thread_t wthread);
 
 
 typedef unsigned long long	wayca_sc_group_t;
