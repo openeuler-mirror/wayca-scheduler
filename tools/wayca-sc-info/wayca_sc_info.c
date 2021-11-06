@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <string.h>
+#include <libgen.h>
 #include "wayca_sc_info.h"
 
 static struct option lgopts[] = {
@@ -42,28 +43,68 @@ static void print_usage(void)
 	       "  -h, --help			print this message and exit\n");
 }
 
+static int canonicalize_export_filename(const char *filename,
+					char *final_filename, size_t size)
+{
+	char file_basename[WAYCA_INFO_MAX_FILE_NAME] = {};
+	char file_dirname[WAYCA_INFO_MAX_FILE_NAME] = {};
+	char *dname;
+	char *bname;
+	char *name;
+
+	strncpy(file_dirname, filename, WAYCA_INFO_MAX_FILE_NAME - 1);
+	dname = dirname(file_dirname);
+	if (!dname)
+		return -EINVAL;
+	name = realpath(dname, final_filename);
+	if (!name) {
+		topo_err("access output directory fail, ret = %d", -errno);
+		return -errno;
+	}
+
+	if (final_filename[strlen(final_filename) - 1] != '/')
+		strncat(final_filename, "/", size - strlen(final_filename));
+
+	strncpy(file_basename, filename, WAYCA_INFO_MAX_FILE_NAME - 1);
+	bname = basename(file_basename);
+	if (!bname)
+		return -EINVAL;
+	strncat(final_filename, bname, size - strlen(final_filename));
+	return 0;
+}
+
 static int parse_file_name(const char *filename, bool is_input)
 {
-	char *final_filename;
-
-	if (strlen(filename) >= WAYCA_INFO_MAX_FILE_NAME) {
-		topo_err("%s filename too long.",
-				is_input ? "input" : "output");
-		print_usage();
-		return -EINVAL;
-	}
+	char *name;
+	int ret;
 
 	if (is_input) {
+		name = realpath(filename, info_args.input_file_name);
+		if (!name) {
+			topo_err("access input file failed, ret = %d.", -errno);
+			return -errno;
+		}
 		info_args.has_input_file = true;
-		final_filename = info_args.input_file_name;
 	} else {
+		if (strlen(filename) >= WAYCA_INFO_MAX_FILE_NAME) {
+			topo_err("output file name tool long.");
+			return -ENAMETOOLONG;
+		}
+
+		ret = canonicalize_export_filename(filename,
+					info_args.output_file_name,
+					sizeof(info_args.output_file_name));
+		if (ret) {
+			topo_err("get canonical output file name failed, ret = %d.",
+					ret);
+			return ret;
+		}
 		info_args.has_output_file = true;
-		final_filename = info_args.output_file_name;
 	}
 
-	strncpy(final_filename, filename, WAYCA_INFO_MAX_FILE_NAME);
 	topo_info("%s xml file name: %s.", is_input ? "input" : "output",
-			final_filename);
+			is_input ? info_args.input_file_name :
+			info_args.output_file_name);
 	return 0;
 }
 

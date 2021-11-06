@@ -861,14 +861,6 @@ static void xml_delete_special_node(xmlDocPtr topo_doc, const char *del_node)
 
 static int xml_import_topo_info(const char *filename, xmlDocPtr *topo_doc)
 {
-	int ret;
-
-	ret = access(filename, R_OK);
-	if (ret) {
-		topo_err("read xml file fail: %s", strerror(errno));
-		return -errno;
-	}
-
 	*topo_doc = xmlReadFile(filename, "UTF-8", 1);
 	if (!*topo_doc) {
 		topo_err("parse xml file fail.");
