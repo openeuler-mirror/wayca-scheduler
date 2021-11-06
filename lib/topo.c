@@ -38,6 +38,39 @@ WAYCA_SC_INIT_PRIO(topo_init, TOPO);
 WAYCA_SC_FINI_PRIO(topo_free, TOPO);
 static struct wayca_topo topo;
 
+/* topo_expand_mem - expand memory size to 'new_size', if ptr is not empty,
+ * original data will be copied to the new allocated buffer. Or a totally new
+ * buffer will be returned.
+ *
+ * note: regardless of whether the execution is successful or not, the
+ * original memory will be released.
+ *
+ * - ptr: origin memory pointer
+ * - old_size: origin memory size
+ * - new_size: size expend to
+ * return:
+ *   NULL: fail to alloc memory, and origin memory will be freed.
+ *   other: success to expand the memmory
+ */
+void *topo_expand_mem(void *ptr, size_t old_size, size_t new_size)
+{
+	void *mem = NULL;
+
+	if (new_size == 0 || old_size > new_size)
+		goto out;
+
+	mem = calloc(new_size, sizeof(char));
+	if (!mem)
+		goto out;
+
+	if (!ptr || old_size == 0)
+		goto out;
+	memcpy(mem, ptr, old_size);
+out:
+	free(ptr);
+	return mem;
+}
+
 /* topo_path_read_buffer - read from filename into buf, maximum 'count' in size
  * return:
  *   negative on error
@@ -438,22 +471,21 @@ static int topo_parse_cpu_node_info(struct wayca_topo *p_topo, int cpu_index)
 			continue;
 		/* check whether need more node space */
 		if (node_index > max_node_index) {
-			struct wayca_node **p_temp;
-
 			max_node_index = node_index;
 			/*
 			 * Unnecessary to check the overflow of the
 			 * realloc(), max_node_index cannot be that
 			 * large.
 			 */
-			p_temp = (struct wayca_node **)realloc(
-				p_topo->nodes, (max_node_index + 1) *
-				sizeof(struct wayca_node *));
-			if (!p_temp) {
+			p_topo->nodes = (struct wayca_node **)topo_expand_mem(
+				p_topo->nodes,
+				node_index * sizeof(*p_topo->nodes),
+				(node_index + 1) * sizeof(*p_topo->nodes));
+			if (!p_topo->nodes) {
 				closedir(dir);
+				PRINT_ERROR("why I failed\n");
 				return -ENOMEM;
 			}
-			p_topo->nodes = p_temp;
 		}
 		/*
 		 * check this 'node_index' node exist or not. if not, create one
@@ -497,7 +529,6 @@ static int topo_parse_cpu_node_info(struct wayca_topo *p_topo, int cpu_index)
 static int topo_parse_cpu_cluster_info(struct wayca_topo *p_topo,
 			const char *path_buffer, int cpu_index)
 {
-	struct wayca_cluster **p_temp;
 	int cluster_id;
 	int ret;
 	int i;
@@ -515,19 +546,18 @@ static int topo_parse_cpu_cluster_info(struct wayca_topo *p_topo,
 	}
 	/* need to create a new wayca_cluster */
 	if (i == p_topo->n_clusters) {
-		p_topo->n_clusters++;
 		/* increase p_topo->ccls array */
-		p_temp = (struct wayca_cluster **)realloc(
-			p_topo->ccls,
-			(p_topo->n_clusters) * sizeof(struct wayca_cluster *));
-		if (!p_temp)
+		p_topo->ccls = (struct wayca_cluster **)topo_expand_mem(
+				p_topo->ccls, i * sizeof(*p_topo->ccls),
+				(i + 1) * sizeof(*p_topo->ccls));
+		if (!p_topo->ccls)
 			return -ENOMEM;
-		p_topo->ccls = p_temp;
 		/* allocate a new wayca_cluster struct, and link it to p_topo->ccls */
 		p_topo->ccls[i] = (struct wayca_cluster *)calloc(
 			1, sizeof(struct wayca_cluster));
 		if (!p_topo->ccls[i])
 			return -ENOMEM;
+		p_topo->n_clusters++;
 		/* initialize this cluster's cpu_map */
 		p_topo->ccls[i]->cpu_map = CPU_ALLOC(p_topo->kernel_max_cpus);
 		if (!p_topo->ccls[i]->cpu_map)
@@ -571,20 +601,17 @@ static int topo_parse_cpu_pkg_info(struct wayca_topo *p_topo,
 			break;
 	/* need to create a new wayca_package */
 	if (i == p_topo->n_packages) {
-		struct wayca_package **p_temp;
-
-		p_topo->n_packages++;
-		p_temp = (struct wayca_package **)realloc(
-			p_topo->packages,
-			p_topo->n_packages * sizeof(struct wayca_package *));
-		if (!p_temp)
+		p_topo->packages = (struct wayca_package **)topo_expand_mem(
+			p_topo->packages, i * sizeof(struct wayca_package *),
+			(i + 1) * sizeof(struct wayca_package *));
+		if (!p_topo->packages)
 			return -ENOMEM;
-		p_topo->packages = p_temp;
 		/* allocate a new wayca_ package struct, and link it to p_topo->ccls */
 		p_topo->packages[i] = (struct wayca_package *)calloc(
 			1, sizeof(struct wayca_package));
 		if (!p_topo->packages[i])
 			return -ENOMEM;
+		p_topo->n_packages++;
 		/* initialize this package's cpu_map */
 		p_topo->packages[i]->cpu_map =
 			CPU_ALLOC(p_topo->kernel_max_cpus);
@@ -902,18 +929,15 @@ static int topo_read_node_topology(struct wayca_topo *p_topo, int node_index)
  */
 static int topo_construct_core_topology(struct wayca_topo *p_topo)
 {
-	struct wayca_core **pp_core;
 	int cur_core_id;
 	int i, j;
 
-	/* initialization */
 	if (p_topo->cores != NULL || p_topo->n_cores != 0) {
 		WAYCA_SC_LOG_ERR(
 			"duplicated call, wayca_cores has been established\n");
 		return -1;
 	}
 
-	/* go through all n_cpus */
 	for (i = 0; i < p_topo->n_cpus; i++) {
 		/* read this cpu's core_id */
 		cur_core_id = p_topo->cpus[i]->core_id;
@@ -930,22 +954,18 @@ static int topo_construct_core_topology(struct wayca_topo *p_topo)
 			continue;
 
 		/* allocate a new wayca_core if cur_core_id does not exist */
-		pp_core = (struct wayca_core **)realloc(
-			p_topo->cores,
-			(p_topo->n_cores + 1) * sizeof(struct wayca_core *));
-		if (!pp_core)
+		p_topo->cores = (struct wayca_core **)topo_expand_mem(
+			p_topo->cores, j * sizeof(struct wayca_core *),
+			(j + 1) * sizeof(struct wayca_core *));
+		if (!p_topo->cores)
 			return -ENOMEM;
-		p_topo->cores = pp_core;
 
 		/* j equals p_topo->n_cores */
 		p_topo->cores[j] = (struct wayca_core *)calloc(
 			1, sizeof(struct wayca_core));
 		if (!p_topo->cores[j])
 			return -ENOMEM;
-
-		/* increase p_topo->n_cores */
 		p_topo->n_cores++;
-
 		/* copy from cpus[i] to cores[j] */
 		p_topo->cores[j]->core_id = cur_core_id;
 		p_topo->cores[j]->core_cpus_map =
@@ -2243,7 +2263,6 @@ static int topo_parse_irq(struct wayca_device_irqs *wirqs,
 				const char *device_sysfs_dir)
 {
 	uint32_t irq_number = 0;
-	uint32_t *irq_numbers;
 	int irq;
 	int j;
 
@@ -2260,12 +2279,12 @@ static int topo_parse_irq(struct wayca_device_irqs *wirqs,
 
 	/* doesn't exist, create a new one */
 	if (j == wirqs->n_irqs) {
-		irq_numbers = (uint32_t *)realloc(wirqs->irq_numbers,
-				(wirqs->n_irqs + 1) * sizeof(int));
-		if (!irq_numbers)
+		wirqs->irq_numbers = (uint32_t *)topo_expand_mem(
+				wirqs->irq_numbers, j * sizeof(uint32_t),
+				(j + 1) * sizeof(uint32_t));
+		if (!wirqs->irq_numbers)
 			return -ENOMEM;
 		wirqs->n_irqs++;
-		wirqs->irq_numbers = irq_numbers;
 	}
 	return 0;
 }
@@ -2473,13 +2492,12 @@ static int topo_parse_pci_numa_node(struct wayca_topo *p_topo,
 static int topo_parse_pci_device(struct wayca_topo *p_topo, const char *dir)
 {
 	struct wayca_pci_device *p_pcidev;
-	struct wayca_pci_device **p_temp;
+	struct wayca_node *node;
 	char *p_index;
 	int ret;
 	int i;
 
 	PRINT_DBG("PCI full path: %s\n", dir);
-	/* allocate struct wayca_pci_device */
 	p_pcidev = (struct wayca_pci_device *)calloc(
 			1, sizeof(struct wayca_pci_device));
 	if (!p_pcidev)
@@ -2505,17 +2523,17 @@ static int topo_parse_pci_device(struct wayca_topo *p_topo, const char *dir)
 		return ret;
 	}
 	/* append p_pcidev to wayca node[]->pcidevs */
-	p_temp = (struct wayca_pci_device **)realloc(p_topo->nodes[i]->pcidevs,
-		(p_topo->nodes[i]->n_pcidevs + 1) *
-		sizeof(struct wayca_pci_device *));
-	if (!p_temp) {
+	node = p_topo->nodes[i];
+	node->pcidevs = (struct wayca_pci_device **)topo_expand_mem(
+			node->pcidevs, node->n_pcidevs * sizeof(*node->pcidevs),
+			(node->n_pcidevs + 1) * sizeof(*node->pcidevs));
+	if (!node->pcidevs) {
 		free(p_pcidev);
 		return -ENOMEM;
 	}
-	p_topo->nodes[i]->pcidevs = p_temp;
-	p_topo->nodes[i]->pcidevs[p_topo->nodes[i]->n_pcidevs] = p_pcidev;
-	p_topo->nodes[i]->n_pcidevs++;
-	PRINT_DBG("n_pcidevs = %zu\n", p_topo->nodes[i]->n_pcidevs);
+	node->pcidevs[node->n_pcidevs] = p_pcidev;
+	node->n_pcidevs++;
+	PRINT_DBG("n_pcidevs = %zu\n", node->n_pcidevs);
 
 	ret = topo_parse_pci_info(p_topo, p_pcidev, dir);
 	if (ret) {
@@ -2524,10 +2542,8 @@ static int topo_parse_pci_device(struct wayca_topo *p_topo, const char *dir)
 	}
 
 	ret = topo_parse_pci_smmu(p_pcidev, dir);
-	if (ret) {
+	if (ret)
 		PRINT_ERROR("read pci smmu fail, ret = %d\n", ret);
-		return ret;
-	}
 	return ret;
 }
 
@@ -2596,8 +2612,8 @@ static int topo_parse_smmu_info(struct wayca_smmu *p_smmu, const char *dir)
 
 static int topo_parse_smmu(struct wayca_topo *p_topo, const char *dir)
 {
-	struct wayca_smmu **p_temp;
 	struct wayca_smmu *p_smmu;
+	struct wayca_node *node;
 	int node_nb = -1;
 	int ret;
 	int i;
@@ -2626,23 +2642,22 @@ static int topo_parse_smmu(struct wayca_topo *p_topo, const char *dir)
 		return -EINVAL;
 	}
 
-	p_temp = (struct wayca_smmu **)realloc(p_topo->nodes[i]->smmus,
-			(p_topo->nodes[i]->n_smmus + 1) *
-			sizeof(struct wayca_smmu *));
-	if (!p_temp) {
+	node = p_topo->nodes[i];
+	node->smmus = (struct wayca_smmu **)topo_expand_mem(
+			node->smmus, node->n_smmus * sizeof(*node->smmus),
+			(node->n_smmus + 1) * sizeof(*node->smmus));
+	if (!node->smmus) {
 		free(p_smmu);
 		return -ENOMEM;
 	}
-	p_topo->nodes[i]->smmus = p_temp;
-	p_topo->nodes[i]->smmus[p_topo->nodes[i]->n_smmus] = p_smmu;
-	p_topo->nodes[i]->n_smmus++; /* incement number of SMMU devices */
-	PRINT_DBG("n_smmus = %zu\n", p_topo->nodes[i]->n_smmus);
+	node->smmus[node->n_smmus] = p_smmu;
+	node->n_smmus++; /* incement number of SMMU devices */
+	PRINT_DBG("n_smmus = %zu\n", node->n_smmus);
 
 	ret = topo_parse_smmu_info(p_smmu, dir);
-	if (ret) {
-		PRINT_ERROR("failed to parse smmu information, ret = %d\n", ret);
-		return ret;
-	}
+	if (ret)
+		PRINT_ERROR("failed to parse smmu information, ret = %d\n",
+				ret);
 	return ret;
 }
 
