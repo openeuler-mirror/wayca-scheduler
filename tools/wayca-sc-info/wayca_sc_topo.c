@@ -16,6 +16,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <inttypes.h>
+#include <fcntl.h>
 #include "wayca-scheduler.h"
 #include "wayca_sc_info.h"
 
@@ -980,20 +981,33 @@ static int print_topo_info(int level, xmlNodePtr topo_node)
 
 static int xml_export_topo_info(const char *filename, xmlDocPtr topo_doc)
 {
-	int ret;
+	xmlChar *xml_buf;
+	int buf_size;
+	ssize_t cnt;
+	int ret = 0;
+	int fd;
 
-	ret = access(filename, F_OK);
-	if (!ret) {
-		topo_err("read xml file fail: File exists");
-		return -EEXIST;
+	fd = open(filename, O_CREAT | O_WRONLY | O_EXCL, 0640);
+	if (fd == -1)
+		return -errno;
+
+	xmlDocDumpFormatMemoryEnc(topo_doc, &xml_buf, &buf_size, "UTF-8", 1);
+	if (xml_buf == NULL) {
+		topo_err("dump xml doc to buffer fail.");
+		ret = -ENOMEM;
+		goto xmldump_fail;
 	}
 
-	ret = xmlSaveFormatFileEnc(filename, topo_doc, "UTF-8", 1);
-	if (ret < 0) {
-		topo_err("file write fail, ret = %d.", ret);
-		return -ENOENT;
+	cnt = write(fd, xml_buf, buf_size);
+	if (cnt != buf_size) {
+		ret = errno ? -errno : -EIO;
+		topo_err("write to file %s fail. ret = %d.", filename, ret);
 	}
-	return 0;
+
+	xmlFree(xml_buf);
+xmldump_fail:
+	close(fd);
+	return ret;
 }
 
 int put_topo_info(struct topo_info_args *args, xmlDocPtr topo_doc)
