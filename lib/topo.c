@@ -358,13 +358,11 @@ int cpulist_parse(const char *str, cpu_set_t *set, size_t setsize, int fail)
 
 		c1 = nexttoken(p, '-');
 		c2 = nexttoken(p, ',');
-
 		if (c1 != NULL && (c2 == NULL || c1 < c2)) {
 			if (nextnumber(c1, &end, &b) != 0)
 				return 1;
 
 			c1 = end && *end ? nexttoken(end, ':') : NULL;
-
 			if (c1 != NULL && (c2 == NULL || c1 < c2)) {
 				if (nextnumber(c1, &end, &s) != 0)
 					return 1;
@@ -2044,7 +2042,7 @@ static const struct {
 	{WAYCA_SC_TOPO_CHIP_NAME_GICV3, "GICv3"},
 };
 
-static enum wayca_sc_irq_chip_name str2_irq_chip_name(char *buf)
+static enum wayca_sc_irq_chip_name str2_irq_chip_name(const char *buf)
 {
 	int i;
 
@@ -2064,7 +2062,7 @@ static const struct {
 	{WAYCA_SC_TOPO_TYPE_LEVEL, "level"},
 };
 
-static enum wayca_sc_irq_type str2_irq_type(char *buf)
+static enum wayca_sc_irq_type str2_irq_type(const char *buf)
 {
 	int i;
 
@@ -2090,7 +2088,7 @@ static void topo_irq_free(struct wayca_irq **irqs, size_t n_irqs)
 	free(irqs);
 }
 
-static int topo_parse_irq_info(struct wayca_irq *irq, char *irq_number)
+static int topo_parse_irq_info(struct wayca_irq *irq, const char *irq_number)
 {
 	char buf[WAYCA_SC_ATTR_STRING_LEN] = {0};
 	char path_buffer[WAYCA_SC_PATH_LEN_MAX];
@@ -2173,8 +2171,10 @@ static int topo_get_irq_info(struct wayca_topo *sys_topo)
 			nb_irq++;
 	}
 	irqs = (struct wayca_irq **)calloc(nb_irq, sizeof(struct wayca_irq *));
-	if (!irqs)
+	if (!irqs) {
+		closedir(proc_dp);
 		return -ENOMEM;
+	}
 	rewinddir(proc_dp);
 
 	i = 0;
@@ -2247,8 +2247,10 @@ static int topo_parse_msi_irq(struct wayca_device_irqs *wirqs,
 		if (entry->d_type == DT_REG) {
 			errno = 0;
 			irq_numbers[i] = strtol(entry->d_name, &endstr, 10);
-			if (endstr == entry->d_name || errno)
+			if (endstr == entry->d_name || errno) {
+				closedir(dp);
 				return errno ? -errno : -EINVAL;
+			}
 			i++;
 			PRINT_DBG("%u\t", irq_numbers[i - 1]);
 			msi_irqs_count--;
@@ -2381,7 +2383,6 @@ static int topo_parse_pci_smmu(struct wayca_pci_device *p_pcidev,
 		 * version of smmu.
 		 */
 		p_index = strstr(buf_link, "arm-smmu-v3");
-
 		if (p_index == NULL)
 			PRINT_ERROR("failed to parse iommu link: %s\n",
 					buf_link);
@@ -2482,7 +2483,6 @@ static int topo_parse_pci_numa_node(struct wayca_topo *p_topo,
 		PRINT_ERROR(
 			"failed to match this PCI device to any numa node: %s\n",
 			dir);
-		free(p_pcidev);
 		return -EINVAL;
 	}
 	*numa_id = i;
@@ -2519,6 +2519,7 @@ static int topo_parse_pci_device(struct wayca_topo *p_topo, const char *dir)
 
 	ret = topo_parse_pci_numa_node(p_topo, p_pcidev, dir, &i);
 	if (ret < 0) {
+		free(p_pcidev);
 		PRINT_ERROR("failed to get pci device node id, ret = %d\n", ret);
 		return ret;
 	}

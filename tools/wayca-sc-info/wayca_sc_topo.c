@@ -153,7 +153,6 @@ static int print_prop_list(xmlNodePtr node, const char * const *prop_list,
 static int add_elem_formater(xmlDocPtr doc, xmlValidCtxtPtr ctxt,
 		xmlDtdPtr topo_dtd, const char * const *elem_list, size_t size)
 {
-
 	xmlElementContentPtr ancestor_cont;
 	xmlElementContentPtr p_cont;
 	xmlElementContentPtr c_cont;
@@ -1314,7 +1313,7 @@ static int smmu_dev_elem_build(xmlNodePtr smmu_node)
 	return 0;
 }
 
-static int topo_str2ul(char *str, unsigned long *num)
+static int topo_str2ul(const char *str, unsigned long *num)
 {
 	char *endptr;
 
@@ -1351,8 +1350,7 @@ static int irq_prop_build(xmlNodePtr numa_node, unsigned long irq_num)
 
 	ret = wayca_sc_get_irq_info(irq_num, &irq_info);
 	if (ret) {
-		topo_err("fail to get irq information, ret = %lu.", irq_num,
-				ret);
+		topo_err("failed to get irq information, ret = %d.", ret);
 		return ret;
 	}
 
