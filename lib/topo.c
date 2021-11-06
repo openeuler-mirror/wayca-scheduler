@@ -745,7 +745,7 @@ static int topo_parse_cpu_cache_info(struct wayca_topo *p_topo, int cpu_index)
 	p_topo->cpus[cpu_index]->n_caches = n_caches;
 
 	if (n_caches == 0) {
-		PRINT_DBG("no cache exists for CPU %d", cpu_index);
+		PRINT_DBG("no cache exists for CPU %d\n", cpu_index);
 		return 0;
 	}
 
@@ -857,7 +857,7 @@ static int topo_read_node_topology(struct wayca_topo *p_topo, int node_index)
 	/* check w/ what's previously composed in cpu_topology reading */
 	if (!CPU_EQUAL_S(p_topo->setsize, node_cpu_map,
 			 p_topo->nodes[node_index]->cpu_map)) {
-		PRINT_ERROR("mismatch detected in node%d cpulist read",
+		PRINT_ERROR("mismatch detected in node%d cpulist read\n",
 			    node_index);
 		return -EINVAL;
 	}
@@ -996,7 +996,7 @@ static int topo_alloc_cpu(struct wayca_topo *p_topo)
 		if (!p_topo->cpus)
 			return -ENOMEM;
 	} else {
-		PRINT_ERROR("failed to read possible CPUs");
+		PRINT_ERROR("failed to read possible CPUs\n");
 		return -EINVAL;
 	}
 	return 0;
@@ -1055,7 +1055,7 @@ static int topo_construct_numa_topology(struct wayca_topo *p_topo)
 	ret = topo_path_read_cpulist(WAYCA_SC_NODE_FNAME, "possible",
 					bitmask, p_topo->n_cpus);
 	if (ret) {
-		PRINT_ERROR("failed to read possible NODEs");
+		PRINT_ERROR("failed to read possible NODEs\n");
 		goto cleanup;
 	}
 
@@ -1063,14 +1063,14 @@ static int topo_construct_numa_topology(struct wayca_topo *p_topo)
 	if (!CPU_EQUAL_S(setsize, bitmask, p_topo->node_map) ||
 		CPU_COUNT_S(setsize, bitmask) != p_topo->n_nodes) {
 		PRINT_ERROR(
-			 "node/possible mismatch with what cpu topology shows");
+			 "node/possible mismatch with what cpu topology shows\n");
 		goto cleanup;
 	}
 	/* read all node%d topology, and it will establish the distance info */
 	for (i = 0; i < p_topo->n_nodes; i++) {
 		ret = topo_read_node_topology(p_topo, i);
 		if (ret) {
-			PRINT_ERROR("get node %d topology fail, ret = %d", i,
+			PRINT_ERROR("get node %d topology fail, ret = %d\n", i,
 				    ret);
 			goto cleanup;
 		}
@@ -1105,37 +1105,37 @@ static void topo_init(void)
 
 	ret = topo_alloc_cpu(p_topo);
 	if (ret) {
-		PRINT_ERROR("failed to alloc cpu, ret = %d", ret);
+		PRINT_ERROR("failed to alloc cpu, ret = %d\n", ret);
 		goto cleanup_on_error;
 	}
 
 	ret = topo_alloc_node_map(p_topo);
 	if (ret) {
-		PRINT_ERROR("failed to alloc numa node map, ret = %d", ret);
+		PRINT_ERROR("failed to alloc numa node map, ret = %d\n", ret);
 		goto cleanup_on_error;
 	}
 
 	ret = topo_construct_cpu_topology(p_topo);
 	if (ret) {
-		PRINT_ERROR("failed to construct cpu topology, ret = %d", ret);
+		PRINT_ERROR("failed to construct cpu topology, ret = %d\n", ret);
 		goto cleanup_on_error;
 	}
 
 	ret = topo_construct_numa_topology(p_topo);
 	if (ret) {
-		PRINT_ERROR("failed to construct numa topology, ret = %d", ret);
+		PRINT_ERROR("failed to construct numa topology, ret = %d\n", ret);
 		goto cleanup_on_error;
 	}
 	/* Construct wayca_cores topology from wayca_cpus */
 	ret = topo_construct_core_topology(p_topo);
 	if (ret) {
-		PRINT_ERROR("failed to construct core topology, ret = %d", ret);
+		PRINT_ERROR("failed to construct core topology, ret = %d\n", ret);
 		goto cleanup_on_error;
 	}
 
 	if (topo_recursively_read_io_devices(p_topo, WAYCA_SC_SYSDEV_FNAME) !=
 	    0) {
-		PRINT_ERROR("failed to construct io device topology, ret = %d",
+		PRINT_ERROR("failed to construct io device topology, ret = %d\n",
 				ret);
 		goto cleanup_on_error;
 	}
@@ -1144,7 +1144,7 @@ static void topo_init(void)
 	if (p && !strcmp(p, "YES")) {
 		ret = topo_get_irq_info(p_topo);
 		if (ret) {
-			PRINT_ERROR("failed to get irq information, ret = %d",
+			PRINT_ERROR("failed to get irq information, ret = %d\n",
 					ret);
 			goto cleanup_on_error;
 		}
@@ -2144,7 +2144,7 @@ static int topo_get_irq_info(struct wayca_topo *sys_topo)
 	 */
 	proc_dp = opendir("/proc/irq");
 	if (!proc_dp) {
-		PRINT_ERROR("failed to open directory /proc/irq");
+		PRINT_ERROR("failed to open directory /proc/irq\n");
 		return -errno;
 	}
 	while ((entry = readdir(proc_dp)) != NULL) {
@@ -2294,7 +2294,7 @@ static int topo_parse_device_irqs(struct wayca_device_irqs *wirqs,
 	       (entry = readdir(dp)) != NULL) {
 		ret = lstat(entry->d_name, &statbuf);
 		if (ret < 0) {
-			PRINT_ERROR("fail to get directory %s stat, ret = %d.",
+			PRINT_ERROR("fail to get directory %s stat, ret = %d\n",
 					entry->d_name, -errno);
 			continue;
 		}
@@ -2319,7 +2319,7 @@ static int topo_parse_device_irqs(struct wayca_device_irqs *wirqs,
 	if (msi_irqs_exist) {
 		ret = topo_parse_msi_irq(wirqs, device_sysfs_dir);
 		if (ret) {
-			PRINT_ERROR("failed to parse msi irq");
+			PRINT_ERROR("failed to parse msi irq\n");
 			return ret;
 		}
 	}
@@ -2327,7 +2327,7 @@ static int topo_parse_device_irqs(struct wayca_device_irqs *wirqs,
 	if (irq_file_exist) {
 		ret = topo_parse_irq(wirqs, device_sysfs_dir);
 		if (ret) {
-			PRINT_ERROR("failed to parse irq");
+			PRINT_ERROR("failed to parse irq\n");
 			return ret;
 		}
 	}
@@ -2461,7 +2461,7 @@ static int topo_parse_pci_numa_node(struct wayca_topo *p_topo,
 	}
 	if (i == p_topo->n_nodes) {
 		PRINT_ERROR(
-			"failed to match this PCI device to any numa node: %s",
+			"failed to match this PCI device to any numa node: %s\n",
 			dir);
 		free(p_pcidev);
 		return -EINVAL;
@@ -2501,7 +2501,7 @@ static int topo_parse_pci_device(struct wayca_topo *p_topo, const char *dir)
 
 	ret = topo_parse_pci_numa_node(p_topo, p_pcidev, dir, &i);
 	if (ret < 0) {
-		PRINT_ERROR("failed to get pci device node id, ret = %d", ret);
+		PRINT_ERROR("failed to get pci device node id, ret = %d\n", ret);
 		return ret;
 	}
 	/* append p_pcidev to wayca node[]->pcidevs */
@@ -2620,7 +2620,7 @@ static int topo_parse_smmu(struct wayca_topo *p_topo, const char *dir)
 	}
 	if (i == p_topo->n_nodes) {
 		PRINT_ERROR(
-			"failed to match this PCI device to any numa node: %s",
+			"failed to match this PCI device to any numa node: %s\n",
 			dir);
 		free(p_smmu);
 		return -EINVAL;
@@ -2640,7 +2640,7 @@ static int topo_parse_smmu(struct wayca_topo *p_topo, const char *dir)
 
 	ret = topo_parse_smmu_info(p_smmu, dir);
 	if (ret) {
-		PRINT_ERROR("failed to parse smmu information, ret = %d", ret);
+		PRINT_ERROR("failed to parse smmu information, ret = %d\n", ret);
 		return ret;
 	}
 	return ret;
@@ -2658,13 +2658,13 @@ static int topo_parse_io_device(struct wayca_topo *p_topo, const char *dir)
 	if (strstr(dir, "pci")) {
 		ret = topo_parse_pci_device(p_topo, dir);
 		if (ret) {
-			PRINT_ERROR("parse pci device fail, ret = %d", ret);
+			PRINT_ERROR("parse pci device fail, ret = %d\n", ret);
 			return ret;
 		}
 	} else if (strstr(dir, "smmu")) {
 		ret = topo_parse_smmu(p_topo, dir);
 		if (ret) {
-			PRINT_ERROR("parse smmu fail, ret = %d", ret);
+			PRINT_ERROR("parse smmu fail, ret = %d\n", ret);
 			return ret;
 		}
 	} else {
