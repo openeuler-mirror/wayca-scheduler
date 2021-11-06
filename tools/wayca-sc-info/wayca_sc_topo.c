@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <inttypes.h>
 #include "wayca-scheduler.h"
 #include "wayca_sc_info.h"
 
@@ -24,23 +25,41 @@ typedef int (*topo_format_t)(xmlDocPtr doc, xmlValidCtxtPtr ctxt,
 typedef int (*topo_verify_prop_t)(xmlNodePtr node);
 typedef int (*topo_print_prop_t)(xmlNodePtr node);
 
+static int output_irq;
+static int output_dev;
+
 static int numa_prop_print(xmlNodePtr node);
 static int numa_prop_verify(xmlNodePtr node);
 static int numa_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd);
 static int numa_elem_build(xmlNodePtr node);
-static int sys_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd);
 static int system_elem_build(xmlNodePtr node);
-static int pkg_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd);
+static int sys_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd);
 static int package_elem_build(xmlNodePtr node);
-static int ccl_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd);
+static int pkg_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd);
 static int ccl_elem_build(xmlNodePtr node);
-static int core_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd);
+static int ccl_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd);
 static int core_elem_build(xmlNodePtr node);
-static int core_prop_print(xmlNodePtr node);
+static int core_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd);
 static int core_prop_verify(xmlNodePtr node);
-static int cpu_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd);
+static int core_prop_print(xmlNodePtr node);
 static int cpu_elem_build(xmlNodePtr node);
-
+static int cpu_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd);
+static int intr_elem_build(xmlNodePtr node);
+static int intr_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd);
+static int irq_elem_build(xmlNodePtr node);
+static int irq_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd);
+static int irq_prop_verify(xmlNodePtr node);
+static int irq_prop_print(xmlNodePtr node);
+static int pci_dev_elem_build(xmlNodePtr node);
+static int pci_dev_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt,
+		xmlDtdPtr topo_dtd);
+static int pci_prop_verify(xmlNodePtr node);
+static int pci_prop_print(xmlNodePtr node);
+static int smmu_dev_elem_build(xmlNodePtr node);
+static int smmu_dev_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt,
+		xmlDtdPtr topo_dtd);
+static int smmu_prop_verify(xmlNodePtr node);
+static int smmu_prop_print(xmlNodePtr node);
 /*
  * In order to ensure subsequent expansion, we cannot introduce the concept of
  * order for topo_elem, so that there can be multiple elems in a level in the
@@ -48,19 +67,27 @@ static int cpu_elem_build(xmlNodePtr node);
  */
 static struct {
 	const char *name;
+	bool has_idx;
 	topo_elem_build_t elem_build;
 	topo_format_t format;
 	topo_verify_prop_t prop_verify;
 	topo_print_prop_t prop_print;
 } topo_elem[] = {
-	{"System", system_elem_build, sys_format, NULL, NULL},
-	{"Package", package_elem_build, pkg_format, NULL, NULL},
-	{"NUMANode", numa_elem_build, numa_format, numa_prop_verify,
+	{"System", false, system_elem_build, sys_format, NULL, NULL},
+	{"Package", true, package_elem_build, pkg_format, NULL, NULL},
+	{"NUMANode", true, numa_elem_build, numa_format, numa_prop_verify,
 		numa_prop_print},
-	{"Cluster", ccl_elem_build, ccl_format, NULL, NULL},
-	{"Core", core_elem_build, core_format, core_prop_verify,
+	{"Cluster", true, ccl_elem_build, ccl_format, NULL, NULL},
+	{"Core", true, core_elem_build, core_format, core_prop_verify,
 		core_prop_print},
-	{"CPU", cpu_elem_build, cpu_format, NULL, NULL},
+	{"CPU", true, cpu_elem_build, cpu_format, NULL, NULL},
+	{"Interrupt", false, intr_elem_build, intr_format, NULL, NULL},
+	{"IRQ", false, irq_elem_build, irq_format, irq_prop_verify,
+		irq_prop_print},
+	{"PCIDEV", false, pci_dev_elem_build, pci_dev_format, pci_prop_verify,
+		pci_prop_print},
+	{"SMMUDEV", false, smmu_dev_elem_build, smmu_dev_format,
+		smmu_prop_verify, smmu_prop_print},
 };
 
 enum topo_level {
@@ -70,17 +97,51 @@ enum topo_level {
 	TOPO_CCL,
 	TOPO_CORE,
 	TOPO_CPU,
+	TOPO_INTR,
+	TOPO_IRQ,
+	TOPO_PCIDEV,
+	TOPO_SMMUDEV,
 	TOPO_MAX
 };
 
-static const char *numa_prop_list[] = {
+static const char * const numa_prop_list[] = {
 	"mem_size", "L3_cache",
 };
 
-static const char *core_prop_list[] = {
+static const char * const core_prop_list[] = {
 	"L1i_cache", "L1d_cache", "L2_cache",
 };
 
+static bool is_valid_num(const char *num, int base, long min, long max)
+{
+	long ret;
+	char *endstr;
+
+	errno = 0;
+	ret = strtol(num, &endstr, base);
+	if (endstr == num || errno != 0)
+		return false;
+	return *endstr == '\0' && ret >= min && ret <= max;
+}
+
+static int print_prop_list(xmlNodePtr node, const char * const *prop_list,
+			   int list_size)
+{
+	char *prop;
+	int i;
+
+	for (i = 0; i < list_size; i++) {
+		prop = (char *)xmlGetProp(node, BAD_CAST prop_list[i]);
+		if (!prop) {
+			topo_err("get %s prop %s failed.", node->name,
+					prop_list[i]);
+			return -ENOENT;
+		}
+		printf("   %s %s", prop_list[i], prop);
+		xmlFree(prop);
+	}
+	return 0;
+}
 /*
  * @elem_list: first elem is the elem to be verified, sequence elems is valid
  *             elem for this verified elem.
@@ -89,7 +150,7 @@ static const char *core_prop_list[] = {
  *   negative on error
  */
 static int add_elem_formater(xmlDocPtr doc, xmlValidCtxtPtr ctxt,
-		xmlDtdPtr topo_dtd, const char **elem_list, size_t size)
+		xmlDtdPtr topo_dtd, const char * const *elem_list, size_t size)
 {
 
 	xmlElementContentPtr ancestor_cont;
@@ -133,6 +194,68 @@ static int add_elem_formater(xmlDocPtr doc, xmlValidCtxtPtr ctxt,
 	return 0;
 }
 
+/*
+ * @attr_list: first element of the list is the node name, sequence elements
+ *             are the attributes which belong to this node.
+ * @size: size of this attr_list
+ * return:
+ *   negative on error
+ */
+static int add_attr_formater(xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd,
+				  const char * const *attr_list, size_t size)
+{
+	xmlAttributePtr attr;
+	int i;
+
+	if (size < 2) {
+		topo_err("not enough attributes.");
+		return -EINVAL;
+	}
+
+	for (i = 1; i < size; i++) {
+		attr = xmlAddAttributeDecl(ctxt, topo_dtd,
+					   BAD_CAST attr_list[0],
+					   BAD_CAST attr_list[i], NULL,
+					   XML_ATTRIBUTE_CDATA,
+					   XML_ATTRIBUTE_REQUIRED, NULL, NULL);
+
+		if (!attr) {
+			topo_err("add %s attributes formater for %s fail.",
+					attr_list[i], attr_list[0]);
+			return -ENOMEM;
+		}
+	}
+	return 0;
+}
+
+static int get_index_from_prop(xmlNodePtr node, int *index)
+{
+	char *index_prop;
+	char *endptr;
+	int ret = 0;
+
+	index_prop = (char *)xmlGetProp(node, BAD_CAST "index");
+	if (!index_prop) {
+		topo_err("get %s node index fail.", node->name);
+		return -ENOENT;
+	}
+
+	errno = 0;
+	*index = strtol(index_prop, &endptr, 10);
+	if (endptr == index_prop || errno != 0) {
+		xmlFree(index_prop);
+		if (errno) {
+			ret = -errno;
+			goto prop_free;
+		}
+		ret = -EINVAL;
+	}
+
+prop_free:
+	xmlFree(index_prop);
+	return ret;
+}
+
 static int build_prop_index(xmlNodePtr node, int id)
 {
 #define MAX_INT_SIZE 32
@@ -150,8 +273,8 @@ static int topo_build_next_elem(xmlNodePtr node, int index, int c_elem_nr,
 		const xmlChar *next_elem)
 {
 	xmlNodePtr c_node;
+	int i, j;
 	int ret;
-	int i;
 
 	for (i = index * c_elem_nr; i < (index + 1) * c_elem_nr; i++) {
 		c_node = xmlNewChild(node, NULL, next_elem, NULL);
@@ -159,6 +282,13 @@ static int topo_build_next_elem(xmlNodePtr node, int index, int c_elem_nr,
 			topo_err("fail to create sub node %d", i);
 			return -ENOMEM;
 		}
+
+		for (j = 0; j < ARRAY_SIZE(topo_elem); j++) {
+			if (!(strcmp((char *)c_node->name, topo_elem[j].name)))
+				break;
+		}
+		if (j >= ARRAY_SIZE(topo_elem) || !topo_elem[j].has_idx)
+			continue;
 
 		ret = build_prop_index(c_node, i);
 		if (ret)
@@ -194,7 +324,7 @@ static int cpu_elem_build(xmlNodePtr node)
 
 static int cpu_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd)
 {
-	const char *cpu_elem_list[] = {
+	static const char * const cpu_elem_list[] = {
 		"CPU", NULL,
 	};
 
@@ -211,18 +341,12 @@ static int cpu_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd)
 
 static int core_prop_print(xmlNodePtr node)
 {
-	char *prop;
-	int i;
+	int ret;
 
-	for (i = 0; i < ARRAY_SIZE(core_prop_list); i++) {
-		prop = (char *)xmlGetProp(node, BAD_CAST core_prop_list[i]);
-		if (!prop) {
-			topo_err("get %s prop %s failed.", node->name,
-					core_prop_list[i]);
-			return -ENOENT;
-		}
-		printf("   %s %s", core_prop_list[i], prop);
-		xmlFree(prop);
+	ret = print_prop_list(node, core_prop_list, ARRAY_SIZE(core_prop_list));
+	if (ret) {
+		topo_err("fail to print node %s properties.", node->name);
+		return ret;
 	}
 	return 0;
 }
@@ -258,8 +382,11 @@ static int core_prop_build(xmlNodePtr numa_node, int core_id)
 
 static int core_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd)
 {
-	const char *core_elem_list[] = {
+	static const char * const core_elem_list[] = {
 		"Core", "CPU",
+	};
+	static const char * const core_attr_list[] = {
+		"Core", "L2_cache", "L1i_cache", "L1d_cache"
 	};
 	int ret;
 
@@ -270,17 +397,12 @@ static int core_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd)
 		return ret;
 	}
 
-	xmlAddAttributeDecl(ctxt, topo_dtd, BAD_CAST "Core",
-			BAD_CAST "L2_cache", NULL, XML_ATTRIBUTE_CDATA,
-			XML_ATTRIBUTE_REQUIRED, NULL, NULL);
-
-	xmlAddAttributeDecl(ctxt, topo_dtd, BAD_CAST "Core",
-			BAD_CAST "L1i_cache", NULL, XML_ATTRIBUTE_CDATA,
-			XML_ATTRIBUTE_REQUIRED, NULL, NULL);
-
-	xmlAddAttributeDecl(ctxt, topo_dtd, BAD_CAST "Core",
-			BAD_CAST "L1d_cache", NULL, XML_ATTRIBUTE_CDATA,
-			XML_ATTRIBUTE_REQUIRED, NULL, NULL);
+	ret = add_attr_formater(ctxt, topo_dtd, core_attr_list,
+				     ARRAY_SIZE(core_attr_list));
+	if (ret) {
+		topo_err("build core attr formater fail, ret = %d.", ret);
+		return ret;
+	}
 	return 0;
 }
 
@@ -310,26 +432,13 @@ static int core_prop_verify(xmlNodePtr node)
 static int core_elem_build(xmlNodePtr node)
 {
 	const xmlChar *next_elem = BAD_CAST topo_elem[TOPO_CPU].name;
-	char *index_prop;
-	char *endptr;
 	int c_nr = 1;
 	int core_id;
 	int ret;
 
-	index_prop = (char *)xmlGetProp(node, BAD_CAST "index");
-	if (!index_prop) {
-		topo_err("get core index fail.");
-		return -EINVAL;
-	}
-	errno = 0; /* errno may be a residual value */
-	core_id = strtol(index_prop, &endptr, 10);
-	if (endptr == index_prop || errno != 0) {
-		xmlFree(index_prop);
-		if (errno)
-			return -errno;
-		return -EINVAL;
-	}
-	xmlFree(index_prop);
+	ret = get_index_from_prop(node, &core_id);
+	if (ret)
+		return ret;
 
 	ret = core_prop_build(node, core_id);
 	if (ret) {
@@ -345,7 +454,7 @@ static int core_elem_build(xmlNodePtr node)
 
 static int ccl_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd)
 {
-	const char *ccl_elem_list[] = {
+	static const char * const ccl_elem_list[] = {
 		"Cluster", "Core",
 	};
 	int ret;
@@ -362,26 +471,13 @@ static int ccl_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd)
 static int ccl_elem_build(xmlNodePtr node)
 {
 	const xmlChar *next_elem = BAD_CAST topo_elem[TOPO_CORE].name;
-	char *index_prop;
-	char *endptr;
 	int c_nr = 1;
 	int ccl_id;
 	int ret;
 
-	index_prop = (char *)xmlGetProp(node, BAD_CAST "index");
-	if (!index_prop) {
-		topo_err("get cluster index fail.");
-		return -ENOENT;
-	}
-	errno = 0; /* errno may be a residual value */
-	ccl_id = strtol(index_prop, &endptr, 10);
-	if (endptr == index_prop || errno != 0) {
-		xmlFree(index_prop);
-		if (errno)
-			return -errno;
-		return -EINVAL;
-	}
-	xmlFree(index_prop);
+	ret = get_index_from_prop(node, &ccl_id);
+	if (ret)
+		return ret;
 
 	c_nr = wayca_sc_cpus_in_ccl();
 	if (c_nr < 0) {
@@ -398,10 +494,12 @@ static int ccl_elem_build(xmlNodePtr node)
 
 static int numa_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd)
 {
-	const char *numa_elem_list[] = {
-		"NUMANode", "Cluster", "Core"
+	static const char * const numa_elem_list[] = {
+		"NUMANode", "Cluster", "Core", "PCIDEV", "SMMUDEV"
 	};
-	xmlAttributePtr attr;
+	static const char * const numa_attr_list[] = {
+		"NUMANode", "mem_size", "L3_cache"
+	};
 	int ret;
 
 	ret = add_elem_formater(doc, ctxt, topo_dtd, numa_elem_list,
@@ -411,21 +509,11 @@ static int numa_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd)
 		return ret;
 	}
 
-	attr = xmlAddAttributeDecl(ctxt, topo_dtd, BAD_CAST "NUMANode",
-			BAD_CAST "mem_size", NULL, XML_ATTRIBUTE_CDATA,
-			XML_ATTRIBUTE_REQUIRED, NULL, NULL);
-
-	if (!attr) {
-		topo_err("add mem_size prop formater fail.");
-		return -ENOMEM;
-	}
-
-	attr = xmlAddAttributeDecl(ctxt, topo_dtd, BAD_CAST "NUMANode",
-			BAD_CAST "L3_cache", NULL, XML_ATTRIBUTE_CDATA,
-			XML_ATTRIBUTE_REQUIRED, NULL, NULL);
-	if (!attr) {
-		topo_err("add L3 cache prop formater fail.");
-		return -ENOMEM;
+	ret = add_attr_formater(ctxt, topo_dtd, numa_attr_list,
+				     ARRAY_SIZE(numa_attr_list));
+	if (ret) {
+		topo_err("build numa node attr formater fail, ret = %d.", ret);
+		return ret;
 	}
 	return 0;
 }
@@ -459,29 +547,88 @@ static int numa_prop_build(xmlNodePtr numa_node, int numa_id)
 	return ret;
 }
 
+static int get_dev_elem_type(enum wayca_sc_device_type dev_type,
+			     const xmlChar **elem, const xmlChar **attr)
+{
+	switch (dev_type) {
+	case WAYCA_SC_TOPO_DEV_TYPE_PCI:
+		*elem = BAD_CAST topo_elem[TOPO_PCIDEV].name;
+		*attr = BAD_CAST "slot";
+		break;
+	case WAYCA_SC_TOPO_DEV_TYPE_SMMU:
+		*elem = BAD_CAST topo_elem[TOPO_SMMUDEV].name;
+		*attr = BAD_CAST "name";
+		break;
+	default:
+		return -ENOENT;
+	}
+
+	return 0;
+}
+
+static int numa_dev_elem_build(xmlNodePtr numa_node, int numa_id)
+{
+	struct wayca_sc_device_info dev_info;
+	const xmlChar *next_elem;
+	const xmlChar *idx_attr;
+	const char **names;
+	xmlNodePtr node;
+	xmlAttrPtr prop;
+	size_t dev_nr;
+	int ret;
+	int i;
+
+	ret = wayca_sc_get_device_list(numa_id, &dev_nr, NULL);
+	if (ret || !dev_nr)
+		return ret;
+
+	names = (const char **)calloc(dev_nr, sizeof(const char *));
+	if (!names)
+		return -ENOMEM;
+
+	ret = wayca_sc_get_device_list(numa_id, &dev_nr, names);
+	if (ret)
+		goto buffer_free;
+
+	for (i = 0; i < dev_nr; i++) {
+		ret = wayca_sc_get_device_info(names[i], &dev_info);
+		if (ret)
+			goto buffer_free;
+
+		ret = get_dev_elem_type(dev_info.dev_type, &next_elem,
+				&idx_attr);
+		if (ret)
+			goto buffer_free;
+
+		node = xmlNewChild(numa_node, NULL, next_elem, NULL);
+		if (!node) {
+			topo_err("fail to create device node %s", names[i]);
+			ret = -ENOMEM;
+			goto buffer_free;
+		}
+
+		prop = xmlNewProp(node, idx_attr, BAD_CAST names[i]);
+		if (!prop) {
+			ret = -ENOMEM;
+			goto buffer_free;
+		}
+	}
+
+buffer_free:
+	free(names);
+	return ret;
+}
+
 static int numa_elem_build(xmlNodePtr node)
 {
 	const xmlChar *next_elem = BAD_CAST topo_elem[TOPO_CCL].name;
-	char *index_prop;
-	char *endptr;
 	int numa_id;
 	int c_nr;
 	int ret;
 
-	index_prop = (char *)xmlGetProp(node, BAD_CAST "index");
-	if (!index_prop) {
-		topo_err("get numa node index fail.");
-		return -ENOENT;
-	}
-	errno = 0; /* errno may be a residual value */
-	numa_id = strtol(index_prop, &endptr, 10);
-	if (endptr == index_prop || errno != 0) {
-		xmlFree(index_prop);
-		if (errno)
-			return -errno;
-		return -EINVAL;
-	}
-	xmlFree(index_prop);
+	ret = get_index_from_prop(node, &numa_id);
+	if (ret)
+		return ret;
 
 	ret = numa_prop_build(node, numa_id);
 	if (ret) {
@@ -492,7 +639,7 @@ static int numa_elem_build(xmlNodePtr node)
 	c_nr = wayca_sc_ccls_in_node();
 	if (c_nr < 0) {
 		topo_warn("number of clusters is invalid, cluster level may not be supported.");
-		c_nr = wayca_sc_cpus_in_node();
+		c_nr = wayca_sc_cores_in_node();
 		if (c_nr < 0) {
 			topo_err("number of core is wrong.");
 			return c_nr;
@@ -501,8 +648,17 @@ static int numa_elem_build(xmlNodePtr node)
 	}
 
 	ret = topo_build_next_elem(node, numa_id, c_nr, next_elem);
-	if (ret)
+	if (ret) {
 		topo_err("fail to create numa node.");
+		return ret;
+	}
+
+	if (!output_dev)
+		return ret;
+
+	ret = numa_dev_elem_build(node, numa_id);
+	if (ret)
+		topo_err("fail to create device node in numa.");
 
 	return ret;
 }
@@ -510,7 +666,7 @@ static int numa_elem_build(xmlNodePtr node)
 static int pkg_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt,
 		xmlDtdPtr topo_dtd)
 {
-	const char *pkg_elem_list[] = {
+	static const char * const pkg_elem_list[] = {
 		"Package", "NUMANode",
 	};
 	int ret;
@@ -527,9 +683,7 @@ static int pkg_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt,
 static int package_elem_build(xmlNodePtr node)
 {
 	const xmlChar *next_elem = BAD_CAST topo_elem[TOPO_NUMA].name;
-	char *index_prop;
 	int package_id;
-	char *endptr;
 	int numa_nr;
 	int ret;
 
@@ -539,20 +693,9 @@ static int package_elem_build(xmlNodePtr node)
 		return numa_nr;
 	}
 
-	index_prop = (char *)xmlGetProp(node, BAD_CAST "index");
-	if (!index_prop) {
-		topo_err("get package index fail.");
-		return -ENOENT;
-	}
-	errno = 0; /* errno may be a residual value */
-	package_id = strtol(index_prop, &endptr, 10);
-	if (endptr == index_prop || errno != 0) {
-		xmlFree(index_prop);
-		if (errno)
-			return -errno;
-		return -EINVAL;
-	}
-	xmlFree(index_prop);
+	ret = get_index_from_prop(node, &package_id);
+	if (ret)
+		return ret;
 
 	ret = topo_build_next_elem(node, package_id, numa_nr, next_elem);
 	if (ret)
@@ -563,8 +706,8 @@ static int package_elem_build(xmlNodePtr node)
 
 static int sys_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd)
 {
-	const char *sys_elem_list[] = {
-		"System", "Package",
+	static const char * const sys_elem_list[] = {
+		"System", "Package", "Interrupt"
 	};
 	int ret;
 
@@ -579,7 +722,7 @@ static int sys_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd)
 
 static int system_elem_build(xmlNodePtr node)
 {
-	const xmlChar *next_elem = BAD_CAST topo_elem[TOPO_PKG].name;
+	const xmlChar *next_elem;
 	int package_nr;
 	int ret;
 
@@ -589,9 +732,20 @@ static int system_elem_build(xmlNodePtr node)
 		return package_nr;
 	}
 
+	next_elem = BAD_CAST topo_elem[TOPO_PKG].name;
 	ret = topo_build_next_elem(node, 0, package_nr, next_elem);
-	if (ret)
+	if (ret) {
 		topo_err("fail to create package node.");
+		return ret;
+	}
+
+	if (!output_irq)
+		return ret;
+
+	next_elem = BAD_CAST topo_elem[TOPO_INTR].name;
+	ret = topo_build_next_elem(node, 0, 1, next_elem);
+	if (ret)
+		topo_err("fail to create interrupts node.");
 
 	return ret;
 }
@@ -603,16 +757,16 @@ static int build_topo(xmlNodePtr node)
 	int ret;
 	int i;
 
-	for (i = 0; i < ARRAY_SIZE(topo_elem); i++) {
-		if (!(strcmp((char *)node->name, topo_elem[i].name)))
-			break;
-	}
-
-	if (i >= ARRAY_SIZE(topo_elem) || !topo_elem[i].elem_build)
-		return 0;
-
 	for (cur_node = node; cur_node;
 				cur_node = xmlNextElementSibling(cur_node)) {
+		for (i = 0; i < ARRAY_SIZE(topo_elem); i++) {
+			if (!(strcmp((char *)cur_node->name, topo_elem[i].name)))
+				break;
+		}
+
+		if (i >= ARRAY_SIZE(topo_elem) || !topo_elem[i].elem_build)
+			return -ENOENT;
+
 		ret = topo_elem[i].elem_build(cur_node);
 		if (ret)
 			return ret;
@@ -667,6 +821,43 @@ build_fail:
 	return ret;
 }
 
+static xmlNodePtr xml_find_node(xmlNodePtr last_node, const char *node_name)
+{
+	xmlNode *cur_node;
+
+	if (!last_node)
+		return NULL;
+
+	while (last_node) {
+		if ((last_node->type == XML_ELEMENT_NODE) &&
+				!strcmp((char *)last_node->name, node_name))
+			return last_node;
+
+		cur_node = xml_find_node(last_node->children, node_name);
+		if (cur_node)
+			return cur_node;
+
+		last_node = last_node->next;
+	}
+
+	return NULL;
+}
+
+static void xml_delete_special_node(xmlDocPtr topo_doc, const char *del_node)
+{
+	xmlNodePtr root_node;
+	xmlNodePtr node;
+
+	root_node = xmlDocGetRootElement(topo_doc);
+
+	node = xml_find_node(root_node, del_node);
+	while (node) {
+		xmlUnlinkNode(node);
+		xmlFreeNode(node);
+		node = xml_find_node(root_node, del_node);
+	}
+}
+
 static int xml_import_topo_info(const char *filename, xmlDocPtr *topo_doc)
 {
 	int ret;
@@ -682,6 +873,13 @@ static int xml_import_topo_info(const char *filename, xmlDocPtr *topo_doc)
 		topo_err("parse xml file fail.");
 		return -ENOENT;
 	}
+
+	if (!output_irq)
+		xml_delete_special_node(*topo_doc, "IRQ");
+	if (!output_dev) {
+		xml_delete_special_node(*topo_doc, "SMMUDEV");
+		xml_delete_special_node(*topo_doc, "PCIDEV");
+	}
 	return 0;
 }
 
@@ -689,6 +887,8 @@ int get_topo_info(struct topo_info_args *args, xmlDocPtr *topo_doc)
 {
 	int ret;
 
+	output_dev = args->output_dev;
+	output_irq = args->output_irq;
 	if (args->has_input_file)
 		ret = xml_import_topo_info(args->input_file_name, topo_doc);
 	else
@@ -698,40 +898,44 @@ int get_topo_info(struct topo_info_args *args, xmlDocPtr *topo_doc)
 
 static int numa_prop_print(xmlNodePtr node)
 {
-	char *prop;
-	int i;
+	int ret;
 
-	for (i = 0; i < ARRAY_SIZE(numa_prop_list); i++) {
-		prop = (char *)xmlGetProp(node, BAD_CAST numa_prop_list[i]);
-		if (!prop) {
-			topo_err("get prop %s failed", numa_prop_list[i]);
-			return -ENOENT;
-		}
-		printf("   %s %s", numa_prop_list[i], prop);
-		xmlFree(prop);
+	ret = print_prop_list(node, numa_prop_list, ARRAY_SIZE(numa_prop_list));
+	if (ret) {
+		topo_err("fail to print node %s properties.", node->name);
+		return ret;
 	}
+	return 0;
+}
+
+static int print_index(xmlNodePtr node)
+{
+	char *index_prop;
+
+	index_prop = (char *)xmlGetProp(node, BAD_CAST "index");
+	if (!index_prop) {
+		topo_err("get index fail.");
+		return -ENOENT;
+	}
+	printf(" #%s", index_prop);
+	xmlFree(index_prop);
 	return 0;
 }
 
 static int print_prop(xmlNodePtr node)
 {
-	char *index_prop;
 	int ret = 0;
 	int i;
-
-	if (strcmp((char *)node->name, topo_elem[TOPO_SYS].name)) {
-		index_prop = (char *)xmlGetProp(node, BAD_CAST "index");
-		if (!index_prop) {
-			topo_err("get index fail.");
-			return -ENOENT;
-		}
-		printf(" #%s", index_prop);
-		xmlFree(index_prop);
-	}
 
 	for (i = 0; i < ARRAY_SIZE(topo_elem); i++) {
 		if (strcmp((char *)node->name, topo_elem[i].name))
 			continue;
+
+		if (topo_elem[i].has_idx) {
+			ret = print_index(node);
+			if (ret)
+				return ret;
+		}
 		if (!topo_elem[i].prop_print)
 			continue;
 
@@ -794,7 +998,24 @@ static int xml_export_topo_info(const char *filename, xmlDocPtr topo_doc)
 
 int put_topo_info(struct topo_info_args *args, xmlDocPtr topo_doc)
 {
+	xmlNodePtr root_node;
 	int ret;
+
+	root_node = xmlDocGetRootElement(topo_doc);
+	if (!root_node)
+		return -EINVAL;
+
+	if (output_dev) {
+		if (!xml_find_node(root_node, "PCIDEV"))
+			topo_warn("no PCIDEV node present.");
+		if (!xml_find_node(root_node, "SMMUDEV"))
+			topo_warn("no SMMUDEV node present.");
+	}
+
+	if (output_irq) {
+		if (!xml_find_node(root_node, "IRQ"))
+			topo_warn("no IRQ node present.");
+	}
 
 	if (args->has_output_file)
 		ret = xml_export_topo_info(args->output_file_name, topo_doc);
@@ -835,9 +1056,9 @@ static int validate_format(xmlDocPtr topo_doc)
 		if (ret)
 			goto free_format;
 
-		if (i == 0)
+		if (!topo_elem[i].has_idx)
 			continue;
-		/* register index attribute for each element except System */
+
 		xmlAddAttributeDecl(ctxt, topo_dtd, BAD_CAST topo_elem[i].name,
 			BAD_CAST "index", NULL, XML_ATTRIBUTE_CDATA,
 			XML_ATTRIBUTE_REQUIRED, NULL, NULL);
@@ -864,7 +1085,7 @@ static int numa_prop_verify(xmlNodePtr node)
 		}
 		if (!is_valid_memory_size(prop, "KB")) {
 			topo_err("%s: invalid %s: %s.", node->name,
-					core_prop_list[i], prop);
+					numa_prop_list[i], prop);
 			xmlFree(prop);
 			return -EINVAL;
 		}
@@ -961,3 +1182,450 @@ int validate_topo_info(xmlDocPtr topo_doc)
 	return 0;
 }
 
+static int intr_elem_build(xmlNodePtr intr)
+{
+#define MAX_INT_SIZE 32
+	char irq_number[MAX_INT_SIZE] = {0};
+	xmlNodePtr node;
+	xmlAttrPtr prop;
+	uint32_t *irqs;
+	size_t irq_nr;
+	int ret;
+	int i;
+
+	ret = wayca_sc_get_irq_list(&irq_nr, NULL);
+	if (ret || !irq_nr)
+		return ret;
+
+	irqs = (uint32_t *)calloc(irq_nr, sizeof(uint32_t));
+	if (!irqs)
+		return -ENOMEM;
+
+	ret = wayca_sc_get_irq_list(&irq_nr, irqs);
+	if (ret)
+		goto buffer_free;
+
+	for (i = 0; i < irq_nr; i++) {
+		node = xmlNewChild(intr, NULL, BAD_CAST "IRQ", NULL);
+		if (!node) {
+			topo_err("fail to create IRQ node %u", irqs[i]);
+			ret = -ENOMEM;
+			goto buffer_free;
+		}
+
+		snprintf(irq_number, sizeof(irq_number), "%u", irqs[i]);
+		prop = xmlNewProp(node, BAD_CAST "irq_number",
+					BAD_CAST irq_number);
+		if (!prop) {
+			ret = -ENOMEM;
+			goto buffer_free;
+		}
+	}
+
+buffer_free:
+	free(irqs);
+	return ret;
+}
+
+static int pci_dev_elem_build(xmlNodePtr pci_node)
+{
+	struct wayca_sc_device_info dev_info;
+	char content[100] = {0};
+	const char *pci_slot;
+	xmlAttrPtr prop;
+	int ret;
+
+	pci_slot = (char *)xmlGetProp(pci_node, BAD_CAST "slot");
+	if (!pci_slot) {
+		topo_err("get pci slot index fail.");
+		return -ENOENT;
+	}
+
+	ret = wayca_sc_get_device_info(pci_slot, &dev_info);
+	if (ret)
+		return ret;
+
+	snprintf(content, sizeof(content), "%d", dev_info.smmu_idx);
+	prop = xmlNewProp(pci_node, BAD_CAST"smmu_idx", BAD_CAST content);
+	if (!prop)
+		return -ENOMEM;
+
+	snprintf(content, sizeof(content), "0x%x", dev_info.class);
+	prop = xmlNewProp(pci_node, BAD_CAST"class_id", BAD_CAST content);
+	if (!prop)
+		return -ENOMEM;
+
+	snprintf(content, sizeof(content), "0x%x", dev_info.vendor);
+	prop = xmlNewProp(pci_node, BAD_CAST"vendor_id", BAD_CAST content);
+	if (!prop)
+		return -ENOMEM;
+
+	snprintf(content, sizeof(content), "0x%x", dev_info.device);
+	prop = xmlNewProp(pci_node, BAD_CAST"device_id", BAD_CAST content);
+	if (!prop)
+		return -ENOMEM;
+
+	snprintf(content, sizeof(content), "%d", dev_info.nb_irq);
+	prop = xmlNewProp(pci_node, BAD_CAST"irq_nr", BAD_CAST content);
+	if (!prop)
+		return -ENOMEM;
+
+	return 0;
+}
+
+static int smmu_dev_elem_build(xmlNodePtr smmu_node)
+{
+	struct wayca_sc_device_info dev_info;
+	char content[100] = {0};
+	const char *name;
+	xmlAttrPtr prop;
+	int ret;
+
+	name = (char *)xmlGetProp(smmu_node, BAD_CAST "name");
+	if (!name) {
+		topo_err("get smmu name fail.");
+		return -ENOENT;
+	}
+
+	ret = wayca_sc_get_device_info(name, &dev_info);
+	if (ret)
+		return ret;
+
+	snprintf(content, sizeof(content), "%d", dev_info.smmu_idx);
+	prop = xmlNewProp(smmu_node, BAD_CAST"smmu_idx", BAD_CAST content);
+	if (!prop)
+		return -ENOMEM;
+
+	snprintf(content, sizeof(content), "0x%" PRIx64, dev_info.base_addr);
+	prop = xmlNewProp(smmu_node, BAD_CAST"base_addr", BAD_CAST content);
+	if (!prop)
+		return -ENOMEM;
+
+	snprintf(content, sizeof(content), "%s", dev_info.modalias);
+	prop = xmlNewProp(smmu_node, BAD_CAST"modalias", BAD_CAST content);
+	if (!prop)
+		return -ENOMEM;
+	return 0;
+}
+
+static int topo_str2ul(char *str, unsigned long *num)
+{
+	char *endptr;
+
+	errno = 0;
+	*num = strtoul(str, &endptr, 10);
+	if (endptr == str || errno != 0) {
+		if (errno)
+			return -errno;
+		return -EINVAL;
+	}
+	return 0;
+}
+
+static const char * const irq_chip_string[] = {
+	"invalid",
+	"mbigen-v2",
+	"ITS-MSI",
+	"ITS-pMSI",
+	"GICv3",
+};
+
+static const char * const irq_type_string[] = {
+	"invalid",
+	"edge",
+	"level",
+};
+
+static int irq_prop_build(xmlNodePtr numa_node, unsigned long irq_num)
+{
+	struct wayca_sc_irq_info irq_info;
+	char content[100] = {0};
+	xmlAttrPtr prop;
+	int ret;
+
+	ret = wayca_sc_get_irq_info(irq_num, &irq_info);
+	if (ret) {
+		topo_err("fail to get irq information, ret = %lu.", irq_num,
+				ret);
+		return ret;
+	}
+
+	snprintf(content, sizeof(content), "%s", irq_info.name);
+	prop = xmlNewProp(numa_node, BAD_CAST"name", BAD_CAST content);
+	if (!prop)
+		return -ENOMEM;
+
+	if (irq_info.chip_name >= ARRAY_SIZE(irq_chip_string))
+		return -EINVAL;
+	snprintf(content, sizeof(content), "%s",
+			irq_chip_string[irq_info.chip_name]);
+	prop = xmlNewProp(numa_node, BAD_CAST"chip_name", BAD_CAST content);
+	if (!prop)
+		return -ENOMEM;
+
+	if (irq_info.type >= ARRAY_SIZE(irq_type_string))
+		return -EINVAL;
+	snprintf(content, sizeof(content), "%s",
+			irq_type_string[irq_info.type]);
+	prop = xmlNewProp(numa_node, BAD_CAST"type", BAD_CAST content);
+	if (!prop)
+		return -ENOMEM;
+
+	return ret;
+}
+
+static int irq_elem_build(xmlNodePtr node)
+{
+	unsigned long irq_number;
+	char *irq_prop;
+	int ret;
+
+	irq_prop = (char *)xmlGetProp(node, BAD_CAST "irq_number");
+	if (!irq_prop) {
+		topo_err("get irq num fail.");
+		return -ENOENT;
+	}
+
+	ret = topo_str2ul(irq_prop, &irq_number);
+	xmlFree(irq_prop);
+	if (ret)
+		return ret;
+
+	ret = irq_prop_build(node, irq_number);
+	if (ret) {
+		topo_err("build irq properties fail, ret = %d.", ret);
+		return ret;
+	}
+
+	return 0;
+}
+
+static int intr_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd)
+{
+	static const char * const intr_elem_list[] = {
+		"Interrupt", "IRQ",
+	};
+	int ret;
+
+	ret = add_elem_formater(doc, ctxt, topo_dtd,
+				intr_elem_list, ARRAY_SIZE(intr_elem_list));
+	if (ret) {
+		topo_err("build interrupts formater fail, ret = %d.", ret);
+		return ret;
+	}
+	return 0;
+}
+
+static int pci_dev_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt,
+			  xmlDtdPtr topo_dtd)
+{
+	static const char * const pci_elem_list[] = {
+		"PCIDEV",
+		NULL,
+	};
+	static const char * const pci_attr_list[] = {
+		"PCIDEV",
+		"slot",
+		"smmu_idx",
+		"class_id",
+		"vendor_id",
+		"device_id",
+		"irq_nr"
+	};
+	int ret;
+
+	ret = add_elem_formater(doc, ctxt, topo_dtd,
+				pci_elem_list, ARRAY_SIZE(pci_elem_list));
+	if (ret) {
+		topo_err("build pci elem formater fail, ret = %d.", ret);
+		return ret;
+	}
+
+	ret = add_attr_formater(ctxt, topo_dtd, pci_attr_list,
+				     ARRAY_SIZE(pci_attr_list));
+	if (ret) {
+		topo_err("build pci attr formater fail, ret = %d.", ret);
+		return ret;
+	}
+
+	return 0;
+}
+
+static int smmu_dev_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd)
+{
+	static const char * const smmu_elem_list[] = {
+		"SMMUDEV",
+		NULL,
+	};
+	static const char * const smmu_attr_list[] = {
+		"SMMUDEV",
+		"name",
+		"smmu_idx",
+		"base_addr",
+		"modalias",
+	};
+	int ret;
+
+	ret = add_elem_formater(doc, ctxt, topo_dtd,
+				smmu_elem_list, ARRAY_SIZE(smmu_elem_list));
+	if (ret) {
+		topo_err("build pci elem formater fail, ret = %d.", ret);
+		return ret;
+	}
+
+	ret = add_attr_formater(ctxt, topo_dtd, smmu_attr_list,
+				     ARRAY_SIZE(smmu_attr_list));
+	if (ret) {
+		topo_err("build pci attr formater fail, ret = %d.", ret);
+		return ret;
+	}
+
+	return 0;
+}
+static int irq_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd)
+{
+	static const char * const irq_elem_list[] = {
+		"IRQ", NULL,
+	};
+	static const char * const irq_attr_list[] = {
+		"IRQ",
+		"irq_number",
+		"name",
+		"type",
+		"chip_name"
+	};
+	int ret;
+
+	ret = add_elem_formater(doc, ctxt, topo_dtd,
+				irq_elem_list, ARRAY_SIZE(irq_elem_list));
+	if (ret) {
+		topo_err("build irq formater fail, ret = %d.", ret);
+		return ret;
+	}
+
+	ret = add_attr_formater(ctxt, topo_dtd, irq_attr_list,
+				     ARRAY_SIZE(irq_attr_list));
+	if (ret) {
+		topo_err("build irq attr formater fail, ret = %d.", ret);
+		return ret;
+	}
+	return 0;
+}
+
+static int irq_prop_print(xmlNodePtr node)
+{
+	static const char * const irq_prop_list[] = {
+		"irq_number", "type", "chip_name", "name"
+	};
+	int ret;
+
+	ret = print_prop_list(node, irq_prop_list, ARRAY_SIZE(irq_prop_list));
+	if (ret) {
+		topo_err("fail to print node %s properties.", node->name);
+		return ret;
+	}
+	return 0;
+}
+
+static int pci_prop_print(xmlNodePtr node)
+{
+	static const char * const pci_prop_list[] = {
+		"slot",
+		"smmu_idx",
+		"class_id",
+		"vendor_id",
+		"device_id",
+		"irq_nr"
+	};
+
+	int ret;
+
+	ret = print_prop_list(node, pci_prop_list, ARRAY_SIZE(pci_prop_list));
+	if (ret) {
+		topo_err("fail to print node %s properties.", node->name);
+		return ret;
+	}
+	return 0;
+}
+
+static int smmu_prop_print(xmlNodePtr node)
+{
+	static const char * const smmu_prop_list[] = {
+		"name", "smmu_idx", "base_addr", "modalias"
+	};
+
+	int ret;
+
+	ret = print_prop_list(node, smmu_prop_list, ARRAY_SIZE(smmu_prop_list));
+	if (ret) {
+		topo_err("fail to print node %s properties.", node->name);
+		return ret;
+	}
+	return 0;
+}
+
+static int irq_prop_verify(xmlNodePtr node)
+{
+	char *prop;
+	int ret = 0;
+
+	prop = (char *)xmlGetProp(node, BAD_CAST "irq_number");
+	if (!prop) {
+		topo_err("get %s prop %s failed.", node->name, "irq_number");
+		return -ENOENT;
+	}
+
+	if (!is_valid_num(prop, WAYCA_SC_INFO_DEC_BASE, 0, UINT32_MAX)) {
+		topo_err("get %s prop %s failed.", node->name, "irq_number");
+		ret = -EINVAL;
+		goto prop_free;
+	}
+
+prop_free:
+	xmlFree(prop);
+	return ret;
+}
+
+static int pci_prop_verify(xmlNodePtr node)
+{
+	char *prop;
+	int ret = 0;
+
+	prop = (char *)xmlGetProp(node, BAD_CAST "smmu_idx");
+	if (!prop) {
+		topo_err("get %s prop %s failed.", node->name, "smmu_idx");
+		return -ENOENT;
+	}
+
+	if (!is_valid_num(prop, WAYCA_SC_INFO_DEC_BASE, -1, UINT8_MAX)) {
+		topo_err("get %s prop %s failed.", node->name, "smmu_idx");
+		ret = -EINVAL;
+		goto prop_free;
+	}
+
+prop_free:
+	xmlFree(prop);
+	return ret;
+}
+
+static int smmu_prop_verify(xmlNodePtr node)
+{
+	char *prop;
+	int ret = 0;
+
+	prop = (char *)xmlGetProp(node, BAD_CAST "smmu_idx");
+	if (!prop) {
+		topo_err("get %s prop %s failed.", node->name, "smmu_idx");
+		return -ENOENT;
+	}
+
+	if (!is_valid_num(prop, WAYCA_SC_INFO_DEC_BASE, -1, UINT8_MAX)) {
+		topo_err("get %s prop %s failed.", node->name, "smmu_idx");
+		ret = -EINVAL;
+		goto prop_free;
+	}
+
+prop_free:
+	xmlFree(prop);
+	return ret;
+}

@@ -20,10 +20,14 @@
 #include "lib/log.h"
 
 #define WAYCA_INFO_MAX_FILE_NAME (PATH_MAX + 1)
+#define WAYCA_SC_INFO_DEC_BASE 10
+#define WAYCA_SC_INFO_HEX_BASE 16
 
 struct topo_info_args {
 	bool has_input_file;
 	bool has_output_file;
+	bool output_irq;
+	bool output_dev;
 	char input_file_name[WAYCA_INFO_MAX_FILE_NAME];
 	char output_file_name[WAYCA_INFO_MAX_FILE_NAME];
 };
