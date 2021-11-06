@@ -228,6 +228,78 @@ static void test_get_cache_info()
 	printf("core 0 L3 cache: %dKB\n", ret);
 }
 
+static void test_get_device_info(void)
+{
+	struct wayca_sc_device_info dev_info = {0};
+	const char **dev_name;
+	size_t num;
+	int ret;
+
+	/* normal case */
+	ret = wayca_sc_get_device_list(0, &num, NULL);
+	assert(ret == 0);
+	ret = wayca_sc_get_device_list(-1, &num, NULL);
+	assert(ret == 0);
+	dev_name = (const char **)calloc(num, sizeof(char *));
+	assert(dev_name != NULL);
+	ret = wayca_sc_get_device_list(-1, &num, dev_name);
+	assert(ret == 0);
+
+	/* abnormal case */
+	ret = wayca_sc_get_device_list(0, NULL, dev_name);
+	assert(ret < 0);
+	ret = wayca_sc_get_device_list(0, NULL, NULL);
+	assert(ret < 0);
+
+	/* normal case */
+	ret = wayca_sc_get_device_info(dev_name[0], &dev_info);
+	assert(ret == 0);
+
+	/* abnormal case */
+	ret = wayca_sc_get_device_info(NULL, &dev_info);
+	assert(ret < 0);
+	ret = wayca_sc_get_device_info(dev_name[0], NULL);
+	assert(ret < 0);
+	free(dev_name);
+	printf("get device info successful.\n");
+}
+
+static void test_get_irq_info(void)
+{
+#define TEST_INVALID_IRQ 100000
+	struct wayca_sc_irq_info irq_info = {0};
+	uint32_t *irq;
+	size_t num;
+	int ret;
+
+	/* normal case */
+	ret = wayca_sc_get_irq_list(&num, NULL);
+	assert(ret == 0);
+	irq = (uint32_t *)calloc(num, sizeof(uint32_t));
+	assert(irq != NULL);
+	ret = wayca_sc_get_irq_list(&num, irq);
+	assert(ret == 0);
+
+	/* abnormal case */
+	ret = wayca_sc_get_irq_list(NULL, NULL);
+	assert(ret < 0);
+	ret = wayca_sc_get_irq_list(NULL, irq);
+	assert(ret < 0);
+
+	/* normal case */
+	ret = wayca_sc_get_irq_info(irq[0], &irq_info);
+	assert(ret == 0);
+
+	/* abnormal case */
+	ret = wayca_sc_get_irq_info(irq[0], NULL);
+	assert(ret < 0);
+	ret = wayca_sc_get_irq_info(TEST_INVALID_IRQ, &irq_info);
+	assert(ret < 0);
+
+	free(irq);
+	printf("get IRQ info successful.\n");
+}
+
 int main()
 {
 	wayca_sc_topo_print();
@@ -237,27 +309,8 @@ int main()
 	test_get_cpu_list();
 	test_get_cache_info();
 	test_get_io_info();
-
-	/* example: wayca_sc_get_pcidev_irqs() */
-	size_t sz;
-	unsigned int *p_irqs;
-	int ret, idx;
-	char (*p_irq_names)[WAYCA_SC_ATTR_STRING_LEN] = NULL;
-
-	ret = wayca_sc_get_pcidev_irqs("0000:bd:00.0" /* "0000:ba:01.0" */
-					, &sz, &p_irqs, (char **)&p_irq_names);
-	if (ret == 0) { /* succeeded */
-		printf("It has %lu irqs.\t", sz);
-		printf("They are: ");
-		for (idx = 0; idx < sz; idx ++) {
-			printf("%u\t", p_irqs[idx]);
-			printf("%s\t", p_irq_names[idx]);
-			printf("\n");
-		}
-	}
-	free(p_irqs);
-	free(p_irq_names);
-	/* end of example: wayca_sc_get_pcidev_irqs() */
+	test_get_device_info();
+	test_get_irq_info();
 
 	return 0;
 }

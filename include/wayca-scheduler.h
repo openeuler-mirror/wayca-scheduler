@@ -18,6 +18,7 @@
 
 #include <pthread.h>
 #include <unistd.h>
+#include <stdint.h>
 
 int wayca_sc_irq_bind_cpu(int irq, int cpu);
 int wayca_sc_get_irq_bind_cpu(int irq, size_t cpusetsize, cpu_set_t *cpuset);
@@ -72,8 +73,58 @@ int wayca_sc_get_l2_size(int cpu_id);
 int wayca_sc_get_l3_size(int cpu_id);
 
 int wayca_sc_get_node_mem_size(int node, unsigned long *size);
-int wayca_sc_get_pcidev_irqs(const char *dev_name, size_t *n_irqs,
-			     unsigned int **p_irqs, char **irq_names);
+enum wayca_sc_irq_type {
+	WAYCA_SC_TOPO_TYPE_INVAL,
+	WAYCA_SC_TOPO_TYPE_EDGE,
+	WAYCA_SC_TOPO_TYPE_LEVEL,
+};
+
+enum wayca_sc_irq_chip_name {
+	WAYCA_SC_TOPO_CHIP_NAME_INVAL,
+	WAYCA_SC_TOPO_CHIP_NAME_MBIGENV2,
+	WAYCA_SC_TOPO_CHIP_NAME_ITS_MSI,
+	WAYCA_SC_TOPO_CHIP_NAME_ITS_PMSI,
+	WAYCA_SC_TOPO_CHIP_NAME_GICV3,
+};
+
+struct wayca_sc_irq_info {
+	unsigned long irq_num;
+	enum wayca_sc_irq_chip_name chip_name;
+	enum wayca_sc_irq_type type;
+	const char *name;
+};
+
+int wayca_sc_get_irq_list(size_t *num, uint32_t *irq);
+int wayca_sc_get_irq_info(uint32_t irq_num, struct wayca_sc_irq_info *irq_info);
+
+enum wayca_sc_device_type {
+	WAYCA_SC_TOPO_DEV_TYPE_INVAL,
+	WAYCA_SC_TOPO_DEV_TYPE_PCI,
+	WAYCA_SC_TOPO_DEV_TYPE_SMMU,
+};
+
+struct wayca_sc_device_info {
+	const char *name; /* name which used to find the device in wayca_sc */
+	enum wayca_sc_device_type dev_type;
+	int smmu_idx;
+	int numa_node;
+	union {
+		struct {
+			uint64_t base_addr;
+			const char *modalias;
+		};
+		struct {
+			uint16_t device;
+			uint16_t vendor;
+			uint32_t class;
+			const uint32_t *irq_numbers;
+			int nb_irq;
+		};
+	};
+};
+
+int wayca_sc_get_device_list(int numa_node, size_t *num, const char **name);
+int wayca_sc_get_device_info(const char *name, struct wayca_sc_device_info *dev_info);
 
 int wayca_managed_thread_create(int id, pthread_t *thread, const pthread_attr_t *attr,
 				void *(*start_routine) (void *), void *arg);
