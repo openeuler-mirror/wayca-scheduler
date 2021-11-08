@@ -97,36 +97,32 @@ struct wayca_cluster {
 struct wayca_smmu {
 	int smmu_idx;				/* index, a sequence number from 0 to ... */
 	int numa_node;				/* which node it belongs to */
-	unsigned long long int base_addr;	/* base address - 64 bits */
+	uint64_t base_addr;			/* base address - 64 bits */
+	char name[WAYCA_SC_ATTR_STRING_LEN];	/* name, i.e. arm-smmu-v3.x.auto */
 	char modalias[WAYCA_SC_ATTR_STRING_LEN];	/* type, eg. arm-smmu-v3 */
 };
 
 struct wayca_irq {
-	unsigned int irq_number;
-	unsigned int active; 		/* actively used in /proc/interrupts
-					 * 1: active;
-					 * 0: inactive;
-					 */
-	/* TODO: fine tune irq_name space */
-	/* Note: only active irqs have names, as in /proc/interrupts.
-	 *   inactive irqs were not listed in /proc/interrupts,
-	 *   so have no names. In that case, its irq_name is filled by NULL.
-	 */
-	char irq_name[WAYCA_SC_ATTR_STRING_LEN];
+	uint32_t irq_number;
+	int chip_name; /* enum irq_chip_name */
+	int type; /* enum irq_type */
+	char name[WAYCA_SC_ATTR_STRING_LEN];
 };
 
 struct wayca_device_irqs {
 	size_t n_irqs;		/* number of irqs for this device */
-	struct wayca_irq *irqs; /* array */
+	uint32_t *irq_numbers;
 };
 
+#define WAYCA_SC_PCI_SLOT_NAME_LEN_MAX 24 //Big enough for pci BDF number
 struct wayca_pci_device {
 	int numa_node;			/* to which numa_node it belongs */
 	int smmu_idx;			/* to which smmu it belongs. -1 none */
 	int enable;
 	char absolute_path[WAYCA_SC_PATH_LEN_MAX];
-	char slot_name[WAYCA_SC_NAME_LEN_MAX];	/* PCI_SLOT_NAME, in format eg. 0000:05:00.0 */
-						/* same as reported by uevent */
+
+	/* SLOT_NAME foramt. e.g, 0000:05:00.0 ,same as reported by uevent */
+	char slot_name[WAYCA_SC_PCI_SLOT_NAME_LEN_MAX];
 	cpu_set_t *local_cpu_map;
 
 	unsigned int   class;		/* 3 bytes: (base, sub, prog-if) */
@@ -183,6 +179,9 @@ struct wayca_topo {
 
 	size_t n_packages;
 	struct wayca_package	**packages;	/* array of Pacakges */
+
+	size_t n_irqs;
+	struct wayca_irq **irqs;			/* array of irqs */
 };
 
 #endif /* _TOPO_H */
