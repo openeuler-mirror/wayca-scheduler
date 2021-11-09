@@ -655,6 +655,23 @@ int wayca_sc_thread_join(wayca_sc_thread_t id, void **retval)
 	return ret;
 }
 
+int wayca_sc_thread_kill(wayca_sc_thread_t id, int sig)
+{
+	struct wayca_thread *thread;
+	int ret;
+
+	thread = id_to_wayca_thread(id);
+	if (!thread)
+		return -EINVAL;
+
+	if (thread->start_routine)
+		ret = -pthread_kill(thread->thread, sig);
+	else
+		ret = syscall(SYS_tkill, thread->pid, sig) == 0 ? 0 : -errno;
+
+	return ret;
+}
+
 int wayca_sc_pid_attach_thread(wayca_sc_thread_t *wthread, pid_t pid)
 {
 	struct wayca_thread *wt_p;
@@ -1131,7 +1148,7 @@ static int wayca_threadpool_init(struct wayca_threadpool *pool,
 
 		ret = wayca_sc_thread_attach_group(wthread, wgroup);
 		if (ret) {
-			pthread_kill(thread->thread, SIGKILL);
+			wayca_sc_thread_kill(thread->thread, SIGKILL);
 			wayca_sc_thread_join(wthread, NULL);
 			break;
 		}

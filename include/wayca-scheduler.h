@@ -142,6 +142,7 @@ int wayca_sc_thread_get_attr(wayca_sc_thread_t wthread, wayca_sc_thread_attr_t *
 
 int wayca_sc_thread_create(wayca_sc_thread_t *wthread, pthread_attr_t *attr, void *(*start_routine)(void *), void *arg);
 int wayca_sc_thread_join(wayca_sc_thread_t wthread, void **retval);
+int wayca_sc_thread_kill(wayca_sc_thread_t id, int sig);
 int wayca_sc_pid_attach_thread(wayca_sc_thread_t *wthread, pid_t pid);
 int wayca_sc_pid_detach_thread(wayca_sc_thread_t wthread);
 
