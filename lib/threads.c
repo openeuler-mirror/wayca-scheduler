@@ -1110,7 +1110,8 @@ static void wayca_threadpool_free(struct wayca_threadpool *pool)
 	pthread_mutex_unlock(&wayca_threadpools_array_mutex);
 }
 
-static int wayca_threadpool_init(struct wayca_threadpool *pool, size_t num)
+static int wayca_threadpool_init(struct wayca_threadpool *pool,
+				 pthread_attr_t *attr, size_t num)
 {
 	wayca_sc_group_attr_t group_attr;
 	struct wayca_thread *thread;
@@ -1135,7 +1136,8 @@ static int wayca_threadpool_init(struct wayca_threadpool *pool, size_t num)
 	pthread_cond_init(&pool->cond, NULL);
 
 	for (worker_num = 0; worker_num < num; worker_num++) {
-		ret = wayca_sc_thread_create(&wthread, NULL, wayca_threadpool_worker_func, pool);
+		ret = wayca_sc_thread_create(&wthread, attr,
+					wayca_threadpool_worker_func, pool);
 		if (ret)
 			break;
 
@@ -1158,7 +1160,8 @@ static int wayca_threadpool_init(struct wayca_threadpool *pool, size_t num)
 	return 0;
 }
 
-int wayca_sc_threadpool_create(wayca_sc_threadpool_t *threadpool, size_t num)
+ssize_t wayca_sc_threadpool_create(wayca_sc_threadpool_t *threadpool,
+				   pthread_attr_t *attr, size_t num)
 {
 	struct wayca_threadpool *pool;
 
@@ -1169,7 +1172,7 @@ int wayca_sc_threadpool_create(wayca_sc_threadpool_t *threadpool, size_t num)
 	if (!pool)
 		return -ENOMEM;
 
-	if (wayca_threadpool_init(pool, num)) {
+	if (wayca_threadpool_init(pool, attr, num)) {
 		wayca_threadpool_free(pool);
 		return -ENOMEM;
 	}

@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
 	if (!info)
 		return -ENOMEM;
 
-	ret = wayca_sc_threadpool_create(&wayca_threadpool, thread_num);
+	ret = wayca_sc_threadpool_create(&wayca_threadpool, NULL, thread_num);
 	if (ret <= 0)
 		return ret;
 
