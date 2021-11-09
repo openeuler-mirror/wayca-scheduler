@@ -495,17 +495,17 @@ static bool is_threadpool_id_valid(wayca_sc_threadpool_t id)
 /* The caller should make sure the @id is valid */
 static struct wayca_thread *id_to_wayca_thread(wayca_sc_thread_t id)
 {
-	return wayca_threads_array[id];
+	return is_thread_id_valid(id) ? wayca_threads_array[id] : NULL;
 }
 
 static struct wayca_sc_group *id_to_wayca_group(wayca_sc_group_t id)
 {
-	return wayca_groups_array[id];
+	return is_group_id_valid(id) ? wayca_groups_array[id] : NULL;
 }
 
 static struct wayca_threadpool *id_to_wayca_threadpool(wayca_sc_threadpool_t id)
 {
-	return wayca_threadpools_array[id];
+	return is_threadpool_id_valid(id) ? wayca_threadpools_array[id] : NULL;
 }
 
 void *wayca_thread_start_routine(void *private)
@@ -533,10 +533,10 @@ int wayca_sc_thread_set_attr(wayca_sc_thread_t wthread, wayca_sc_thread_attr_t *
 {
 	struct wayca_thread *wt_p;
 
-	if (!is_thread_id_valid(wthread))
+	wt_p = id_to_wayca_thread(wthread);
+	if (!wt_p)
 		return -EINVAL;
 
-	wt_p = id_to_wayca_thread(wthread);
 	wt_p->attribute = *attr;
 
 	if (wt_p->group)
@@ -549,12 +549,11 @@ int wayca_sc_thread_get_attr(wayca_sc_thread_t wthread, wayca_sc_thread_attr_t *
 {
 	struct wayca_thread *wt_p;
 
-	if (!is_thread_id_valid(wthread))
+	wt_p = id_to_wayca_thread(wthread);
+	if (!wt_p)
 		return -EINVAL;
 
-	wt_p = id_to_wayca_thread(wthread);
 	*attr = wt_p->attribute;
-
 	return 0;
 }
 
@@ -640,10 +639,9 @@ int wayca_sc_thread_join(wayca_sc_thread_t id, void **retval)
 	struct wayca_thread *thread;
 	int ret;
 
-	if (!is_thread_id_valid(id))
-		return -EINVAL; /* Invalid id */
-
 	thread = id_to_wayca_thread(id);
+	if (!thread)
+		return -EINVAL;
 
 	ret = pthread_join(thread->thread, retval);
 	if (ret)
@@ -711,10 +709,9 @@ int wayca_sc_pid_detach_thread(wayca_sc_thread_t id)
 {
 	struct wayca_thread *thread;
 
-	if (!is_thread_id_valid(id))
-		return -EINVAL;
-
 	thread = id_to_wayca_thread(id);
+	if (!thread)
+		return -EINVAL;
 
 	/* If the wayca thread is not created from an existed PID */
 	if (!thread->start_routine)
@@ -736,13 +733,12 @@ int wayca_sc_group_set_attr(wayca_sc_group_t group, wayca_sc_group_attr_t *attr)
 	struct wayca_sc_group *wg_p;
 	int ret;
 
-	if (!is_group_id_valid(group))
-		return -EINVAL;
-
 	if (!attr)
 		return -EINVAL;
 
 	wg_p = id_to_wayca_group(group);
+	if (!wg_p)
+		return -EINVAL;
 
 	pthread_mutex_lock(&wg_p->mutex);
 	old_attr = wg_p->attribute;
@@ -764,10 +760,9 @@ int wayca_sc_group_get_attr(wayca_sc_group_t group, wayca_sc_group_attr_t *attr)
 	if (!attr)
 		return -EINVAL;
 
-	if (!is_group_id_valid(group))
-		return -EINVAL;
-
 	wg_p = id_to_wayca_group(group);
+	if (!wg_p)
+		return -EINVAL;
 
 	pthread_mutex_lock(&wg_p->mutex);
 	*attr = wg_p->attribute;
@@ -833,10 +828,9 @@ int wayca_sc_group_destroy(wayca_sc_group_t group)
 {
 	struct wayca_sc_group *wg_p;
 
-	if (!is_group_id_valid(group))
-		return -EINVAL;
-
 	wg_p = id_to_wayca_group(group);
+	if (!wg_p)
+		return -EINVAL;
 
 	/* We still have threads in this group, stop destroy */
 	pthread_mutex_lock(&wg_p->mutex);
@@ -865,11 +859,10 @@ int wayca_sc_thread_attach_group(wayca_sc_thread_t wthread, wayca_sc_group_t gro
 	struct wayca_sc_group *wg_p;
 	int ret;
 
-	if (!is_thread_id_valid(wthread) || !is_group_id_valid(group))
-		return -EINVAL;
-
 	wt_p = id_to_wayca_thread(wthread);
 	wg_p = id_to_wayca_group(group);
+	if (!wt_p || !wg_p)
+		return -EINVAL;
 
 	/*
 	 * If wayca_sc_thread has already attached to one group, it must
@@ -897,11 +890,10 @@ int wayca_sc_thread_detach_group(wayca_sc_thread_t wthread, wayca_sc_group_t gro
 	struct wayca_sc_group *wg_p;
 	int ret;
 
-	if (!is_thread_id_valid(wthread) || !is_group_id_valid(group))
-		return -EINVAL;
-
 	wt_p = id_to_wayca_thread(wthread);
 	wg_p = id_to_wayca_group(group);
+	if (!wt_p || !wg_p)
+		return -EINVAL;
 
 	pthread_mutex_lock(&wg_p->mutex);
 	ret = wayca_group_delete_thread(wg_p, wt_p);
@@ -915,11 +907,10 @@ int wayca_sc_group_attach_group(wayca_sc_group_t group, wayca_sc_group_t father)
 	struct wayca_sc_group *wg_p, *father_p;
 	int ret;
 
-	if (!is_group_id_valid(group) || !is_group_id_valid(father))
-		return -EINVAL;
-
 	wg_p = id_to_wayca_group(group);
 	father_p = id_to_wayca_group(father);
+	if (!wg_p || !father_p)
+		return -EINVAL;
 
 	/* If @group already has a father, should detach first before attach to a new one. */
 	if (wg_p->father)
@@ -939,11 +930,10 @@ int wayca_sc_group_detach_group(wayca_sc_group_t group, wayca_sc_group_t father)
 	struct wayca_sc_group *wg_p, *father_p;
 	int ret;
 
-	if (!is_group_id_valid(group) || !is_group_id_valid(father))
-		return -EINVAL;
-
 	wg_p = id_to_wayca_group(group);
 	father_p = id_to_wayca_group(father);
+	if (!wg_p || !father_p)
+		return -EINVAL;
 
 	pthread_mutex_lock(&wg_p->mutex);
 	pthread_mutex_lock(&father_p->mutex);
@@ -959,11 +949,11 @@ int wayca_sc_is_thread_in_group(wayca_sc_thread_t thread, wayca_sc_group_t group
 	struct wayca_sc_group *wg_p;
 	struct wayca_thread *wt_p;
 
-	if (!is_thread_id_valid(thread) || !is_group_id_valid(group))
-		return -EINVAL;
-
 	wt_p = id_to_wayca_thread(thread);
 	wg_p = id_to_wayca_group(group);
+	if (!wt_p || !wg_p)
+		return -EINVAL;
+
 	return is_thread_in_group(wg_p, wt_p);
 }
 
@@ -971,11 +961,11 @@ int wayca_sc_is_group_in_group(wayca_sc_group_t target, wayca_sc_group_t group)
 {
 	struct wayca_sc_group *wg_p, *father_p;
 
-	if (!is_group_id_valid(target) || !is_group_id_valid(group))
-		return -EINVAL;
-
 	wg_p = id_to_wayca_group(target);
 	father_p = id_to_wayca_group(group);
+	if (!wg_p || !father_p)
+		return -EINVAL;
+
 	return is_group_in_father(wg_p, father_p);
 }
 
@@ -1181,10 +1171,9 @@ int wayca_sc_threadpool_destroy(wayca_sc_threadpool_t threadpool)
 	struct wayca_threadpool *pool;
 	struct wayca_threadpool_task *task;
 
-	if (!is_threadpool_id_valid(threadpool))
-		return -EINVAL;
-
 	pool = id_to_wayca_threadpool(threadpool);
+	if (!pool)
+		return -EINVAL;
 
 	/* Wait for the finish of current running tasks */
 	pthread_mutex_lock(&pool->mutex);
@@ -1227,13 +1216,12 @@ int wayca_sc_threadpool_get_group(wayca_sc_threadpool_t threadpool, wayca_sc_gro
 {
 	struct wayca_threadpool *pool;
 
-	if (!is_threadpool_id_valid(threadpool))
-		return -EINVAL;
-
 	if (!group)
 		return -EINVAL;
 
 	pool = id_to_wayca_threadpool(threadpool);
+	if (!pool)
+		return -EINVAL;
 
 	pthread_mutex_lock(&pool->mutex);
 	*group = pool->group->id;
@@ -1249,10 +1237,9 @@ int wayca_sc_threadpool_queue(wayca_sc_threadpool_t threadpool,
 	struct wayca_threadpool_task *task;
 	int ret = 0;
 
-	if (!is_threadpool_id_valid(threadpool))
-		return -EINVAL;
-
 	pool = id_to_wayca_threadpool(threadpool);
+	if (!pool || !task_func)
+		return -EINVAL;
 
 	task = malloc(sizeof(struct wayca_threadpool_task));
 	if (!task) {
@@ -1278,10 +1265,10 @@ int wayca_sc_threadpool_thread_num(wayca_sc_threadpool_t threadpool)
 {
 	struct wayca_threadpool *pool;
 
-	if (!is_threadpool_id_valid(threadpool))
+	pool = id_to_wayca_threadpool(threadpool);
+	if (!pool)
 		return -EINVAL;
 
-	pool = id_to_wayca_threadpool(threadpool);
 	return pool->total_worker_num;
 }
 
@@ -1290,10 +1277,9 @@ int wayca_sc_threadpool_task_num(wayca_sc_threadpool_t threadpool)
 	struct wayca_threadpool *pool;
 	size_t task_num;
 
-	if (!is_threadpool_id_valid(threadpool))
-		return -EINVAL;
-
 	pool = id_to_wayca_threadpool(threadpool);
+	if (!pool)
+		return -EINVAL;
 
 	pthread_mutex_lock(&pool->mutex);
 	task_num = pool->task_num;
@@ -1307,10 +1293,10 @@ int wayca_sc_threadpool_running_num(wayca_sc_threadpool_t threadpool)
 	struct wayca_threadpool *pool;
 	size_t running_num;
 
-	if (!is_threadpool_id_valid(threadpool))
+	pool = id_to_wayca_threadpool(threadpool);
+	if (!pool)
 		return -EINVAL;
 
-	pool = id_to_wayca_threadpool(threadpool);
 	pthread_mutex_lock(&pool->mutex);
 	running_num = pool->total_worker_num - pool->idle_num;
 	pthread_mutex_unlock(&pool->mutex);
@@ -1329,14 +1315,13 @@ int wayca_sc_thread_get_cpuset(wayca_sc_thread_t wthread, size_t cpusetsize,
 	if (!cpuset)
 		return -EINVAL;
 
-	if (!is_thread_id_valid(wthread))
+	wt_p = id_to_wayca_thread(wthread);
+	if (!wt_p)
 		return -EINVAL;
 
 	valid_cpu_setsize = CPU_ALLOC_SIZE(wayca_sc_cpus_in_total());
 	if (cpusetsize < valid_cpu_setsize)
 		return -EINVAL;
-
-	wt_p = id_to_wayca_thread(wthread);
 
 	CPU_ZERO(cpuset);
 	CPU_OR(cpuset, cpuset, &wt_p->cur_set);
@@ -1353,14 +1338,14 @@ int wayca_sc_group_get_cpuset(wayca_sc_group_t group, size_t cpusetsize,
 	if (!cpuset)
 		return -EINVAL;
 
-	if (!is_group_id_valid(group))
+	wg_p = id_to_wayca_group(group);
+	if (!wg_p)
 		return -EINVAL;
 
 	valid_cpu_setsize = CPU_ALLOC_SIZE(wayca_sc_cpus_in_total());
 	if (cpusetsize < valid_cpu_setsize)
 		return -EINVAL;
 
-	wg_p = id_to_wayca_group(group);
 
 	CPU_ZERO(cpuset);
 	CPU_OR(cpuset, cpuset, &wg_p->total);
