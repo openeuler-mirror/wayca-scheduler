@@ -37,14 +37,14 @@ int validate_topo_info(xmlDocPtr topo_doc);
 int put_topo_info(struct topo_info_args *args, xmlDocPtr topo_doc);
 
 #define topo_err(fmt, args...) \
-		WAYCA_SC_LOG_ERR_CONN("wayca_sc_info: %s(): " fmt "\n", \
+		WAYCA_SC_LOG_ERR_NO_TS("wayca_sc_info: %s(): " fmt "\n", \
 				__func__, ##args)
 
 #define topo_warn(fmt, args...) \
-		WAYCA_SC_LOG_WARN_CONN("wayca_sc_info: %s(): " fmt "\n", \
+		WAYCA_SC_LOG_WARN_NO_TS("wayca_sc_info: %s(): " fmt "\n", \
 				__func__, ##args)
 
 #define topo_info(fmt, args...) \
-		WAYCA_SC_LOG_INFO_CONN("wayca_sc_info: %s(): " fmt "\n", \
+		WAYCA_SC_LOG_INFO_NO_TS("wayca_sc_info: %s(): " fmt "\n", \
 				__func__, ##args)
 #endif
