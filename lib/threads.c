@@ -302,11 +302,30 @@ static inline bool is_env_invalid(size_t num)
 	return !num || num >= ULLONG_MAX / sizeof(void *);
 }
 
+static void wayca_thread_init_from_envs(size_t *num, size_t def,
+					const char *env)
+{
+	char *p;
+
+	p = secure_getenv(env);
+	errno = 0;
+	if (p)
+		*num = strtoull(p, NULL, 10);
+
+	/*
+	 * We'll fall back to the default number if:
+	 *	1. No such environment variable
+	 *	2. error occurs when parsing the environment variable
+	 *	3. invalid number, either 0 or too big
+	 */
+	if (!p || errno || is_env_invalid(*num))
+		*num = def;
+}
+
 static void wayca_thread_init(void)
 {
 	int total_cpu_cnt;
 	size_t num;
-	char *p;
 
 	CPU_ZERO(&total_cpu_set);
 	total_cpu_cnt = wayca_sc_cpus_in_total();
@@ -323,22 +342,8 @@ static void wayca_thread_init(void)
 	memset(wayca_cpu_loads, 0, sizeof(long long) * total_cpu_cnt);
 	pthread_mutex_init(&wayca_cpu_loads_mutex, NULL);
 
-	p = secure_getenv("WAYCA_SC_THREADS_NUMBER");
-	errno = 0;
-	if (p)
-		num = strtoull(p, NULL, 10);
-
-	/*
-	 * We'll fall back to the default number if:
-	 *	1. No such environment variable
-	 *	2. error occurs when parsing the environment variable
-	 *	3. invalid number, either 0 or too big
-	 *
-	 * Similar check will be performed below.
-	 */
-	if (!p || errno || is_env_invalid(num))
-		num = DEFAULT_WAYCA_SC_THREADS_NUM;
-
+	wayca_thread_init_from_envs(&num, DEFAULT_WAYCA_SC_THREADS_NUM,
+				    "WAYCA_SC_THREADS_NUMBER");
 	wayca_threads_array = malloc(num * sizeof(struct wayca_thread *));
 	if (!wayca_threads_array) {
 		wayca_threads_array = NULL;
@@ -349,14 +354,8 @@ static void wayca_thread_init(void)
 	wayca_threads_array_size = num;
 	pthread_mutex_init(&wayca_threads_array_mutex, NULL);
 
-	p = secure_getenv("WAYCA_SC_GROUPS_NUMBER");
-	errno = 0;
-	if (p)
-		num = strtoull(p, NULL, 10);
-
-	if (!p || errno || is_env_invalid(num))
-		num = DEFAULT_WAYCA_SC_GROUPS_NUM;
-
+	wayca_thread_init_from_envs(&num, DEFAULT_WAYCA_SC_GROUPS_NUM,
+				    "WAYCA_SC_GROUPS_NUMBER");
 	wayca_groups_array = malloc(num * sizeof(struct wayca_sc_group *));
 	if (!wayca_groups_array) {
 		wayca_groups_array = NULL;
@@ -368,21 +367,16 @@ static void wayca_thread_init(void)
 	wayca_groups_array_size = num;
 	pthread_mutex_init(&wayca_groups_array_mutex, NULL);
 
-	p = secure_getenv("WAYCA_SC_THREADPOOLS_NUMBER");
-	errno = 0;
-	if (p)
-		num = strtoull(p, NULL, 10);
-
-	if (!p || errno || is_env_invalid(num))
-		num = DEFAULT_WAYCA_SC_THREADPOOLS_NUM;
-
-	wayca_threadpools_array = malloc(num * sizeof(struct wayca_threadpool));
+	wayca_thread_init_from_envs(&num, DEFAULT_WAYCA_SC_THREADPOOLS_NUM,
+				    "WAYCA_SC_THREADPOOLS_NUMBER");
+	wayca_threadpools_array = malloc(num * sizeof(struct wayca_threadpool *));
 	if (!wayca_threadpools_array) {
 		wayca_threadpools_array = NULL;
 		wayca_threadpools_num = 0;
 		return;
 	}
-	memset(wayca_threadpools_array, 0, num * sizeof(struct wayca_threadpool));
+	memset(wayca_threadpools_array, 0,
+	       num * sizeof(struct wayca_threadpool *));
 	wayca_threadpools_num = num;
 	pthread_mutex_init(&wayca_threadpools_array_mutex, NULL);
 }
