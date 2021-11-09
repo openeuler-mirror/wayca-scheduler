@@ -696,8 +696,9 @@ int wayca_sc_pid_attach_thread(wayca_sc_thread_t *wthread, pid_t pid)
 
 	/* if taget pid not exists */
 	if (retval < 0) {
+		retval = -errno;
 		wayca_thread_free(wt_p);
-		return -errno;
+		return retval;
 	}
 
 	CPU_ZERO(&wt_p->cur_set);
