@@ -48,18 +48,16 @@ extern WAYCA_SC_LOG_LEVEL wayca_sc_log_level;
 static inline void logTimeStamp(FILE *file)
 {
 	time_t rawtime;
-	struct tm *tm;
+	struct tm tm, *tm_p;
 
 	time(&rawtime);
-	tm = gmtime(&rawtime);
-
-	/* Probably will never enter this branch */
-	if (!tm)
+	tm_p = gmtime_r(&rawtime, &tm);
+	if (!tm_p)
 		return;
 
 	fprintf(file, "[%04d-%02d-%02d %02d:%02d:%02d]",
-		tm->tm_year + 1900, tm->tm_mon, tm->tm_mday,
-		tm->tm_hour, tm->tm_min, tm->tm_sec);
+		tm.tm_year + 1900, tm.tm_mon, tm.tm_mday,
+		tm.tm_hour, tm.tm_min, tm.tm_sec);
 }
 
 static inline void _log(FILE *file, bool conn, char *fmt, ...)
