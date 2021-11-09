@@ -26,7 +26,19 @@ void wayca_thread_update_load(struct wayca_thread *thread, bool add)
 	long long load;
 
 	pthread_mutex_lock(&wayca_cpu_loads_mutex);
+
+	/*
+	 * Load is updated when the thread is created, destroyed or the
+	 * affinity is changed. It can be zero when the thread creation
+	 * failed and the cpuset of the thread has not been initialized.
+	 * Then we do cleanup works and free the thread, including
+	 * updating the load. Sanity check the count to avoid zero
+	 * division.
+	 */
 	cnt = CPU_COUNT(&thread->cur_set);
+	if (!cnt)
+		goto out;
+
 	load = div_round_up(wayca_sc_cpus_in_total(), cnt);
 
 	if (!add)
@@ -37,6 +49,8 @@ void wayca_thread_update_load(struct wayca_thread *thread, bool add)
 		wayca_cpu_loads[pos] += load;
 		pos = cpuset_find_next_set(&thread->cur_set, pos);
 	}
+
+out:
 	pthread_mutex_unlock(&wayca_cpu_loads_mutex);
 }
 
