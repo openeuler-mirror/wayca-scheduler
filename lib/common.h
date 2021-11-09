@@ -56,8 +56,7 @@ static void __attribute__ ((constructor(WAYCA_SC_PRIO(prio)), used)) func(void)
 #define WAYCA_SC_FINI_PRIO(func, prio) \
 static void __attribute__ ((destructor(WAYCA_SC_PRIO(prio)), used)) func(void)
 
-struct task_cpu_map
-{
+struct task_cpu_map {
 	task_set_t tasks;
 	cpu_set_t cpus;
 	node_set_t nodes;

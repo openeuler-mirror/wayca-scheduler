@@ -50,11 +50,11 @@ static int bitmap_scnprintf(char *buf, unsigned int buflen,
 	uint32_t chunkmask;
 	int first = 1;
 
-	chunksz = nmaskbits & (CHUNKSZ - 1);
+	chunksz = (unsigned int)nmaskbits & (CHUNKSZ - 1);
 	if (chunksz == 0)
 		chunksz = CHUNKSZ;
 
-	i = ALIGN(nmaskbits, CHUNKSZ) - CHUNKSZ;
+	i = ALIGN((unsigned int)nmaskbits, CHUNKSZ) - CHUNKSZ;
 	for (; i >= 0; i -= CHUNKSZ) {
 		chunkmask = ((1ULL << chunksz) - 1);
 		word = i / BITS_PER_LONG;
@@ -94,7 +94,7 @@ static int bitmap_str_to_cpumask(const char *start, size_t len,
 		if (num < 0)
 			return -EINVAL;
 
-		*((unsigned int *)cpuset + pos) |= (num << i);
+		*((unsigned int *)cpuset + pos) |= ((unsigned int)num << i);
 		i += 4;
 		if (i >= CHUNKSZ) {
 			i = 0;

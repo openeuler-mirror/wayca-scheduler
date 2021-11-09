@@ -508,8 +508,7 @@ static void wayca_group_assign_thread_resource(struct wayca_sc_group *group,
 		anchor = target_pos - target_pos % group->nr_cpus_per_topo;
 		for (int num = anchor;
 		     num < anchor + group->nr_cpus_per_topo;
-		     num++)
-		{
+		     num++) {
 			CPU_SET(num, &thread->cur_set);
 			CPU_SET(num, &thread->allowed_set);
 		}

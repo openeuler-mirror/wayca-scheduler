@@ -188,7 +188,7 @@ struct wayca_threadpool {
 	/* Conditonal variable to wakeup threads */
 	pthread_cond_t cond;
 	/* True to Notify the workers to stop */
-	volatile bool stop;
+	bool stop;
 };
 
 static inline bool threadpool_task_is_empty(struct wayca_threadpool *pool)

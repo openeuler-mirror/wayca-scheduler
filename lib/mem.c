@@ -122,7 +122,6 @@ int wayca_sc_get_mem_bind_nodes(size_t maxnode, node_set_t *mask)
 	int mode, ret;
 
 	ret = get_mempolicy(&mode, (unsigned long *)mask, maxnode, NULL, 0);
-
 	if (ret < 0)
 		return ret;
 
