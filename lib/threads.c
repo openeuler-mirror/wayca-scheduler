@@ -1178,7 +1178,7 @@ int wayca_sc_threadpool_create(wayca_sc_threadpool_t *threadpool, size_t num)
 	return pool->total_worker_num;
 }
 
-int wayca_sc_threadpool_destroy(wayca_sc_threadpool_t threadpool, int force)
+int wayca_sc_threadpool_destroy(wayca_sc_threadpool_t threadpool)
 {
 	struct wayca_threadpool *pool;
 	struct wayca_threadpool_task *task;
@@ -1194,12 +1194,8 @@ int wayca_sc_threadpool_destroy(wayca_sc_threadpool_t threadpool, int force)
 	pthread_cond_broadcast(&pool->cond);
 	pthread_mutex_unlock(&pool->mutex);
 
-
-	for (int worker = 0; worker < pool->total_worker_num; worker++) {
-		if (force)
-			kill(pool->workers[worker]->pid, SIGKILL);
+	for (int worker = 0; worker < pool->total_worker_num; worker++)
 		wayca_sc_thread_join(pool->workers[worker]->id, NULL);
-	}
 
 	pthread_mutex_lock(&pool->mutex);
 	wayca_sc_group_destroy(pool->group->id);

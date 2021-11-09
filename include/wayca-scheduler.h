@@ -178,7 +178,7 @@ typedef unsigned long long	wayca_sc_threadpool_t;
 typedef void (*wayca_sc_threadpool_task_func)(void *);
 
 int wayca_sc_threadpool_create(wayca_sc_threadpool_t *threadpool, size_t num);
-int wayca_sc_threadpool_destroy(wayca_sc_threadpool_t threadpool, int force);
+int wayca_sc_threadpool_destroy(wayca_sc_threadpool_t threadpool);
 int wayca_sc_threadpool_get_group(wayca_sc_threadpool_t threadpool, wayca_sc_group_t *group);
 int wayca_sc_threadpool_queue(wayca_sc_threadpool_t threadpool,
 			   wayca_sc_threadpool_task_func task_func, void *arg);
