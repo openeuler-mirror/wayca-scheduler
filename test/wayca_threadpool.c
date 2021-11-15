@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
 	if (!info)
 		return -ENOMEM;
 
-	ret = wayca_sc_threadpool_create(&wayca_threadpool, thread_num);
+	ret = wayca_sc_threadpool_create(&wayca_threadpool, NULL, thread_num);
 	if (ret <= 0)
 		return ret;
 
@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
 	while (wayca_sc_threadpool_running_num(wayca_threadpool))
 		sched_yield();
 
-	wayca_sc_threadpool_destroy(wayca_threadpool, false);
+	wayca_sc_threadpool_destroy(wayca_threadpool);
 
 	printf("Average queue time is %.12f\n", (float)total_queue_time / task_num / 1000);
 	return 0;

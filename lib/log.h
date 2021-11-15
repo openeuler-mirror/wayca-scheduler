@@ -48,18 +48,16 @@ extern WAYCA_SC_LOG_LEVEL wayca_sc_log_level;
 static inline void logTimeStamp(FILE *file)
 {
 	time_t rawtime;
-	struct tm *tm;
+	struct tm tm, *tm_p;
 
 	time(&rawtime);
-	tm = gmtime(&rawtime);
-
-	/* Probably will never enter this branch */
-	if (!tm)
+	tm_p = gmtime_r(&rawtime, &tm);
+	if (!tm_p)
 		return;
 
 	fprintf(file, "[%04d-%02d-%02d %02d:%02d:%02d]",
-		tm->tm_year + 1900, tm->tm_mon, tm->tm_mday,
-		tm->tm_hour, tm->tm_min, tm->tm_sec);
+		tm.tm_year + 1900, tm.tm_mon, tm.tm_mday,
+		tm.tm_hour, tm.tm_min, tm.tm_sec);
 }
 
 static inline void _log(FILE *file, bool conn, char *fmt, ...)
@@ -74,35 +72,59 @@ static inline void _log(FILE *file, bool conn, char *fmt, ...)
 	va_end(args);
 }
 
+/*
+ * Log APIs for various level of wayca scheduler.
+ *
+ * WAYCA_SC_LOG_{ERR,WARN,INFO}: log with timestamp and colored message level
+ *                               banner
+ * WAYCA_SC_LOG_{ERR,WARN,INFO}_CONN: log connnected to the previous one,
+ *                                    without timestamp or message level banner
+ * WAYCA_SC_LOG_{ERR,WARN,INFO}_NO_TS: log without timestamp but with message
+ *                                     level banner
+ */
+
 #define WAYCA_SC_LOG_ERR(fmt, ...) \
-	do {if (WAYCA_SC_LOG_LEVEL_ERR <= wayca_sc_log_level) \
+	do {if (wayca_sc_log_level >= WAYCA_SC_LOG_LEVEL_ERR) \
 		_log(stderr, false, Red("[Error] ") fmt, ##__VA_ARGS__); \
-	} while (0);
+	} while (0)
 
 #define WAYCA_SC_LOG_ERR_CONN(fmt, ...) \
-	do {if (WAYCA_SC_LOG_LEVEL_ERR <= wayca_sc_log_level) \
+	do {if (wayca_sc_log_level >= WAYCA_SC_LOG_LEVEL_ERR) \
+		_log(stderr, true, fmt, ##__VA_ARGS__); \
+	} while (0)
+
+#define WAYCA_SC_LOG_ERR_NO_TS(fmt, ...) \
+	do {if (wayca_sc_log_level >= WAYCA_SC_LOG_LEVEL_ERR) \
 		_log(stderr, true, Red("[Error] ") fmt, ##__VA_ARGS__); \
-	} while (0);
+	} while (0)
 
 #define WAYCA_SC_LOG_WARN(fmt, ...) \
-	do {if (WAYCA_SC_LOG_LEVEL_WARN <= wayca_sc_log_level) \
+	do {if (wayca_sc_log_level >= WAYCA_SC_LOG_LEVEL_WARN) \
 		_log(stderr, false, Yellow("[Warning] ") fmt, ##__VA_ARGS__); \
-	} while (0);
+	} while (0)
 
 #define WAYCA_SC_LOG_WARN_CONN(fmt, ...) \
-	do {if (WAYCA_SC_LOG_LEVEL_WARN <= wayca_sc_log_level) \
+	do {if (wayca_sc_log_level >= WAYCA_SC_LOG_LEVEL_WARN) \
+		_log(stderr, true, fmt, ##__VA_ARGS__); \
+	} while (0)
+
+#define WAYCA_SC_LOG_WARN_NO_TS(fmt, ...) \
+	do {if (wayca_sc_log_level >= WAYCA_SC_LOG_LEVEL_WARN) \
 		_log(stderr, true, Yellow("[Warning] ") fmt, ##__VA_ARGS__); \
-	} while (0);
+	} while (0)
 
 #define WAYCA_SC_LOG_INFO(fmt, ...) \
-	do {if (WAYCA_SC_LOG_LEVEL_INFO <= wayca_sc_log_level) \
+	do {if (wayca_sc_log_level >= WAYCA_SC_LOG_LEVEL_INFO) \
 		_log(stderr, false, fmt, ##__VA_ARGS__); \
-	} while (0);
+	} while (0)
 
 #define WAYCA_SC_LOG_INFO_CONN(fmt, ...) \
-	do {if (WAYCA_SC_LOG_LEVEL_INFO <= wayca_sc_log_level) \
+	do {if (wayca_sc_log_level >= WAYCA_SC_LOG_LEVEL_INFO) \
 		_log(stderr, true, fmt, ##__VA_ARGS__); \
-	} while (0);
+	} while (0)
+
+#define WAYCA_SC_LOG_INFO_NO_TS(fmt, ...) \
+	WAYCA_SC_LOG_INFO_CONN(fmt, ##__VA_ARGS__)
 
 void wayca_sc_set_log_level(WAYCA_SC_LOG_LEVEL level);
 #endif /* LIB_LOG_H */

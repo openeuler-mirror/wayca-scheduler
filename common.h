@@ -14,8 +14,8 @@
 #ifndef DEPLOY_COMMON_H
 #define DEPLOY_COMMON_H
 
-#include "lib/common.h"
 #include <string.h>
+#include "lib/common.h"
 
 #define MAX_IRQS_BIND 20
 
@@ -64,7 +64,6 @@ struct program {
 static inline int cfg_strtostr(char *buf, char *str)
 {
 	char *p;
-
 
 	p = strchr(buf, '\n');
 	if (p)
