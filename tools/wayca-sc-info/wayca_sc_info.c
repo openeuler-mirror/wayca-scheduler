@@ -79,13 +79,24 @@ static int parse_file_name(const char *filename, bool is_input)
 	int ret;
 
 	if (is_input) {
+		if (info_args.has_input_file) {
+			topo_err("too many input file.");
+			return -EINVAL;
+		}
+		info_args.has_input_file = true;
+
 		name = realpath(filename, info_args.input_file_name);
 		if (!name) {
 			topo_err("access input file failed, ret = %d.", -errno);
 			return -errno;
 		}
-		info_args.has_input_file = true;
 	} else {
+		if (info_args.has_output_file) {
+			topo_err("too many output file.");
+			return -EINVAL;
+		}
+		info_args.has_output_file = true;
+
 		if (strlen(filename) >= WAYCA_INFO_MAX_FILE_NAME) {
 			topo_err("output file name tool long.");
 			return -ENAMETOOLONG;
@@ -99,7 +110,6 @@ static int parse_file_name(const char *filename, bool is_input)
 					ret);
 			return ret;
 		}
-		info_args.has_output_file = true;
 	}
 
 	topo_info("%s xml file name: %s.", is_input ? "input" : "output",
