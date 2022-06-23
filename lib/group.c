@@ -157,7 +157,12 @@ static int find_incomplete_set(struct wayca_sc_group *group, cpu_set_t *cpuset)
 
 bool is_thread_in_group(struct wayca_sc_group *group, struct wayca_thread *thread)
 {
-	struct wayca_thread *member = group->threads;
+	struct wayca_thread *member;
+
+	if (!group || !thread)
+		return false;
+
+	member = group->threads;
 
 	while (member) {
 		if (member == thread)
@@ -173,6 +178,9 @@ int max_topo_cpus_in_child_groups(struct wayca_sc_group *group)
 {
 	struct wayca_sc_group *child;
 	int max_topo_cpus = 0;
+
+	if (!group)
+		return -EINVAL;
 
 	if (!group->nr_groups)
 		return 0;
@@ -426,6 +434,9 @@ static int wayca_group_arrange(struct wayca_sc_group *group)
 
 int wayca_group_init(struct wayca_sc_group *group)
 {
+	if (!group)
+		return -EINVAL;
+
 	/* Init with no members */
 	group->threads = NULL;
 	group->nr_threads = 0;
