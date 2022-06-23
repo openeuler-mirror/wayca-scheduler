@@ -20,7 +20,7 @@ option(WAYCA_SC_BUILD_TOOLS "Build various tools of the wayca scheduler" on)
 
 option(WAYCA_SC_BUILD_TEST "Build the test program of the project" on)
 
-add_compile_options(-Wall -fPIC)
+add_compile_options(-Wall -fPIC -O2)
 add_definitions(-DWAYCA_SCHEDULER_VERSION=\"${WAYCA_SCHEDULER_VERSION}\")
 
 if(DEBUG)
