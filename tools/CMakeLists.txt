@@ -43,3 +43,14 @@ install(
 	FILES ${WAYCA_CALIBRATION_CONF}
 	DESTINATION ${CMAKE_INSTALL_PREFIX}/etc/wayca-scheduler
 )
+
+# wayca-memory-bench
+set(WAYCA_MEMORY_BENCH_NAME wayca-memory-bench)
+set(WAYCA_MEMORY_BENCH_SRCS wayca-memory-bench/wayca-memory-bench.c)
+add_executable(${WAYCA_MEMORY_BENCH_NAME} ${WAYCA_MEMORY_BENCH_SRCS})
+target_link_libraries(${WAYCA_MEMORY_BENCH_NAME} pthread ${WAYCA_SC_LIB_NAME})
+
+install(
+	TARGETS ${WAYCA_MEMORY_BENCH_NAME}
+	RUNTIME DESTINATION ${WAYCA_SC_INSTALL_PREFIX}/bin/
+)

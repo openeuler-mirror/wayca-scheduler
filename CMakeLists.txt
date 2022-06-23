@@ -15,6 +15,7 @@ set(WAYCA_SCHEDULER_VERSION 0.1)
 
 option(DEBUG "Build the debug version of the project" off)
 option(ASAN "Build with ASan enabled; Depend on DEBUG" off)
+option(GCOV "User's going to build with coverage test" off)
 
 option(WAYCA_SC_BUILD_TOOLS "Build various tools of the wayca scheduler" on)
 
@@ -31,6 +32,10 @@ if(DEBUG)
 		add_link_options(-fsanitize=address)
 	endif(ASAN)
 endif(DEBUG)
+
+if(GCOV)
+	add_definitions(-DGCOV_BUILD)
+endif(GCOV)
 
 include_directories(include/)
 
