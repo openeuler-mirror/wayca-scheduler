@@ -630,7 +630,7 @@ int wayca_sc_thread_create(wayca_sc_thread_t *wthread, pthread_attr_t *attr,
 	 * this won't last long here.
 	 */
 	while (!wt_p->start)
-		;
+		asm volatile("" : : : "memory");
 
 	*wthread = wt_p->id;
 	return 0;
