@@ -12,20 +12,21 @@
  */
 
 #define _GNU_SOURCE
-#include <sched.h>
-#include <limits.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <string.h>
-#include <signal.h>
 #include <dirent.h>
 #include <errno.h>
+#include <limits.h>
 #include <pthread.h>
+#include <sched.h>
+#include <signal.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 #include <sys/syscall.h>
-#include <wayca-scheduler.h>
+
 #include "wayca_thread.h"
+#include "wayca-scheduler.h"
 
 WAYCA_SC_INIT_PRIO(wayca_thread_init, THREAD);
 WAYCA_SC_FINI_PRIO(wayca_thread_exit, THREAD);

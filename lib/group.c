@@ -12,10 +12,11 @@
  */
 
 #define _GNU_SOURCE
+#include <errno.h>
 #include <limits.h>
+#include <sched.h>
 #include <stdbool.h>
 #include <string.h>
-#include <sched.h>
 
 #include "common.h"
 #include "wayca_thread.h"

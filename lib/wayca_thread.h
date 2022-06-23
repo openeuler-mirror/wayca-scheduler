@@ -17,9 +17,10 @@
 #define _GNU_SOURCE
 #include <sched.h>
 #include <syscall.h>
-#include <wayca-scheduler.h>
+
 #include "common.h"
 #include "bitmap.h"
+#include "wayca-scheduler.h"
 
 static inline int thread_sched_setaffinity(pid_t pid, size_t cpusetsize,
 					   const cpu_set_t *cpuset)

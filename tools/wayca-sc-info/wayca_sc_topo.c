@@ -11,12 +11,15 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#include <stdlib.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include <unistd.h>
-#include <inttypes.h>
-#include <fcntl.h>
+
+#include "common.h"
 #include "wayca-scheduler.h"
 #include "wayca_sc_info.h"
 

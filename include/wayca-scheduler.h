@@ -14,10 +14,12 @@
 #ifndef WAYCA_SCHEDULER_H
 #define WAYCA_SCHEDULER_H
 
-#include <stdbool.h>
-#include <stdint.h>
+#include <fcntl.h>
 #include <pthread.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <unistd.h>
+#include <sys/types.h>
 
 /**
  * wayca_sc_irq_bind_cpu - bind a specific IRQ to the target cpu

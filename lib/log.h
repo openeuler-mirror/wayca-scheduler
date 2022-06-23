@@ -14,11 +14,10 @@
 #ifndef LIB_LOG_H
 #define LIB_LOG_H
 
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <stdarg.h>
 #include <time.h>
-#include <unistd.h>
 
 #define Reset 		"\033[0m"
 

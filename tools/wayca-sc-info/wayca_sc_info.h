@@ -16,7 +16,6 @@
 
 #include <libxml/parser.h>
 #include <libxml/tree.h>
-#include "common.h"
 #include "lib/log.h"
 
 #define WAYCA_INFO_MAX_FILE_NAME (PATH_MAX + 1)

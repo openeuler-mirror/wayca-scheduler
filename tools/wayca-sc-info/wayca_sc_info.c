@@ -11,12 +11,13 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
+#include <errno.h>
 #include <getopt.h>
-#include <string.h>
 #include <libgen.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 #include "wayca_sc_info.h"
 
 static struct option lgopts[] = {
