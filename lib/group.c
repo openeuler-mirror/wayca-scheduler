@@ -377,31 +377,8 @@ static int wayca_group_request_resource(struct wayca_sc_group *group)
 	return 0;
 }
 
-int wayca_group_init(struct wayca_sc_group *group)
-{
-	/* Init with no members */
-	group->threads = NULL;
-	group->nr_threads = 0;
-
-	/* Init group in no hierarchy */
-	group->siblings = NULL;
-	group->father = NULL;
-	group->topo_hint = -1;
-	group->roll_over_cnts = 0;
-
-	CPU_ZERO(&group->used);
-	pthread_mutex_init(&group->mutex, NULL);
-
-	/*
-	 * Init the group attribute, threads will be placed continuously in the
-	 * adjacent CPUs and bind per-CPU.
-	 */
-	group->attribute = (WT_GF_CPU | WT_GF_COMPACT | WT_GF_PERCPU);
-
-	return wayca_group_arrange(group);
-}
-
-int wayca_group_arrange(struct wayca_sc_group *group)
+/* Arrange the resource of the group according to the attribute */
+static int wayca_group_arrange(struct wayca_sc_group *group)
 {
 	/* Arrange the parameters according to the attribute */
 	switch (group->attribute & 0xffff) {
@@ -445,6 +422,30 @@ int wayca_group_arrange(struct wayca_sc_group *group)
 		group->stride = group->nr_cpus_per_topo;
 
 	return wayca_group_request_resource(group);
+}
+
+int wayca_group_init(struct wayca_sc_group *group)
+{
+	/* Init with no members */
+	group->threads = NULL;
+	group->nr_threads = 0;
+
+	/* Init group in no hierarchy */
+	group->siblings = NULL;
+	group->father = NULL;
+	group->topo_hint = -1;
+	group->roll_over_cnts = 0;
+
+	CPU_ZERO(&group->used);
+	pthread_mutex_init(&group->mutex, NULL);
+
+	/*
+	 * Init the group attribute, threads will be placed continuously in the
+	 * adjacent CPUs and bind per-CPU.
+	 */
+	group->attribute = (WT_GF_CPU | WT_GF_COMPACT | WT_GF_PERCPU);
+
+	return wayca_group_arrange(group);
 }
 
 static void wayca_group_assign_thread_resource(struct wayca_sc_group *group,

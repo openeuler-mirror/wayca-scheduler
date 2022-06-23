@@ -132,9 +132,6 @@ struct wayca_sc_group {
 /* Do the initialization work for a new create group */
 int wayca_group_init(struct wayca_sc_group *group);
 
-/* Arrange the resource of the group according to the attribute */
-int wayca_group_arrange(struct wayca_sc_group *group);
-
 /* Add the thread to the group, arrange the resource for it */
 int wayca_group_add_thread(struct wayca_sc_group *group, struct wayca_thread *thread);
 
