@@ -2662,6 +2662,29 @@ static int topo_parse_smmu(struct wayca_topo *p_topo, const char *dir)
 	return ret;
 }
 
+static bool is_pci_device_dir(const char *dir)
+{
+	char path_buffer[WAYCA_SC_PATH_LEN_MAX] = {0};
+	char symlink_dir[WAYCA_SC_PATH_LEN_MAX] = {0};
+	ssize_t size;
+	char *ptr;
+
+	snprintf(path_buffer, sizeof(path_buffer) - 1, "%s/subsystem", dir);
+	size = readlink(path_buffer, symlink_dir, sizeof(symlink_dir) - 1);
+	if (size < 0) {
+		if (errno != ENOENT)
+			PRINT_ERROR("fail to read %s/subsystem, ret = %d", dir,
+				    -errno);
+		return false;
+	}
+
+	ptr = strstr(symlink_dir, "bus/pci");
+	if (!ptr)
+		return false;
+
+	return true;
+}
+
 /* Return negative on error, 0 on success
  */
 static int topo_parse_io_device(struct wayca_topo *p_topo, const char *dir)
@@ -2671,7 +2694,7 @@ static int topo_parse_io_device(struct wayca_topo *p_topo, const char *dir)
 	if (!dir)
 		return -EINVAL;
 
-	if (strstr(dir, "pci")) {
+	if (strstr(dir, "pci") && is_pci_device_dir(dir)) {
 		ret = topo_parse_pci_device(p_topo, dir);
 		if (ret) {
 			PRINT_ERROR("parse pci device fail, ret = %d\n", ret);
