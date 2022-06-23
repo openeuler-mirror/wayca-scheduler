@@ -29,6 +29,9 @@ import sys
 import os
 import re
 
+# The real version will be inserted here by cmake, don't change this line
+WAYCA_LSTOPO_VERSION = 0.0
+
 
 class TopoType(IntFlag):
     """
@@ -224,7 +227,8 @@ For more details, see: wayca-calibration --help
 def parse_args():
     """ parse the command line argument """
     parser = argparse.ArgumentParser(
-        description='An wrapper for lstopo-no-graphics.'
+        description=f'wayca-lstopo version:{WAYCA_LSTOPO_VERSION}\n'
+                    'An wrapper for lstopo-no-graphics.\n'
                     'This wrapper add support for displaying performance data of this system',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         add_help=False,

@@ -33,6 +33,10 @@ import os
 import re
 
 
+# The real version will be inserted here by cmake, don't change this line
+WAYCA_CALIBRATION_VERSION = 0.0
+
+
 group_name = None
 group_name_init = False
 DEF_MEMTEST_SIZE = 335544320
@@ -1098,7 +1102,8 @@ class StreamPerfTest(CalibrationPerTest):
 def parse_args():
     """ parse the command line argument """
     parser = argparse.ArgumentParser(
-        description='Auto calibration tool used to automate performance '
+        description=f'wayca-calibration version:{WAYCA_CALIBRATION_VERSION}\n'
+                    'Auto calibration tool used to automate performance '
                     'testing and export the results to an XML which '
                     'could be used by HWLOC',
         formatter_class=argparse.RawDescriptionHelpFormatter,
