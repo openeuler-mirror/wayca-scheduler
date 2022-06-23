@@ -14,6 +14,7 @@ project(WaycaScheduler)
 set(WAYCA_SCHEDULER_VERSION 0.1)
 
 option(DEBUG "Build the debug version of the project" off)
+option(ASAN "Build with ASan enabled; Depend on DEBUG" off)
 
 option(WAYCA_SC_BUILD_TOOLS "Build various tools of the wayca scheduler" on)
 
@@ -25,6 +26,10 @@ add_definitions(-DWAYCA_SCHEDULER_VERSION=\"${WAYCA_SCHEDULER_VERSION}\")
 if(DEBUG)
 	add_compile_options(-g)
 	add_definitions(-DWAYCA_SC_DEBUG)
+	if(ASAN)
+		add_compile_options(-fsanitize=address)
+		add_link_options(-fsanitize=address)
+	endif(ASAN)
 endif(DEBUG)
 
 include_directories(include/)
