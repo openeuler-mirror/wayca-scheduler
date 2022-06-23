@@ -2503,7 +2503,7 @@ static int topo_parse_pci_device(struct wayca_topo *p_topo, const char *dir)
 	if (!p_pcidev)
 		return -ENOMEM;
 	/* store dir full path */
-	strncpy(p_pcidev->absolute_path, dir, WAYCA_SC_PATH_LEN_MAX);
+	strncpy(p_pcidev->absolute_path, dir, WAYCA_SC_PATH_LEN_MAX - 1);
 	PRINT_DBG("absolute path: %s\n", p_pcidev->absolute_path);
 
 	/*
