@@ -224,16 +224,16 @@ int wayca_sc_packages_in_total(void);
  *
  * wayca_sc_*_cpu_mask() retrieve the cpuset mask of a certain topology
  * structure ID including
- * @core/ccl/node/package: ID of the topology structure
+ * @{core, ccl, node, package}_id: ID of the topology structure
  * @cpusetsize: size of @mask
  * @mask: the cpuset pointer to receive the result
  *
  * Return 0 on success and a negative error number on failure.
  */
-int wayca_sc_core_cpu_mask(int core, size_t cpusetsize, cpu_set_t *mask);
-int wayca_sc_ccl_cpu_mask(int ccl, size_t cpusetsize, cpu_set_t *mask);
-int wayca_sc_node_cpu_mask(int node, size_t cpusetsize, cpu_set_t *mask);
-int wayca_sc_package_cpu_mask(int package, size_t cpusetsize, cpu_set_t *mask);
+int wayca_sc_core_cpu_mask(int core_id, size_t cpusetsize, cpu_set_t *mask);
+int wayca_sc_ccl_cpu_mask(int ccl_id, size_t cpusetsize, cpu_set_t *mask);
+int wayca_sc_node_cpu_mask(int node_id, size_t cpusetsize, cpu_set_t *mask);
+int wayca_sc_package_cpu_mask(int package_id, size_t cpusetsize, cpu_set_t *mask);
 
 /**
  * wayca_sc_total_cpu_mask - retrieve the mask for all the cpus in the system
@@ -242,13 +242,13 @@ int wayca_sc_total_cpu_mask(size_t cpusetsize, cpu_set_t *mask);
 
 /**
  * wayca_sc_package_node_mask - retrieve the node mask in a certain package
- * @package: target package ID
+ * @package_id: target package ID
  * @setsize: size of @mask
  * @mask: the node mask to receive the result
  *
  * Return 0 on success and a negative error number on failure.
  */
-int wayca_sc_package_node_mask(int package, size_t setsize, cpu_set_t *mask);
+int wayca_sc_package_node_mask(int package_id, size_t setsize, cpu_set_t *mask);
 
 /**
  * wayca_sc_total_node_mask - retrieve the node mask in the system
@@ -262,15 +262,15 @@ int wayca_sc_total_node_mask(size_t setsize, cpu_set_t *mask);
 /**
  * The following family of functions retrieve the topology structure
  * ID which the target cpu belongs to.
- * @cpu: the target cpu
+ * @cpu_id: the target cpu
  *
  * Return the topology structure ID on success, or a negative error
  * number.
  */
-int wayca_sc_get_core_id(int cpu);
-int wayca_sc_get_ccl_id(int cpu);
-int wayca_sc_get_node_id(int cpu);
-int wayca_sc_get_package_id(int cpu);
+int wayca_sc_get_core_id(int cpu_id);
+int wayca_sc_get_ccl_id(int cpu_id);
+int wayca_sc_get_node_id(int cpu_id);
+int wayca_sc_get_package_id(int cpu_id);
 
 /**
  * The following family of functions retrieve size of specific level
@@ -298,7 +298,7 @@ int wayca_sc_get_l3_size(int cpu_id);
  *
  * Return 0 on success, or a negative error number on failure.
  */
-int wayca_sc_get_node_mem_size(int node, unsigned long *size);
+int wayca_sc_get_node_mem_size(int node_id, unsigned long *size);
 
 /* The type of the interrupt */
 enum wayca_sc_irq_type {

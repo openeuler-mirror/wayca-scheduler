@@ -48,18 +48,18 @@ static int core_prop_verify(xmlNodePtr node);
 static int core_prop_print(xmlNodePtr node);
 static int cpu_elem_build(xmlNodePtr node);
 static int cpu_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd);
-static int intr_elem_build(xmlNodePtr node);
+static int intr_elem_build(xmlNodePtr intr);
 static int intr_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd);
 static int irq_elem_build(xmlNodePtr node);
 static int irq_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd);
 static int irq_prop_verify(xmlNodePtr node);
 static int irq_prop_print(xmlNodePtr node);
-static int pci_dev_elem_build(xmlNodePtr node);
+static int pci_dev_elem_build(xmlNodePtr pci_node);
 static int pci_dev_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt,
 		xmlDtdPtr topo_dtd);
 static int pci_prop_verify(xmlNodePtr node);
 static int pci_prop_print(xmlNodePtr node);
-static int smmu_dev_elem_build(xmlNodePtr node);
+static int smmu_dev_elem_build(xmlNodePtr smmu_node);
 static int smmu_dev_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt,
 		xmlDtdPtr topo_dtd);
 static int smmu_prop_verify(xmlNodePtr node);

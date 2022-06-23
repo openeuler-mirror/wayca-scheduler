@@ -561,7 +561,7 @@ int wayca_sc_thread_get_attr(wayca_sc_thread_t wthread, wayca_sc_thread_attr_t *
 	return 0;
 }
 
-static struct wayca_thread *wayca_thread_alloc()
+static struct wayca_thread *wayca_thread_alloc(void)
 {
 	wayca_sc_thread_t id;
 
@@ -637,12 +637,12 @@ int wayca_sc_thread_create(wayca_sc_thread_t *wthread, pthread_attr_t *attr,
 	return 0;
 }
 
-int wayca_sc_thread_join(wayca_sc_thread_t id, void **retval)
+int wayca_sc_thread_join(wayca_sc_thread_t wthread, void **retval)
 {
 	struct wayca_thread *thread;
 	int ret;
 
-	thread = id_to_wayca_thread(id);
+	thread = id_to_wayca_thread(wthread);
 	if (!thread)
 		return -EINVAL;
 
@@ -655,19 +655,19 @@ int wayca_sc_thread_join(wayca_sc_thread_t id, void **retval)
 		ret = -ret;
 
 	if (thread->group)
-		wayca_sc_thread_detach_group(id, thread->group->id);
+		wayca_sc_thread_detach_group(wthread, thread->group->id);
 
 	wayca_thread_free(thread);
 
 	return ret;
 }
 
-int wayca_sc_thread_kill(wayca_sc_thread_t id, int sig)
+int wayca_sc_thread_kill(wayca_sc_thread_t wthread, int sig)
 {
 	struct wayca_thread *thread;
 	int ret;
 
-	thread = id_to_wayca_thread(id);
+	thread = id_to_wayca_thread(wthread);
 	if (!thread)
 		return -EINVAL;
 
@@ -732,11 +732,11 @@ int wayca_sc_pid_attach_thread(wayca_sc_thread_t *wthread, pid_t pid)
 	return 0;
 }
 
-int wayca_sc_pid_detach_thread(wayca_sc_thread_t id)
+int wayca_sc_pid_detach_thread(wayca_sc_thread_t wthread)
 {
 	struct wayca_thread *thread;
 
-	thread = id_to_wayca_thread(id);
+	thread = id_to_wayca_thread(wthread);
 	if (!thread)
 		return -EINVAL;
 
@@ -745,7 +745,7 @@ int wayca_sc_pid_detach_thread(wayca_sc_thread_t id)
 		return -EINVAL;
 
 	if (thread->group)
-		wayca_sc_thread_detach_group(id, thread->group->id);
+		wayca_sc_thread_detach_group(wthread, thread->group->id);
 
 	wayca_thread_update_load(thread, false);
 
@@ -798,7 +798,7 @@ int wayca_sc_group_get_attr(wayca_sc_group_t group, wayca_sc_group_attr_t *attr)
 	return 0;
 }
 
-static struct wayca_sc_group *wayca_group_alloc()
+static struct wayca_sc_group *wayca_group_alloc(void)
 {
 	wayca_sc_group_t id;
 
