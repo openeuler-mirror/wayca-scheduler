@@ -30,3 +30,16 @@ install(
 	TARGETS ${WAYCA_SC_INFO_NAME}
 	RUNTIME DESTINATION ${WAYCA_SC_INSTALL_PREFIX}/bin/
 )
+
+set(WAYCA_CALIBRATION_TOOL wayca-calibration/wayca_calibration.py)
+set(WAYCA_CALIBRATION_CONF wayca-calibration/wayca_calibration.conf)
+
+install(
+	PROGRAMS ${WAYCA_CALIBRATION_TOOL}
+	DESTINATION ${WAYCA_SC_INSTALL_PREFIX}/bin/
+)
+
+install(
+	FILES ${WAYCA_CALIBRATION_CONF}
+	DESTINATION ${CMAKE_INSTALL_PREFIX}/etc/wayca-scheduler
+)
