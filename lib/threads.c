@@ -136,6 +136,7 @@ int thread_unbind(pid_t pid)
 int thread_bind_cpulist(pid_t pid, char *s)
 {
 	cpu_set_t mask;
+
 	if (list_to_mask(s, sizeof(cpu_set_t), &mask))
 		return -EINVAL;
 	return thread_sched_setaffinity(pid, sizeof(mask), &mask);
@@ -144,6 +145,7 @@ int thread_bind_cpulist(pid_t pid, char *s)
 int process_bind_cpulist(pid_t pid, char *s)
 {
 	cpu_set_t mask;
+
 	if (list_to_mask(s, sizeof(cpu_set_t), &mask))
 		return -EINVAL;
 	return thread_sched_setaffinity(pid, sizeof(mask), &mask);

@@ -890,7 +890,7 @@ static int topo_read_node_topology(struct wayca_topo *p_topo, int node_index)
 	}
 	CPU_FREE(node_cpu_map);
 
-	/* allocate a distance array*/
+	/* allocate a distance array */
 	distance_array = (int *)calloc(p_topo->n_nodes, sizeof(int));
 	if (!distance_array)
 		return -ENOMEM;
@@ -1767,7 +1767,7 @@ int wayca_sc_get_ccl_id(int cpu_id)
 	int physical_id;
 	int i;
 
-	// cluster may not exist in some version of kernel
+	/* cluster may not exist in some version of kernel */
 	if (!topo_is_valid_cpu(cpu_id) || wayca_sc_cpus_in_ccl() < 0)
 		return -EINVAL;
 
@@ -1889,8 +1889,8 @@ int wayca_sc_get_l2_size(int cpu_id)
 
 int wayca_sc_get_l3_size(int cpu_id)
 {
-	static const char *size;
-	static const char *type;
+	const char *size;
+	const char *type;
 	int level;
 	int i;
 
@@ -2876,14 +2876,14 @@ static void topo_copy_pcidev_info(struct wayca_sc_device_info *dev_info,
 
 int wayca_sc_get_device_info(const char *name, struct wayca_sc_device_info *dev_info)
 {
-	int i, j, k;
+	int j, k;
 
 	if (!dev_info || !name)
 		return -EINVAL;
 	memset(dev_info, 0, sizeof(*dev_info));
 
-	for (i = 0, j = 0; j < topo.n_nodes; j++) {
-		for (k = 0; k < topo.nodes[j]->n_smmus; k++, i++) {
+	for (j = 0; j < topo.n_nodes; j++) {
+		for (k = 0; k < topo.nodes[j]->n_smmus; k++) {
 			struct wayca_smmu *smmu = topo.nodes[j]->smmus[k];
 
 			if (!strcmp(smmu->name, name)) {
@@ -2894,7 +2894,7 @@ int wayca_sc_get_device_info(const char *name, struct wayca_sc_device_info *dev_
 			}
 		}
 
-		for (k = 0; k < topo.nodes[j]->n_pcidevs; k++, i++) {
+		for (k = 0; k < topo.nodes[j]->n_pcidevs; k++) {
 			struct wayca_pci_device *pcidev =
 						topo.nodes[j]->pcidevs[k];
 

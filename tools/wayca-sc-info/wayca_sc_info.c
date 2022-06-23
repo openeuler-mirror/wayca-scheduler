@@ -84,8 +84,8 @@ static int parse_file_name(const char *filename, bool is_input)
 			topo_err("too many input file.");
 			return -EINVAL;
 		}
-		info_args.has_input_file = true;
 
+		info_args.has_input_file = true;
 		name = realpath(filename, info_args.input_file_name);
 		if (!name) {
 			topo_err("access input file failed, ret = %d.", -errno);
