@@ -12,17 +12,16 @@
  */
 
 #define _GNU_SOURCE
+#include <errno.h>
 #include <sched.h>
-#include <limits.h>
-#include <linux/mempolicy.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <stdint.h>
 #include <sys/syscall.h>
-#include <wayca-scheduler.h>
+#include <linux/mempolicy.h>
 
 #include "common.h"
+#include "wayca-scheduler.h"
 
 static inline long set_mempolicy(int mode, const unsigned long *nodemask,
 				 unsigned long maxnode)

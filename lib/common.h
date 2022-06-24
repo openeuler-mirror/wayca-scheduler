@@ -15,17 +15,16 @@
 #define LIB_COMMON_H_
 
 #define _GNU_SOURCE
-#include <stdbool.h>
-#include <linux/limits.h>
-#include <errno.h>
+#include <fcntl.h>
 #include <sched.h>
+#include <sys/types.h>
 
-#include <wayca-scheduler.h>
+#include "wayca-scheduler.h"
 
 extern char *wayca_scheduler_socket_path;
 
-#include <assert.h>
 #ifdef WAYCA_SC_DEBUG
+#include <assert.h>
 #define WAYCA_SC_ASSERT(cond)	assert(cond)
 #else
 #define WAYCA_SC_ASSERT(cond)	do { } while (0)
@@ -67,8 +66,8 @@ int list_to_mask(char *s, size_t cpusetsize, cpu_set_t *mask);
 int to_task_cpu_map(char *cpu_list, struct task_cpu_map maps[]);
 int process_bind_cpulist(pid_t pid, char *s);
 int thread_bind_cpulist(pid_t pid, char *s);
-int process_bind_cpumask(pid_t pid, cpu_set_t *cpumask, size_t maxCpus);
-int thread_bind_cpumask(pid_t pid, cpu_set_t *cpumask, size_t maxCpus);
+int process_bind_cpumask(pid_t pid, cpu_set_t *cpumask, size_t cpusetsize);
+int thread_bind_cpumask(pid_t pid, cpu_set_t *cpumask, size_t cpusetsize);
 
 int thread_bind_cpu(pid_t pid, int cpu);
 int thread_bind_ccl(pid_t pid, int ccl);

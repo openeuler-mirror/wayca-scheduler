@@ -17,22 +17,24 @@
 
 #define _GNU_SOURCE
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <dirent.h>
-#include <limits.h>
-#include <string.h>
 #include <ctype.h>
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <inttypes.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
+#include <string.h>
 #include <unistd.h>
-#include <inttypes.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #include "common.h"
-#include "topo.h"
 #include "log.h"
 #include "wayca-scheduler.h"
+
+#include "topo.h"
 
 WAYCA_SC_INIT_PRIO(topo_init, TOPO);
 WAYCA_SC_FINI_PRIO(topo_free, TOPO);
@@ -888,7 +890,7 @@ static int topo_read_node_topology(struct wayca_topo *p_topo, int node_index)
 	}
 	CPU_FREE(node_cpu_map);
 
-	/* allocate a distance array*/
+	/* allocate a distance array */
 	distance_array = (int *)calloc(p_topo->n_nodes, sizeof(int));
 	if (!distance_array)
 		return -ENOMEM;
@@ -1765,7 +1767,7 @@ int wayca_sc_get_ccl_id(int cpu_id)
 	int physical_id;
 	int i;
 
-	// cluster may not exist in some version of kernel
+	/* cluster may not exist in some version of kernel */
 	if (!topo_is_valid_cpu(cpu_id) || wayca_sc_cpus_in_ccl() < 0)
 		return -EINVAL;
 
@@ -1887,8 +1889,8 @@ int wayca_sc_get_l2_size(int cpu_id)
 
 int wayca_sc_get_l3_size(int cpu_id)
 {
-	static const char *size;
-	static const char *type;
+	const char *size;
+	const char *type;
 	int level;
 	int i;
 
@@ -2503,7 +2505,7 @@ static int topo_parse_pci_device(struct wayca_topo *p_topo, const char *dir)
 	if (!p_pcidev)
 		return -ENOMEM;
 	/* store dir full path */
-	strncpy(p_pcidev->absolute_path, dir, WAYCA_SC_PATH_LEN_MAX);
+	strncpy(p_pcidev->absolute_path, dir, WAYCA_SC_PATH_LEN_MAX - 1);
 	PRINT_DBG("absolute path: %s\n", p_pcidev->absolute_path);
 
 	/*
@@ -2662,6 +2664,29 @@ static int topo_parse_smmu(struct wayca_topo *p_topo, const char *dir)
 	return ret;
 }
 
+static bool is_pci_device_dir(const char *dir)
+{
+	char path_buffer[WAYCA_SC_PATH_LEN_MAX] = {0};
+	char symlink_dir[WAYCA_SC_PATH_LEN_MAX] = {0};
+	ssize_t size;
+	char *ptr;
+
+	snprintf(path_buffer, sizeof(path_buffer) - 1, "%s/subsystem", dir);
+	size = readlink(path_buffer, symlink_dir, sizeof(symlink_dir) - 1);
+	if (size < 0) {
+		if (errno != ENOENT)
+			PRINT_ERROR("fail to read %s/subsystem, ret = %d", dir,
+				    -errno);
+		return false;
+	}
+
+	ptr = strstr(symlink_dir, "bus/pci");
+	if (!ptr)
+		return false;
+
+	return true;
+}
+
 /* Return negative on error, 0 on success
  */
 static int topo_parse_io_device(struct wayca_topo *p_topo, const char *dir)
@@ -2671,7 +2696,7 @@ static int topo_parse_io_device(struct wayca_topo *p_topo, const char *dir)
 	if (!dir)
 		return -EINVAL;
 
-	if (strstr(dir, "pci")) {
+	if (strstr(dir, "pci") && is_pci_device_dir(dir)) {
 		ret = topo_parse_pci_device(p_topo, dir);
 		if (ret) {
 			PRINT_ERROR("parse pci device fail, ret = %d\n", ret);
@@ -2851,14 +2876,14 @@ static void topo_copy_pcidev_info(struct wayca_sc_device_info *dev_info,
 
 int wayca_sc_get_device_info(const char *name, struct wayca_sc_device_info *dev_info)
 {
-	int i, j, k;
+	int j, k;
 
 	if (!dev_info || !name)
 		return -EINVAL;
 	memset(dev_info, 0, sizeof(*dev_info));
 
-	for (i = 0, j = 0; j < topo.n_nodes; j++) {
-		for (k = 0; k < topo.nodes[j]->n_smmus; k++, i++) {
+	for (j = 0; j < topo.n_nodes; j++) {
+		for (k = 0; k < topo.nodes[j]->n_smmus; k++) {
 			struct wayca_smmu *smmu = topo.nodes[j]->smmus[k];
 
 			if (!strcmp(smmu->name, name)) {
@@ -2869,7 +2894,7 @@ int wayca_sc_get_device_info(const char *name, struct wayca_sc_device_info *dev_
 			}
 		}
 
-		for (k = 0; k < topo.nodes[j]->n_pcidevs; k++, i++) {
+		for (k = 0; k < topo.nodes[j]->n_pcidevs; k++) {
 			struct wayca_pci_device *pcidev =
 						topo.nodes[j]->pcidevs[k];
 

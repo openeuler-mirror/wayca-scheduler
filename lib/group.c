@@ -12,10 +12,11 @@
  */
 
 #define _GNU_SOURCE
+#include <errno.h>
 #include <limits.h>
+#include <sched.h>
 #include <stdbool.h>
 #include <string.h>
-#include <sched.h>
 
 #include "common.h"
 #include "wayca_thread.h"
@@ -157,7 +158,12 @@ static int find_incomplete_set(struct wayca_sc_group *group, cpu_set_t *cpuset)
 
 bool is_thread_in_group(struct wayca_sc_group *group, struct wayca_thread *thread)
 {
-	struct wayca_thread *member = group->threads;
+	struct wayca_thread *member;
+
+	if (!group || !thread)
+		return false;
+
+	member = group->threads;
 
 	while (member) {
 		if (member == thread)
@@ -173,6 +179,9 @@ int max_topo_cpus_in_child_groups(struct wayca_sc_group *group)
 {
 	struct wayca_sc_group *child;
 	int max_topo_cpus = 0;
+
+	if (!group)
+		return -EINVAL;
 
 	if (!group->nr_groups)
 		return 0;
@@ -377,31 +386,8 @@ static int wayca_group_request_resource(struct wayca_sc_group *group)
 	return 0;
 }
 
-int wayca_group_init(struct wayca_sc_group *group)
-{
-	/* Init with no members */
-	group->threads = NULL;
-	group->nr_threads = 0;
-
-	/* Init group in no hierarchy */
-	group->siblings = NULL;
-	group->father = NULL;
-	group->topo_hint = -1;
-	group->roll_over_cnts = 0;
-
-	CPU_ZERO(&group->used);
-	pthread_mutex_init(&group->mutex, NULL);
-
-	/*
-	 * Init the group attribute, threads will be placed continuously in the
-	 * adjacent CPUs and bind per-CPU.
-	 */
-	group->attribute = (WT_GF_CPU | WT_GF_COMPACT | WT_GF_PERCPU);
-
-	return wayca_group_arrange(group);
-}
-
-int wayca_group_arrange(struct wayca_sc_group *group)
+/* Arrange the resource of the group according to the attribute */
+static int wayca_group_arrange(struct wayca_sc_group *group)
 {
 	/* Arrange the parameters according to the attribute */
 	switch (group->attribute & 0xffff) {
@@ -445,6 +431,33 @@ int wayca_group_arrange(struct wayca_sc_group *group)
 		group->stride = group->nr_cpus_per_topo;
 
 	return wayca_group_request_resource(group);
+}
+
+int wayca_group_init(struct wayca_sc_group *group)
+{
+	if (!group)
+		return -EINVAL;
+
+	/* Init with no members */
+	group->threads = NULL;
+	group->nr_threads = 0;
+
+	/* Init group in no hierarchy */
+	group->siblings = NULL;
+	group->father = NULL;
+	group->topo_hint = -1;
+	group->roll_over_cnts = 0;
+
+	CPU_ZERO(&group->used);
+	pthread_mutex_init(&group->mutex, NULL);
+
+	/*
+	 * Init the group attribute, threads will be placed continuously in the
+	 * adjacent CPUs and bind per-CPU.
+	 */
+	group->attribute = (WT_GF_CPU | WT_GF_COMPACT | WT_GF_PERCPU);
+
+	return wayca_group_arrange(group);
 }
 
 static void wayca_group_assign_thread_resource(struct wayca_sc_group *group,

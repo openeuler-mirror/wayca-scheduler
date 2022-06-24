@@ -13,16 +13,17 @@
 
 #define _GNU_SOURCE
 #include <errno.h>
-#include <sched.h>
-#include <limits.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <stdint.h>
 #include <fcntl.h>
+#include <limits.h>
+#include <sched.h>
+#include <stdio.h>
+#include <stdint.h>
 #include <string.h>
-#include <wayca-scheduler.h>
+#include <unistd.h>
 
 #include "bitmap.h"
+#include "wayca-scheduler.h"
+
 /*
  * Bitmap printing & parsing functions: first version by Bill Irwin,
  * second version by Paul Jackson, third by Joe Korty.

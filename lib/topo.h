@@ -114,7 +114,7 @@ struct wayca_device_irqs {
 	uint32_t *irq_numbers;
 };
 
-#define WAYCA_SC_PCI_SLOT_NAME_LEN_MAX 24 //Big enough for pci BDF number
+#define WAYCA_SC_PCI_SLOT_NAME_LEN_MAX 24	/* Big enough for PCI BDF number */
 struct wayca_pci_device {
 	int numa_node;			/* to which numa_node it belongs */
 	int smmu_idx;			/* to which smmu it belongs. -1 none */

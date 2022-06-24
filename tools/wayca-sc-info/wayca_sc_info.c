@@ -11,12 +11,13 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
+#include <errno.h>
 #include <getopt.h>
-#include <string.h>
 #include <libgen.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 #include "wayca_sc_info.h"
 
 static struct option lgopts[] = {
@@ -79,13 +80,24 @@ static int parse_file_name(const char *filename, bool is_input)
 	int ret;
 
 	if (is_input) {
+		if (info_args.has_input_file) {
+			topo_err("too many input file.");
+			return -EINVAL;
+		}
+
+		info_args.has_input_file = true;
 		name = realpath(filename, info_args.input_file_name);
 		if (!name) {
 			topo_err("access input file failed, ret = %d.", -errno);
 			return -errno;
 		}
-		info_args.has_input_file = true;
 	} else {
+		if (info_args.has_output_file) {
+			topo_err("too many output file.");
+			return -EINVAL;
+		}
+		info_args.has_output_file = true;
+
 		if (strlen(filename) >= WAYCA_INFO_MAX_FILE_NAME) {
 			topo_err("output file name tool long.");
 			return -ENAMETOOLONG;
@@ -99,7 +111,6 @@ static int parse_file_name(const char *filename, bool is_input)
 					ret);
 			return ret;
 		}
-		info_args.has_output_file = true;
 	}
 
 	topo_info("%s xml file name: %s.", is_input ? "input" : "output",

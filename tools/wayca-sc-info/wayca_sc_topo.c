@@ -11,12 +11,15 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#include <stdlib.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include <unistd.h>
-#include <inttypes.h>
-#include <fcntl.h>
+
+#include "common.h"
 #include "wayca-scheduler.h"
 #include "wayca_sc_info.h"
 
@@ -45,18 +48,18 @@ static int core_prop_verify(xmlNodePtr node);
 static int core_prop_print(xmlNodePtr node);
 static int cpu_elem_build(xmlNodePtr node);
 static int cpu_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd);
-static int intr_elem_build(xmlNodePtr node);
+static int intr_elem_build(xmlNodePtr intr);
 static int intr_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd);
 static int irq_elem_build(xmlNodePtr node);
 static int irq_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd);
 static int irq_prop_verify(xmlNodePtr node);
 static int irq_prop_print(xmlNodePtr node);
-static int pci_dev_elem_build(xmlNodePtr node);
+static int pci_dev_elem_build(xmlNodePtr pci_node);
 static int pci_dev_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt,
 		xmlDtdPtr topo_dtd);
 static int pci_prop_verify(xmlNodePtr node);
 static int pci_prop_print(xmlNodePtr node);
-static int smmu_dev_elem_build(xmlNodePtr node);
+static int smmu_dev_elem_build(xmlNodePtr smmu_node);
 static int smmu_dev_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt,
 		xmlDtdPtr topo_dtd);
 static int smmu_prop_verify(xmlNodePtr node);
@@ -300,8 +303,8 @@ static int topo_build_next_elem(xmlNodePtr node, int index, int c_elem_nr,
 static bool is_valid_idx(const char *num)
 {
 #define MAX_CPUS 1280 // kunpeng930 support 16 packects interconnected
-	long ret;
 	char *endstr;
+	long ret;
 
 	ret = strtol(num, &endstr, 10);
 	return *endstr == '\0' && ret >= 0 && ret < MAX_CPUS;
@@ -353,7 +356,7 @@ static int core_prop_print(xmlNodePtr node)
 
 static int core_prop_build(xmlNodePtr numa_node, int core_id)
 {
-	char content[100] = {0};
+	char content[CONTENT_STR_LEN] = {0};
 	xmlAttrPtr prop;
 	int cache_size;
 
@@ -520,7 +523,7 @@ static int numa_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd)
 
 static int numa_prop_build(xmlNodePtr numa_node, int numa_id)
 {
-	char content[100] = {0};
+	char content[CONTENT_STR_LEN] = {0};
 	unsigned long mem_size;
 	xmlAttrPtr prop;
 	int cache_size;
@@ -816,7 +819,7 @@ static int build_topo_info(xmlDocPtr *topo_doc)
 	return 0;
 
 build_fail:
-	//subtree will be freed too.
+	/* subtree will be freed too */
 	xmlFreeDoc(doc);
 	return ret;
 }
@@ -824,9 +827,6 @@ build_fail:
 static xmlNodePtr xml_find_node(xmlNodePtr last_node, const char *node_name)
 {
 	xmlNode *cur_node;
-
-	if (!last_node)
-		return NULL;
 
 	while (last_node) {
 		if ((last_node->type == XML_ELEMENT_NODE) &&
@@ -1025,8 +1025,6 @@ int put_topo_info(struct topo_info_args *args, xmlDocPtr topo_doc)
 	if (args->has_output_file)
 		ret = xml_export_topo_info(args->output_file_name, topo_doc);
 	else {
-		xmlNodePtr root_node;
-
 		root_node = xmlDocGetRootElement(topo_doc);
 		if (!root_node)
 			return -ENOENT;
@@ -1235,7 +1233,7 @@ buffer_free:
 static int pci_dev_elem_build(xmlNodePtr pci_node)
 {
 	struct wayca_sc_device_info dev_info;
-	char content[100] = {0};
+	char content[CONTENT_STR_LEN] = {0};
 	const char *pci_slot;
 	xmlAttrPtr prop;
 	int ret;
@@ -1281,7 +1279,7 @@ static int pci_dev_elem_build(xmlNodePtr pci_node)
 static int smmu_dev_elem_build(xmlNodePtr smmu_node)
 {
 	struct wayca_sc_device_info dev_info;
-	char content[100] = {0};
+	char content[CONTENT_STR_LEN] = {0};
 	const char *name;
 	xmlAttrPtr prop;
 	int ret;
@@ -1327,24 +1325,22 @@ static int topo_str2ul(const char *str, unsigned long *num)
 	return 0;
 }
 
-static const char * const irq_chip_string[] = {
-	"invalid",
-	"mbigen-v2",
-	"ITS-MSI",
-	"ITS-pMSI",
-	"GICv3",
-};
-
-static const char * const irq_type_string[] = {
-	"invalid",
-	"edge",
-	"level",
-};
-
 static int irq_prop_build(xmlNodePtr numa_node, unsigned long irq_num)
 {
+	static const char * const irq_chip_string[] = {
+		"invalid",
+		"mbigen-v2",
+		"ITS-MSI",
+		"ITS-pMSI",
+		"GICv3",
+	};
+	static const char * const irq_type_string[] = {
+		"invalid",
+		"edge",
+		"level",
+	};
+	char content[CONTENT_STR_LEN] = {0};
 	struct wayca_sc_irq_info irq_info;
-	char content[100] = {0};
 	xmlAttrPtr prop;
 	int ret;
 
@@ -1486,6 +1482,7 @@ static int smmu_dev_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_d
 
 	return 0;
 }
+
 static int irq_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd)
 {
 	static const char * const irq_elem_list[] = {
@@ -1541,7 +1538,6 @@ static int pci_prop_print(xmlNodePtr node)
 		"device_id",
 		"irq_nr"
 	};
-
 	int ret;
 
 	ret = print_prop_list(node, pci_prop_list, ARRAY_SIZE(pci_prop_list));
