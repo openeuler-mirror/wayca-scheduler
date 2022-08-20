@@ -163,6 +163,13 @@ int wayca_sc_get_irq_bind_cpu(int irq, size_t cpusetsize, cpu_set_t *cpuset)
 		return -EINVAL;
 
 	CPU_ZERO_S(cpusetsize, cpuset);
+
+	/*
+	 * With GCC -O2 optimization the compiler may optimize @mask out which
+	 * will lead to the wrong result. Add a barrier here to void incorrect
+	 * optimization.
+	 */
+	asm volatile ("":::"memory");
 	CPU_OR_S(cpusetsize, cpuset, cpuset, &mask);
 	return 0;
 }
