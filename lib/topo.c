@@ -2276,7 +2276,7 @@ static int topo_parse_irq(struct wayca_device_irqs *wirqs,
 				const char *device_sysfs_dir)
 {
 	uint32_t irq_number = 0;
-	int irq;
+	int irq = -1;
 	int j;
 
 	topo_path_read_s32(device_sysfs_dir, "irq", &irq);

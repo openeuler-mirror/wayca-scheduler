@@ -542,7 +542,8 @@ int wayca_sc_thread_set_attr(wayca_sc_thread_t wthread, wayca_sc_thread_attr_t *
 	wt_p = id_to_wayca_thread(wthread);
 	if (!wt_p)
 		return -EINVAL;
-
+	if (!attr)
+		return -EINVAL;
 	wt_p->attribute = *attr;
 
 	if (wt_p->group)
@@ -558,7 +559,8 @@ int wayca_sc_thread_get_attr(wayca_sc_thread_t wthread, wayca_sc_thread_attr_t *
 	wt_p = id_to_wayca_thread(wthread);
 	if (!wt_p)
 		return -EINVAL;
-
+	if (!attr)
+		return -EINVAL;
 	*attr = wt_p->attribute;
 	return 0;
 }
