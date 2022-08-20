@@ -162,6 +162,7 @@ int wayca_sc_get_irq_bind_cpu(int irq, size_t cpusetsize, cpu_set_t *cpuset)
 	if (cpusetsize < valid_cpu_setsize)
 		return -EINVAL;
 
+	CPU_ZERO_S(cpusetsize, cpuset);
 	CPU_OR_S(cpusetsize, cpuset, cpuset, &mask);
 	return 0;
 }
