@@ -22,6 +22,7 @@
 #include <unistd.h>
 
 #include "bitops.h"
+#include "common.h"
 #include "wayca-scheduler.h"
 
 /*
@@ -106,7 +107,7 @@ static int bitmap_str_to_cpumask(const char *start, size_t len,
 	return 0;
 }
 
-int wayca_sc_irq_bind_cpu(int irq, int cpu)
+int WAYCA_SC_DECLSPEC wayca_sc_irq_bind_cpu(int irq, int cpu)
 {
 	char buf[PATH_MAX];
 	cpu_set_t mask;
@@ -132,7 +133,8 @@ int wayca_sc_irq_bind_cpu(int irq, int cpu)
 	return 0;
 }
 
-int wayca_sc_get_irq_bind_cpu(int irq, size_t cpusetsize, cpu_set_t *cpuset)
+int WAYCA_SC_DECLSPEC wayca_sc_get_irq_bind_cpu(int irq, size_t cpusetsize,
+						cpu_set_t *cpuset)
 {
 	size_t valid_cpu_setsize;
 	int fd, ret;

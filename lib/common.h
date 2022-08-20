@@ -30,6 +30,8 @@ extern char *wayca_scheduler_socket_path;
 #define WAYCA_SC_ASSERT(cond)	do { } while (0)
 #endif
 
+#define WAYCA_SC_DECLSPEC __attribute__((__visibility__("default")))
+
 /*
  * Mathematic utils.
  */

@@ -31,7 +31,7 @@
 WAYCA_SC_INIT_PRIO(wayca_thread_init, THREAD);
 WAYCA_SC_FINI_PRIO(wayca_thread_exit, THREAD);
 
-int list_to_mask(char *s, size_t cpusetsize, cpu_set_t *mask)
+int WAYCA_SC_DECLSPEC list_to_mask(char *s, size_t cpusetsize, cpu_set_t *mask)
 {
 	int cr_in_total = wayca_sc_cpus_in_total();
 
@@ -68,7 +68,7 @@ int list_to_mask(char *s, size_t cpusetsize, cpu_set_t *mask)
 }
 
 /* bind a thread to a specified CPU */
-int thread_bind_cpu(pid_t pid, int cpu)
+int WAYCA_SC_DECLSPEC thread_bind_cpu(pid_t pid, int cpu)
 {
 	cpu_set_t mask;
 	int ret;
@@ -81,7 +81,7 @@ int thread_bind_cpu(pid_t pid, int cpu)
 }
 
 /* bind a thread to a CCL which starts from a specified CPU */
-int thread_bind_ccl(pid_t pid, int ccl)
+int WAYCA_SC_DECLSPEC thread_bind_ccl(pid_t pid, int ccl)
 {
 	cpu_set_t mask;
 	int ret;
@@ -94,7 +94,7 @@ int thread_bind_ccl(pid_t pid, int ccl)
 }
 
 /* bind a thread to a numa node */
-int thread_bind_node(pid_t pid, int node)
+int WAYCA_SC_DECLSPEC thread_bind_node(pid_t pid, int node)
 {
 	cpu_set_t mask;
 	int ret;
@@ -107,7 +107,7 @@ int thread_bind_node(pid_t pid, int node)
 }
 
 /* bind a thread to a package which might include multiple numa nodes */
-int thread_bind_package(pid_t pid, int package)
+int WAYCA_SC_DECLSPEC thread_bind_package(pid_t pid, int package)
 {
 	cpu_set_t mask;
 	int ret;
@@ -120,7 +120,7 @@ int thread_bind_package(pid_t pid, int package)
 }
 
 /* unbind a thread, aka. bind to all CPUs */
-int thread_unbind(pid_t pid)
+int WAYCA_SC_DECLSPEC thread_unbind(pid_t pid)
 {
 	cpu_set_t mask;
 	int ret;
@@ -133,7 +133,7 @@ int thread_unbind(pid_t pid)
 }
 
 /* bind a thread to cpulist defined by a string like "0-3,5" */
-int thread_bind_cpulist(pid_t pid, char *s)
+int WAYCA_SC_DECLSPEC thread_bind_cpulist(pid_t pid, char *s)
 {
 	cpu_set_t mask;
 
@@ -142,7 +142,7 @@ int thread_bind_cpulist(pid_t pid, char *s)
 	return thread_sched_setaffinity(pid, sizeof(mask), &mask);
 }
 
-int process_bind_cpulist(pid_t pid, char *s)
+int WAYCA_SC_DECLSPEC process_bind_cpulist(pid_t pid, char *s)
 {
 	cpu_set_t mask;
 
@@ -186,7 +186,7 @@ static int process_sched_setaffinity(pid_t pid, int size, cpu_set_t * mask)
 /*
  * bind all threads in a process to a specified CPU
  */
-int process_bind_cpu(pid_t pid, int cpu)
+int WAYCA_SC_DECLSPEC process_bind_cpu(pid_t pid, int cpu)
 {
 	cpu_set_t mask;
 	int ret;
@@ -201,7 +201,7 @@ int process_bind_cpu(pid_t pid, int cpu)
 /*
  * bind all threads in a process to a CCL which starts from a specified CPU
  */
-int process_bind_ccl(pid_t pid, int ccl)
+int WAYCA_SC_DECLSPEC process_bind_ccl(pid_t pid, int ccl)
 {
 	cpu_set_t mask;
 	int ret;
@@ -216,7 +216,7 @@ int process_bind_ccl(pid_t pid, int ccl)
 /*
  * bind all threads in a process to a numa node
  */
-int process_bind_node(pid_t pid, int node)
+int WAYCA_SC_DECLSPEC process_bind_node(pid_t pid, int node)
 {
 	cpu_set_t mask;
 	int ret;
@@ -229,7 +229,7 @@ int process_bind_node(pid_t pid, int node)
 }
 
 /* bind all threads in a process to a package which might include multiple numa nodes */
-int process_bind_package(pid_t pid, int package)
+int WAYCA_SC_DECLSPEC process_bind_package(pid_t pid, int package)
 {
 	cpu_set_t mask;
 	int ret;
@@ -242,7 +242,7 @@ int process_bind_package(pid_t pid, int package)
 }
 
 /* unbind all threads in one process, aka. bind to all CPUs */
-int process_unbind(pid_t pid)
+int WAYCA_SC_DECLSPEC process_unbind(pid_t pid)
 {
 	cpu_set_t mask;
 	int ret;
@@ -255,17 +255,17 @@ int process_unbind(pid_t pid)
 }
 
 /* bind all threads in one process to cpulist defined by a string like "0-3,5" */
-int process_bind_cpumask(pid_t pid, cpu_set_t *cpumask, size_t cpusetsize)
+int WAYCA_SC_DECLSPEC process_bind_cpumask(pid_t pid, cpu_set_t *cpumask, size_t cpusetsize)
 {
 	return process_sched_setaffinity(pid, cpusetsize, cpumask);
 }
 
-int thread_bind_cpumask(pid_t pid, cpu_set_t *cpumask, size_t cpusetsize)
+int WAYCA_SC_DECLSPEC thread_bind_cpumask(pid_t pid, cpu_set_t *cpumask, size_t cpusetsize)
 {
 	return thread_sched_setaffinity(pid, cpusetsize, cpumask);
 }
 
-char *wayca_scheduler_socket_path = "/etc/wayca-scheduler/wayca.socket";
+WAYCA_SC_DECLSPEC char *wayca_scheduler_socket_path = "/etc/wayca-scheduler/wayca.socket";
 
 /*
  * The maximum threads one process can create depends on several
@@ -535,7 +535,8 @@ void *wayca_thread_start_routine(void *private)
 	return thread->start_routine(thread->arg);
 }
 
-int wayca_sc_thread_set_attr(wayca_sc_thread_t wthread, wayca_sc_thread_attr_t *attr)
+int WAYCA_SC_DECLSPEC wayca_sc_thread_set_attr(wayca_sc_thread_t wthread,
+					       wayca_sc_thread_attr_t *attr)
 {
 	struct wayca_thread *wt_p;
 
@@ -552,7 +553,8 @@ int wayca_sc_thread_set_attr(wayca_sc_thread_t wthread, wayca_sc_thread_attr_t *
 	return thread_sched_setaffinity(wt_p->pid, sizeof(cpu_set_t), &wt_p->cur_set);
 }
 
-int wayca_sc_thread_get_attr(wayca_sc_thread_t wthread, wayca_sc_thread_attr_t *attr)
+int WAYCA_SC_DECLSPEC wayca_sc_thread_get_attr(wayca_sc_thread_t wthread,
+					       wayca_sc_thread_attr_t *attr)
 {
 	struct wayca_thread *wt_p;
 
@@ -597,8 +599,10 @@ static void wayca_thread_free(struct wayca_thread *thread)
 	pthread_mutex_unlock(&wayca_threads_array_mutex);
 }
 
-int wayca_sc_thread_create(wayca_sc_thread_t *wthread, pthread_attr_t *attr,
-			void *(*start_routine)(void *), void *arg)
+int WAYCA_SC_DECLSPEC wayca_sc_thread_create(wayca_sc_thread_t *wthread,
+					     pthread_attr_t *attr,
+					     void *(*start_routine)(void *),
+					     void *arg)
 {
 	struct wayca_thread *wt_p;
 	pthread_t *pthread_ptr;
@@ -641,7 +645,7 @@ int wayca_sc_thread_create(wayca_sc_thread_t *wthread, pthread_attr_t *attr,
 	return 0;
 }
 
-int wayca_sc_thread_join(wayca_sc_thread_t wthread, void **retval)
+int WAYCA_SC_DECLSPEC wayca_sc_thread_join(wayca_sc_thread_t wthread, void **retval)
 {
 	struct wayca_thread *thread;
 	int ret;
@@ -666,7 +670,7 @@ int wayca_sc_thread_join(wayca_sc_thread_t wthread, void **retval)
 	return ret;
 }
 
-int wayca_sc_thread_kill(wayca_sc_thread_t wthread, int sig)
+int WAYCA_SC_DECLSPEC wayca_sc_thread_kill(wayca_sc_thread_t wthread, int sig)
 {
 	struct wayca_thread *thread;
 	int ret;
@@ -683,7 +687,7 @@ int wayca_sc_thread_kill(wayca_sc_thread_t wthread, int sig)
 	return ret;
 }
 
-int wayca_sc_pid_attach_thread(wayca_sc_thread_t *wthread, pid_t pid)
+int WAYCA_SC_DECLSPEC wayca_sc_pid_attach_thread(wayca_sc_thread_t *wthread, pid_t pid)
 {
 	struct wayca_thread *wt_p;
 	cpu_set_t cpuset;
@@ -736,7 +740,7 @@ int wayca_sc_pid_attach_thread(wayca_sc_thread_t *wthread, pid_t pid)
 	return 0;
 }
 
-int wayca_sc_pid_detach_thread(wayca_sc_thread_t wthread)
+int WAYCA_SC_DECLSPEC wayca_sc_pid_detach_thread(wayca_sc_thread_t wthread)
 {
 	struct wayca_thread *thread;
 
@@ -758,7 +762,8 @@ int wayca_sc_pid_detach_thread(wayca_sc_thread_t wthread)
 	return 0;
 }
 
-int wayca_sc_group_set_attr(wayca_sc_group_t group, wayca_sc_group_attr_t *attr)
+int WAYCA_SC_DECLSPEC wayca_sc_group_set_attr(wayca_sc_group_t group,
+					      wayca_sc_group_attr_t *attr)
 {
 	wayca_sc_group_attr_t old_attr;
 	struct wayca_sc_group *wg_p;
@@ -784,7 +789,8 @@ int wayca_sc_group_set_attr(wayca_sc_group_t group, wayca_sc_group_attr_t *attr)
 	return ret;
 }
 
-int wayca_sc_group_get_attr(wayca_sc_group_t group, wayca_sc_group_attr_t *attr)
+int WAYCA_SC_DECLSPEC wayca_sc_group_get_attr(wayca_sc_group_t group,
+					      wayca_sc_group_attr_t *attr)
 {
 	struct wayca_sc_group *wg_p;
 
@@ -833,7 +839,7 @@ static void wayca_group_free(struct wayca_sc_group *group)
 	pthread_mutex_unlock(&wayca_groups_array_mutex);
 }
 
-int wayca_sc_group_create(wayca_sc_group_t *group)
+int WAYCA_SC_DECLSPEC wayca_sc_group_create(wayca_sc_group_t *group)
 {
 	struct wayca_sc_group *wg_p;
 	int ret;
@@ -855,7 +861,7 @@ int wayca_sc_group_create(wayca_sc_group_t *group)
 	return 0;
 }
 
-int wayca_sc_group_destroy(wayca_sc_group_t group)
+int WAYCA_SC_DECLSPEC wayca_sc_group_destroy(wayca_sc_group_t group)
 {
 	struct wayca_sc_group *wg_p;
 
@@ -884,7 +890,8 @@ int wayca_sc_group_destroy(wayca_sc_group_t group)
 	return 0;
 }
 
-int wayca_sc_thread_attach_group(wayca_sc_thread_t wthread, wayca_sc_group_t group)
+int WAYCA_SC_DECLSPEC wayca_sc_thread_attach_group(wayca_sc_thread_t wthread,
+						   wayca_sc_group_t group)
 {
 	struct wayca_thread *wt_p;
 	struct wayca_sc_group *wg_p;
@@ -915,7 +922,8 @@ int wayca_sc_thread_attach_group(wayca_sc_thread_t wthread, wayca_sc_group_t gro
 	return ret;
 }
 
-int wayca_sc_thread_detach_group(wayca_sc_thread_t wthread, wayca_sc_group_t group)
+int WAYCA_SC_DECLSPEC wayca_sc_thread_detach_group(wayca_sc_thread_t wthread,
+						   wayca_sc_group_t group)
 {
 	struct wayca_thread *wt_p;
 	struct wayca_sc_group *wg_p;
@@ -933,7 +941,8 @@ int wayca_sc_thread_detach_group(wayca_sc_thread_t wthread, wayca_sc_group_t gro
 	return ret;
 }
 
-int wayca_sc_group_attach_group(wayca_sc_group_t group, wayca_sc_group_t father)
+int WAYCA_SC_DECLSPEC wayca_sc_group_attach_group(wayca_sc_group_t group,
+						  wayca_sc_group_t father)
 {
 	struct wayca_sc_group *wg_p, *father_p;
 	int ret;
@@ -956,7 +965,8 @@ int wayca_sc_group_attach_group(wayca_sc_group_t group, wayca_sc_group_t father)
 	return ret;
 }
 
-int wayca_sc_group_detach_group(wayca_sc_group_t group, wayca_sc_group_t father)
+int WAYCA_SC_DECLSPEC wayca_sc_group_detach_group(wayca_sc_group_t group,
+						  wayca_sc_group_t father)
 {
 	struct wayca_sc_group *wg_p, *father_p;
 	int ret;
@@ -975,7 +985,8 @@ int wayca_sc_group_detach_group(wayca_sc_group_t group, wayca_sc_group_t father)
 	return ret;
 }
 
-int wayca_sc_is_thread_in_group(wayca_sc_thread_t thread, wayca_sc_group_t group)
+int WAYCA_SC_DECLSPEC wayca_sc_is_thread_in_group(wayca_sc_thread_t thread,
+						  wayca_sc_group_t group)
 {
 	struct wayca_sc_group *wg_p;
 	struct wayca_thread *wt_p;
@@ -988,7 +999,8 @@ int wayca_sc_is_thread_in_group(wayca_sc_thread_t thread, wayca_sc_group_t group
 	return is_thread_in_group(wg_p, wt_p);
 }
 
-int wayca_sc_is_group_in_group(wayca_sc_group_t target, wayca_sc_group_t group)
+int WAYCA_SC_DECLSPEC wayca_sc_is_group_in_group(wayca_sc_group_t target,
+						 wayca_sc_group_t group)
 {
 	struct wayca_sc_group *wg_p, *father_p;
 
@@ -1177,8 +1189,8 @@ static int wayca_threadpool_init(struct wayca_threadpool *pool,
 	return 0;
 }
 
-ssize_t wayca_sc_threadpool_create(wayca_sc_threadpool_t *threadpool,
-				   pthread_attr_t *attr, size_t num)
+ssize_t WAYCA_SC_DECLSPEC wayca_sc_threadpool_create(wayca_sc_threadpool_t *threadpool,
+						     pthread_attr_t *attr, size_t num)
 {
 	struct wayca_threadpool *pool;
 
@@ -1198,7 +1210,7 @@ ssize_t wayca_sc_threadpool_create(wayca_sc_threadpool_t *threadpool,
 	return pool->total_worker_num;
 }
 
-int wayca_sc_threadpool_destroy(wayca_sc_threadpool_t threadpool)
+int WAYCA_SC_DECLSPEC wayca_sc_threadpool_destroy(wayca_sc_threadpool_t threadpool)
 {
 	struct wayca_threadpool *pool;
 	struct wayca_threadpool_task *task;
@@ -1245,8 +1257,8 @@ int wayca_sc_threadpool_destroy(wayca_sc_threadpool_t threadpool)
 	return 0;
 }
 
-int wayca_sc_threadpool_get_group(wayca_sc_threadpool_t threadpool,
-				  wayca_sc_group_t *group)
+int WAYCA_SC_DECLSPEC wayca_sc_threadpool_get_group(wayca_sc_threadpool_t threadpool,
+						    wayca_sc_group_t *group)
 {
 	struct wayca_threadpool *pool;
 
@@ -1264,8 +1276,9 @@ int wayca_sc_threadpool_get_group(wayca_sc_threadpool_t threadpool,
 	return 0;
 }
 
-int wayca_sc_threadpool_queue(wayca_sc_threadpool_t threadpool,
-			   wayca_sc_threadpool_task_func task_func, void *arg)
+int WAYCA_SC_DECLSPEC wayca_sc_threadpool_queue(wayca_sc_threadpool_t threadpool,
+						wayca_sc_threadpool_task_func task_func,
+						void *arg)
 {
 	struct wayca_threadpool *pool;
 	struct wayca_threadpool_task *task;
@@ -1295,7 +1308,7 @@ out:
 	return ret;
 }
 
-ssize_t wayca_sc_threadpool_thread_num(wayca_sc_threadpool_t threadpool)
+ssize_t WAYCA_SC_DECLSPEC wayca_sc_threadpool_thread_num(wayca_sc_threadpool_t threadpool)
 {
 	struct wayca_threadpool *pool;
 
@@ -1306,7 +1319,7 @@ ssize_t wayca_sc_threadpool_thread_num(wayca_sc_threadpool_t threadpool)
 	return pool->total_worker_num;
 }
 
-ssize_t wayca_sc_threadpool_task_num(wayca_sc_threadpool_t threadpool)
+ssize_t WAYCA_SC_DECLSPEC wayca_sc_threadpool_task_num(wayca_sc_threadpool_t threadpool)
 {
 	struct wayca_threadpool *pool;
 	size_t task_num;
@@ -1322,7 +1335,7 @@ ssize_t wayca_sc_threadpool_task_num(wayca_sc_threadpool_t threadpool)
 	return task_num;
 }
 
-ssize_t wayca_sc_threadpool_running_num(wayca_sc_threadpool_t threadpool)
+ssize_t WAYCA_SC_DECLSPEC wayca_sc_threadpool_running_num(wayca_sc_threadpool_t threadpool)
 {
 	struct wayca_threadpool *pool;
 	size_t running_num;
@@ -1340,8 +1353,9 @@ ssize_t wayca_sc_threadpool_running_num(wayca_sc_threadpool_t threadpool)
 
 
 #ifdef WAYCA_SC_DEBUG
-int wayca_sc_thread_get_cpuset(wayca_sc_thread_t wthread, size_t cpusetsize,
-			       cpu_set_t *cpuset)
+int WAYCA_SC_DECLSPEC wayca_sc_thread_get_cpuset(wayca_sc_thread_t wthread,
+						 size_t cpusetsize,
+						 cpu_set_t *cpuset)
 {
 	struct wayca_thread *wt_p;
 	size_t valid_cpu_setsize;
@@ -1363,8 +1377,9 @@ int wayca_sc_thread_get_cpuset(wayca_sc_thread_t wthread, size_t cpusetsize,
 	return 0;
 }
 
-int wayca_sc_group_get_cpuset(wayca_sc_group_t group, size_t cpusetsize,
-			      cpu_set_t *cpuset)
+int WAYCA_SC_DECLSPEC wayca_sc_group_get_cpuset(wayca_sc_group_t group,
+						size_t cpusetsize,
+						cpu_set_t *cpuset)
 {
 	struct wayca_sc_group *wg_p;
 	size_t valid_cpu_setsize;

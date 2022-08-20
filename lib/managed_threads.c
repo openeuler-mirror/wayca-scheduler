@@ -40,7 +40,7 @@ static inline void nodemask_to_cpumask(node_set_t *node_mask, cpu_set_t *cpu_mas
 	}
 }
 
-int to_task_cpu_map(char *cpu_list, struct task_cpu_map maps[])
+int WAYCA_SC_DECLSPEC to_task_cpu_map(char *cpu_list, struct task_cpu_map maps[])
 {
 	char *p = cpu_list;
 	char *q, *r;
@@ -89,7 +89,7 @@ static void wayca_managed_thread_init(void)
 	to_task_cpu_map(p, maps);
 }
 
-int wayca_managed_thread_cpumask(int id, cpu_set_t *mask)
+int WAYCA_SC_DECLSPEC wayca_managed_thread_cpumask(int id, cpu_set_t *mask)
 {
 	for (int i = 0; i < MAX_MANAGED_MAPS; i++) {
 		if (TASK_ISSET(id, &maps[i].tasks)) {
@@ -101,7 +101,7 @@ int wayca_managed_thread_cpumask(int id, cpu_set_t *mask)
 	return -1;
 }
 
-int wayca_managed_thread_create(int id, pthread_t *thread, const pthread_attr_t *attr,
+int WAYCA_SC_DECLSPEC wayca_managed_thread_create(int id, pthread_t *thread, const pthread_attr_t *attr,
 		void *(*start_routine) (void *), void *arg)
 {
 	int ret = pthread_create(thread, attr, start_routine, arg);
@@ -126,7 +126,7 @@ int wayca_managed_thread_create(int id, pthread_t *thread, const pthread_attr_t 
 /*
  * On success, it returns the number of threads which have been created; otherwise, returns -1
  */
-int wayca_managed_threadpool_create(int id, int num, pthread_t *thread[], const pthread_attr_t *attr,
+int WAYCA_SC_DECLSPEC wayca_managed_threadpool_create(int id, int num, pthread_t *thread[], const pthread_attr_t *attr,
 		void *(*start_routine) (void *), void *arg)
 {
 	int ret, i;
