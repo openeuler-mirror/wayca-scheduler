@@ -395,9 +395,9 @@ static int topo_path_read_cpulist(const char *base, const char *filename,
 {
 	size_t len = maxcpus * 8; /* big enough to hold a CPU ids */
 	char *real_path = NULL;
-	char buf[len]; /* dynamic allocation */
 	int ret = 0;
 	int dir_fd;
+	char *buf;
 	FILE *f;
 	int fd;
 
@@ -423,24 +423,33 @@ static int topo_path_read_cpulist(const char *base, const char *filename,
 		return -errno;
 	}
 
+	buf = calloc(len, sizeof(char));
+	if (!buf) {
+		ret = -ENOMEM;
+		goto close_file;
+	}
+
 	if (fgets(buf, len, f) == NULL)
 		ret = -errno;
 
+close_file:
 	fclose(f);
 	close(fd);
 	close(dir_fd);
 
 	if (ret != 0)
-		return ret;
+		goto free_buf;
 
 	len = strlen(buf);
 	if (buf[len - 1] == '\n')
 		buf[len - 1] = '\0';
 
 	if (cpulist_parse(buf, set, CPU_ALLOC_SIZE(maxcpus), 0))
-		return -EINVAL;
+		ret = -EINVAL;
 
-	return 0;
+free_buf:
+	free(buf);
+	return ret;
 }
 
 static int topo_parse_cpu_node_info(struct wayca_topo *p_topo, int cpu_index)
