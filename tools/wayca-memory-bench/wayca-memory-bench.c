@@ -45,7 +45,7 @@
 #include <sys/types.h>
 #include <wayca-scheduler.h>
 
-#include "math.h"
+#include "common.h"
 
 #define WAYCA_MEMORY_BENCH	"wayca-memory-bench"
 
