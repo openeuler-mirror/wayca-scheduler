@@ -21,7 +21,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "bitmap.h"
+#include "bitops.h"
 #include "wayca-scheduler.h"
 
 /*

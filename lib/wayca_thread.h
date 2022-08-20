@@ -19,7 +19,7 @@
 #include <syscall.h>
 
 #include "common.h"
-#include "bitmap.h"
+#include "bitops.h"
 #include "wayca-scheduler.h"
 
 static inline int thread_sched_setaffinity(pid_t pid, size_t cpusetsize,
