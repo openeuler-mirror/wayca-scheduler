@@ -1129,7 +1129,8 @@ static void topo_init(void)
 	char *p;
 	int ret;
 
-	getcwd(origin_wd, WAYCA_SC_PATH_LEN_MAX);
+	if (!getcwd(origin_wd, WAYCA_SC_PATH_LEN_MAX))
+		PRINT_ERROR("failed to get original working dir, try init\n");
 	memset(p_topo, 0, sizeof(struct wayca_topo));
 
 	ret = topo_alloc_cpu(p_topo);
@@ -1179,7 +1180,8 @@ static void topo_init(void)
 		}
 	}
 	/* the working dir may be changed, restore thie working dir */
-	chdir(origin_wd);
+	if (chdir(origin_wd) == -1)
+		PRINT_DBG("failed to restore the working dir\n");
 	return;
 	/* cleanup_on_error */
 cleanup_on_error:
@@ -2744,7 +2746,9 @@ static int topo_recursively_read_io_devices(struct wayca_topo *p_topo,
 	if (!dp)
 		return -errno;
 
-	chdir(rootdir);
+	if (chdir(rootdir) == -1)
+		PRINT_DBG("failed to change the working dir\n");
+
 	while ((entry = readdir(dp)) != NULL) {
 		ret = lstat(entry->d_name, &statbuf);
 		if (ret < 0) {
@@ -2772,7 +2776,8 @@ static int topo_recursively_read_io_devices(struct wayca_topo *p_topo,
 	}
 
 out:
-	chdir("..");
+	if (chdir("..") == -1)
+		PRINT_DBG("failed to restore the working dir\n");
 	closedir(dp);
 	return ret;
 }
