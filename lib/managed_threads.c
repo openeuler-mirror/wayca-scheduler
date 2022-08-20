@@ -23,7 +23,7 @@
 #include "common.h"
 
 WAYCA_SC_INIT_PRIO(wayca_managed_thread_init, LAST);
-struct task_cpu_map maps[MAX_MANAGED_MAPS];
+struct task_cpu_map wayca_sc_cpu_maps[MAX_MANAGED_MAPS];
 
 static inline void nodemask_to_cpumask(node_set_t *node_mask, cpu_set_t *cpu_mask)
 {
@@ -86,14 +86,14 @@ int WAYCA_SC_DECLSPEC to_task_cpu_map(char *cpu_list, struct task_cpu_map maps[]
 static void wayca_managed_thread_init(void)
 {
 	char *p = secure_getenv("MANAGED_THREADS");
-	to_task_cpu_map(p, maps);
+	to_task_cpu_map(p, wayca_sc_cpu_maps);
 }
 
 int WAYCA_SC_DECLSPEC wayca_managed_thread_cpumask(int id, cpu_set_t *mask)
 {
 	for (int i = 0; i < MAX_MANAGED_MAPS; i++) {
-		if (TASK_ISSET(id, &maps[i].tasks)) {
-			*mask = maps[i].cpus;
+		if (TASK_ISSET(id, &wayca_sc_cpu_maps[i].tasks)) {
+			*mask = wayca_sc_cpu_maps[i].cpus;
 			return 0;
 		}
 	}
