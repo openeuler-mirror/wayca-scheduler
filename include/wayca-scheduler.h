@@ -148,7 +148,7 @@ int wayca_sc_get_mem_bind_nodes(size_t maxnode, node_set_t *mask);
  * This is a wrapper of syscall SYS_migrate_pages to migrate the pages of
  * target process to the target node.
  *
- * Return the number of pages that has been migrated, 0 if all the pages
+ * Return the number of pages that cannot be migrated, 0 if all the pages
  * of the target process has been migrated successfully and a negative
  * error number on error.
  */
@@ -163,7 +163,7 @@ long wayca_sc_mem_migrate_to_node(pid_t pid, int node);
  * This is a wrapper of syscall SYS_migrate_pages to migrate the pages of
  * target process to the nodes in the target package.
  *
- * Return the number of pages that has been migrated, 0 if all the pages
+ * Return the number of pages that cannot be migrated, 0 if all the pages
  * of the target process has been migrated successfully and a negative
  * error number on error.
  */

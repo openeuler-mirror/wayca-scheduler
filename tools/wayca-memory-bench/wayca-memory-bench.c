@@ -45,7 +45,7 @@
 #include <sys/types.h>
 #include <wayca-scheduler.h>
 
-#include "math.h"
+#include "common.h"
 
 #define WAYCA_MEMORY_BENCH	"wayca-memory-bench"
 
@@ -96,7 +96,7 @@ static int initiator_cpu = -1;
 static int target_cpu = -1;
 static int total_cpus = 1;
 static int iteration = 1;
-static int parallel = 0;
+static long int parallel = 0;
 static int stride = 64;
 
 #define TOTAL_BUFFER_CNT	3
@@ -271,7 +271,7 @@ static unsigned long lcg_prng(void)
 	static unsigned long seed = 0;
 	static unsigned long A = 1103515245;
 	static unsigned long B = 12345;
-	static unsigned long M = 1 << 31;
+	static unsigned long M = (unsigned long)1 << 31;
 
 	if (!random_access)
 		return stride;
@@ -885,8 +885,8 @@ static int parse_command(int argc, char *argv[])
 			break;
 		case 's':
 			stride = strtol(optarg, NULL, 0);
-			/* stride should be LATENCY_TYPE aligned */
-			if (stride % sizeof(LATENCY_TYPE)) {
+			/* stride should be LATENCY_TYPE aligned and not zero */
+			if (stride % sizeof(LATENCY_TYPE) || stride == 0) {
 				fprintf(stderr, "stride should be %ld aligned\n",
 					sizeof(LATENCY_TYPE));
 				return -EINVAL;

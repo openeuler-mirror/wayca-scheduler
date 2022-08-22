@@ -59,7 +59,7 @@ static inline void set_node_mask(int node, node_set_t * mask)
 	NODE_SET(node, mask);
 }
 
-int wayca_sc_mem_interleave_in_package(int package)
+int WAYCA_SC_DECLSPEC wayca_sc_mem_interleave_in_package(int package)
 {
 	node_set_t mask;
 	int ret;
@@ -73,7 +73,7 @@ int wayca_sc_mem_interleave_in_package(int package)
 			     wayca_sc_nodes_in_total() + 1);
 }
 
-int wayca_sc_mem_interleave_in_all(void)
+int WAYCA_SC_DECLSPEC wayca_sc_mem_interleave_in_all(void)
 {
 	node_set_t mask;
 	int ret;
@@ -86,7 +86,7 @@ int wayca_sc_mem_interleave_in_all(void)
 			     wayca_sc_nodes_in_total() + 1);
 }
 
-int wayca_sc_mem_bind_node(int node)
+int WAYCA_SC_DECLSPEC wayca_sc_mem_bind_node(int node)
 {
 	node_set_t mask;
 
@@ -97,7 +97,7 @@ int wayca_sc_mem_bind_node(int node)
 	return set_mempolicy(MPOL_BIND, (unsigned long *)&mask, wayca_sc_nodes_in_total() + 1);
 }
 
-int wayca_sc_mem_bind_package(int package)
+int WAYCA_SC_DECLSPEC wayca_sc_mem_bind_package(int package)
 {
 	node_set_t mask;
 	int ret;
@@ -111,12 +111,12 @@ int wayca_sc_mem_bind_package(int package)
 			     wayca_sc_nodes_in_total() + 1);
 }
 
-int wayca_sc_mem_unbind(void)
+int WAYCA_SC_DECLSPEC wayca_sc_mem_unbind(void)
 {
 	return set_mempolicy(MPOL_DEFAULT, NULL, wayca_sc_nodes_in_total());
 }
 
-int wayca_sc_get_mem_bind_nodes(size_t maxnode, node_set_t *mask)
+int WAYCA_SC_DECLSPEC wayca_sc_get_mem_bind_nodes(size_t maxnode, node_set_t *mask)
 {
 	int mode, ret;
 
@@ -135,7 +135,7 @@ int wayca_sc_get_mem_bind_nodes(size_t maxnode, node_set_t *mask)
  * zero means that all pages were successfully moved). On error, it returns -1, and sets
  * errno to indicate the error.
  */
-long wayca_sc_mem_migrate_to_node(pid_t pid, int node)
+long WAYCA_SC_DECLSPEC wayca_sc_mem_migrate_to_node(pid_t pid, int node)
 {
 	node_set_t all_mask, node_mask;
 	int ret;
@@ -150,7 +150,7 @@ long wayca_sc_mem_migrate_to_node(pid_t pid, int node)
 			     (unsigned long *)&node_mask);
 }
 
-long wayca_sc_mem_migrate_to_package(pid_t pid, int package)
+long WAYCA_SC_DECLSPEC wayca_sc_mem_migrate_to_package(pid_t pid, int package)
 {
 	node_set_t all_mask, pack_mask;
 	int ret;

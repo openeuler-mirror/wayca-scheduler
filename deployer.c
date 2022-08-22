@@ -52,7 +52,13 @@ static int start_program(struct program *prog, char **argv)
 
 	if (socket_fd != -1) {
 		int ret;
-		write(socket_fd, prog, sizeof(*prog));
+
+		ret = write(socket_fd, prog, sizeof(*prog));
+		if (ret <= 0) {
+			fprintf(stderr, "Failed to connect deployd\n");
+			goto out;
+		}
+
 		ret = read(socket_fd, &flags, sizeof(flags));
 		if (ret <= 0)
 			fprintf(stderr, "Failed to deploy %s by deployd\n",
@@ -67,6 +73,7 @@ static int start_program(struct program *prog, char **argv)
 	else
 		execle("/bin/sh", "/bin/sh", "-c", prog->exec, NULL, env);
 
+out:
 	_exit(-1);
 
 	return 0;

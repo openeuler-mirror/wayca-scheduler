@@ -395,9 +395,9 @@ static int topo_path_read_cpulist(const char *base, const char *filename,
 {
 	size_t len = maxcpus * 8; /* big enough to hold a CPU ids */
 	char *real_path = NULL;
-	char buf[len]; /* dynamic allocation */
 	int ret = 0;
 	int dir_fd;
+	char *buf;
 	FILE *f;
 	int fd;
 
@@ -423,24 +423,33 @@ static int topo_path_read_cpulist(const char *base, const char *filename,
 		return -errno;
 	}
 
+	buf = calloc(len, sizeof(char));
+	if (!buf) {
+		ret = -ENOMEM;
+		goto close_file;
+	}
+
 	if (fgets(buf, len, f) == NULL)
 		ret = -errno;
 
+close_file:
 	fclose(f);
 	close(fd);
 	close(dir_fd);
 
 	if (ret != 0)
-		return ret;
+		goto free_buf;
 
 	len = strlen(buf);
 	if (buf[len - 1] == '\n')
 		buf[len - 1] = '\0';
 
 	if (cpulist_parse(buf, set, CPU_ALLOC_SIZE(maxcpus), 0))
-		return -EINVAL;
+		ret = -EINVAL;
 
-	return 0;
+free_buf:
+	free(buf);
+	return ret;
 }
 
 static int topo_parse_cpu_node_info(struct wayca_topo *p_topo, int cpu_index)
@@ -1120,7 +1129,8 @@ static void topo_init(void)
 	char *p;
 	int ret;
 
-	getcwd(origin_wd, WAYCA_SC_PATH_LEN_MAX);
+	if (!getcwd(origin_wd, WAYCA_SC_PATH_LEN_MAX))
+		PRINT_ERROR("failed to get original working dir, try init\n");
 	memset(p_topo, 0, sizeof(struct wayca_topo));
 
 	ret = topo_alloc_cpu(p_topo);
@@ -1170,7 +1180,8 @@ static void topo_init(void)
 		}
 	}
 	/* the working dir may be changed, restore thie working dir */
-	chdir(origin_wd);
+	if (chdir(origin_wd) == -1)
+		PRINT_DBG("failed to restore the working dir\n");
 	return;
 	/* cleanup_on_error */
 cleanup_on_error:
@@ -1298,7 +1309,7 @@ void topo_print_wayca_core(size_t setsize, struct wayca_core *p_core)
 }
 
 #ifdef WAYCA_SC_DEBUG
-void wayca_sc_topo_print(void)
+void WAYCA_SC_DECLSPEC wayca_sc_topo_print(void)
 {
 	struct wayca_topo *p_topo = &topo;
 	int i;
@@ -1506,42 +1517,42 @@ void topo_free(void)
 	return;
 }
 
-int wayca_sc_cpus_in_core(void)
+int WAYCA_SC_DECLSPEC wayca_sc_cpus_in_core(void)
 {
 	if (topo.n_cores < 1)
 		return -ENODATA; /* not initialized */
 	return topo.cores[0]->n_cpus;
 }
 
-int wayca_sc_cpus_in_ccl(void)
+int WAYCA_SC_DECLSPEC wayca_sc_cpus_in_ccl(void)
 {
 	if (topo.n_clusters < 1)
 		return -ENODATA; /* not initialized */
 	return topo.ccls[0]->n_cpus;
 }
 
-int wayca_sc_cpus_in_node(void)
+int WAYCA_SC_DECLSPEC wayca_sc_cpus_in_node(void)
 {
 	if (topo.n_nodes < 1)
 		return -ENODATA; /* not initialized */
 	return topo.nodes[0]->n_cpus;
 }
 
-int wayca_sc_cpus_in_package(void)
+int WAYCA_SC_DECLSPEC wayca_sc_cpus_in_package(void)
 {
 	if (topo.n_packages < 1)
 		return -ENODATA; /* not initialized */
 	return topo.packages[0]->n_cpus;
 }
 
-int wayca_sc_cpus_in_total(void)
+int WAYCA_SC_DECLSPEC wayca_sc_cpus_in_total(void)
 {
 	if (topo.n_cpus < 1)
 		return -ENODATA; /* not initialized */
 	return topo.n_cpus;
 }
 
-int wayca_sc_cores_in_ccl(void)
+int WAYCA_SC_DECLSPEC wayca_sc_cores_in_ccl(void)
 {
 	if (topo.n_clusters < 1)
 		return -ENODATA; /* not initialized */
@@ -1550,63 +1561,63 @@ int wayca_sc_cores_in_ccl(void)
 	return topo.ccls[0]->n_cpus / topo.cores[0]->n_cpus;
 }
 
-int wayca_sc_cores_in_node(void)
+int WAYCA_SC_DECLSPEC wayca_sc_cores_in_node(void)
 {
 	if (topo.n_cores < 1)
 		return -ENODATA; /* not initialized */
 	return topo.nodes[0]->n_cpus / topo.cores[0]->n_cpus;
 }
 
-int wayca_sc_cores_in_package(void)
+int WAYCA_SC_DECLSPEC wayca_sc_cores_in_package(void)
 {
 	if (topo.n_cores < 1)
 		return -ENODATA; /* not initialized */
 	return topo.packages[0]->n_cpus / topo.cores[0]->n_cpus;
 }
 
-int wayca_sc_cores_in_total(void)
+int WAYCA_SC_DECLSPEC wayca_sc_cores_in_total(void)
 {
 	if (topo.n_cores < 1)
 		return -ENODATA; /* not initialized */
 	return topo.n_cores;
 }
 
-int wayca_sc_ccls_in_package(void)
+int WAYCA_SC_DECLSPEC wayca_sc_ccls_in_package(void)
 {
 	if (topo.n_clusters < 1)
 		return -ENODATA; /* not initialized */
 	return topo.packages[0]->n_cpus / topo.ccls[0]->n_cpus;
 }
 
-int wayca_sc_ccls_in_node(void)
+int WAYCA_SC_DECLSPEC wayca_sc_ccls_in_node(void)
 {
 	if (topo.n_clusters < 1)
 		return -ENODATA; /* not initialized */
 	return topo.nodes[0]->n_cpus / topo.ccls[0]->n_cpus;
 }
 
-int wayca_sc_ccls_in_total(void)
+int WAYCA_SC_DECLSPEC wayca_sc_ccls_in_total(void)
 {
 	if (topo.n_clusters < 1)
 		return -ENODATA; /* not initialized */
 	return topo.n_clusters;
 }
 
-int wayca_sc_nodes_in_package(void)
+int WAYCA_SC_DECLSPEC wayca_sc_nodes_in_package(void)
 {
 	if (topo.n_packages < 1)
 		return -ENODATA; /* not initialized */
 	return topo.packages[0]->n_cpus / topo.nodes[0]->n_cpus;
 }
 
-int wayca_sc_nodes_in_total(void)
+int WAYCA_SC_DECLSPEC wayca_sc_nodes_in_total(void)
 {
 	if (topo.n_nodes < 1)
 		return -ENODATA; /* not initialized */
 	return topo.n_nodes;
 }
 
-int wayca_sc_packages_in_total(void)
+int WAYCA_SC_DECLSPEC wayca_sc_packages_in_total(void)
 {
 	if (topo.n_packages < 1)
 		return -ENODATA; /* not initialized */
@@ -1638,7 +1649,8 @@ static bool topo_is_valid_package(int package_id)
 	return package_id >= 0 && package_id < wayca_sc_packages_in_total();
 }
 
-int wayca_sc_core_cpu_mask(int core_id, size_t cpusetsize, cpu_set_t *mask)
+int WAYCA_SC_DECLSPEC wayca_sc_core_cpu_mask(int core_id, size_t cpusetsize,
+					     cpu_set_t *mask)
 {
 	size_t valid_cpu_setsize;
 
@@ -1655,7 +1667,8 @@ int wayca_sc_core_cpu_mask(int core_id, size_t cpusetsize, cpu_set_t *mask)
 	return 0;
 }
 
-int wayca_sc_ccl_cpu_mask(int ccl_id, size_t cpusetsize, cpu_set_t *mask)
+int WAYCA_SC_DECLSPEC wayca_sc_ccl_cpu_mask(int ccl_id, size_t cpusetsize,
+					    cpu_set_t *mask)
 {
 	size_t valid_cpu_setsize;
 
@@ -1671,7 +1684,8 @@ int wayca_sc_ccl_cpu_mask(int ccl_id, size_t cpusetsize, cpu_set_t *mask)
 	return 0;
 }
 
-int wayca_sc_node_cpu_mask(int node_id, size_t cpusetsize, cpu_set_t *mask)
+int WAYCA_SC_DECLSPEC wayca_sc_node_cpu_mask(int node_id, size_t cpusetsize,
+					     cpu_set_t *mask)
 {
 	size_t valid_cpu_setsize;
 
@@ -1687,8 +1701,8 @@ int wayca_sc_node_cpu_mask(int node_id, size_t cpusetsize, cpu_set_t *mask)
 	return 0;
 }
 
-int wayca_sc_package_cpu_mask(int package_id, size_t cpusetsize,
-			      cpu_set_t *mask)
+int WAYCA_SC_DECLSPEC wayca_sc_package_cpu_mask(int package_id, size_t cpusetsize,
+						cpu_set_t *mask)
 {
 	size_t valid_cpu_setsize;
 
@@ -1705,7 +1719,7 @@ int wayca_sc_package_cpu_mask(int package_id, size_t cpusetsize,
 	return 0;
 }
 
-int wayca_sc_total_cpu_mask(size_t cpusetsize, cpu_set_t *mask)
+int WAYCA_SC_DECLSPEC wayca_sc_total_cpu_mask(size_t cpusetsize, cpu_set_t *mask)
 {
 	size_t valid_cpu_setsize;
 
@@ -1721,7 +1735,8 @@ int wayca_sc_total_cpu_mask(size_t cpusetsize, cpu_set_t *mask)
 	return 0;
 }
 
-int wayca_sc_package_node_mask(int package_id, size_t setsize, cpu_set_t *mask)
+int WAYCA_SC_DECLSPEC wayca_sc_package_node_mask(int package_id, size_t setsize,
+						 cpu_set_t *mask)
 {
 	size_t valid_numa_setsize;
 
@@ -1738,7 +1753,7 @@ int wayca_sc_package_node_mask(int package_id, size_t setsize, cpu_set_t *mask)
 	return 0;
 }
 
-int wayca_sc_total_node_mask(size_t setsize, cpu_set_t *mask)
+int WAYCA_SC_DECLSPEC wayca_sc_total_node_mask(size_t setsize, cpu_set_t *mask)
 {
 	size_t valid_numa_setsize;
 
@@ -1754,7 +1769,7 @@ int wayca_sc_total_node_mask(size_t setsize, cpu_set_t *mask)
 	return 0;
 }
 
-int wayca_sc_get_core_id(int cpu_id)
+int WAYCA_SC_DECLSPEC wayca_sc_get_core_id(int cpu_id)
 {
 	if (!topo_is_valid_cpu(cpu_id))
 		return -EINVAL;
@@ -1762,7 +1777,7 @@ int wayca_sc_get_core_id(int cpu_id)
 	return topo.cpus[cpu_id]->core_id;
 }
 
-int wayca_sc_get_ccl_id(int cpu_id)
+int WAYCA_SC_DECLSPEC wayca_sc_get_ccl_id(int cpu_id)
 {
 	int physical_id;
 	int i;
@@ -1779,7 +1794,7 @@ int wayca_sc_get_ccl_id(int cpu_id)
 	return -EINVAL;
 }
 
-int wayca_sc_get_node_id(int cpu_id)
+int WAYCA_SC_DECLSPEC wayca_sc_get_node_id(int cpu_id)
 {
 	if (!topo_is_valid_cpu(cpu_id))
 		return -EINVAL;
@@ -1787,7 +1802,7 @@ int wayca_sc_get_node_id(int cpu_id)
 	return topo.cpus[cpu_id]->p_numa_node->node_idx;
 }
 
-int wayca_sc_get_package_id(int cpu_id)
+int WAYCA_SC_DECLSPEC wayca_sc_get_package_id(int cpu_id)
 {
 	int physical_id;
 	int i;
@@ -1803,7 +1818,7 @@ int wayca_sc_get_package_id(int cpu_id)
 	return -EINVAL;
 }
 
-int wayca_sc_get_node_mem_size(int node_id, unsigned long *size)
+int WAYCA_SC_DECLSPEC wayca_sc_get_node_mem_size(int node_id, unsigned long *size)
 {
 	if (size == NULL || !topo_is_valid_node(node_id))
 		return -EINVAL;
@@ -1824,7 +1839,7 @@ static int parse_cache_size(const char *size)
 	return cache_size;
 }
 
-int wayca_sc_get_l1i_size(int cpu_id)
+int WAYCA_SC_DECLSPEC wayca_sc_get_l1i_size(int cpu_id)
 {
 	static const char *size;
 	static const char *type;
@@ -1845,7 +1860,7 @@ int wayca_sc_get_l1i_size(int cpu_id)
 	return -ENODATA;
 }
 
-int wayca_sc_get_l1d_size(int cpu_id)
+int WAYCA_SC_DECLSPEC wayca_sc_get_l1d_size(int cpu_id)
 {
 	static const char *size;
 	static const char *type;
@@ -1866,7 +1881,7 @@ int wayca_sc_get_l1d_size(int cpu_id)
 	return -ENODATA;
 }
 
-int wayca_sc_get_l2_size(int cpu_id)
+int WAYCA_SC_DECLSPEC wayca_sc_get_l2_size(int cpu_id)
 {
 	static const char *size;
 	static const char *type;
@@ -1887,7 +1902,7 @@ int wayca_sc_get_l2_size(int cpu_id)
 	return -ENODATA;
 }
 
-int wayca_sc_get_l3_size(int cpu_id)
+int WAYCA_SC_DECLSPEC wayca_sc_get_l3_size(int cpu_id)
 {
 	const char *size;
 	const char *type;
@@ -2267,7 +2282,7 @@ static int topo_parse_irq(struct wayca_device_irqs *wirqs,
 				const char *device_sysfs_dir)
 {
 	uint32_t irq_number = 0;
-	int irq;
+	int irq = -1;
 	int j;
 
 	topo_path_read_s32(device_sysfs_dir, "irq", &irq);
@@ -2731,7 +2746,9 @@ static int topo_recursively_read_io_devices(struct wayca_topo *p_topo,
 	if (!dp)
 		return -errno;
 
-	chdir(rootdir);
+	if (chdir(rootdir) == -1)
+		PRINT_DBG("failed to change the working dir\n");
+
 	while ((entry = readdir(dp)) != NULL) {
 		ret = lstat(entry->d_name, &statbuf);
 		if (ret < 0) {
@@ -2759,12 +2776,13 @@ static int topo_recursively_read_io_devices(struct wayca_topo *p_topo,
 	}
 
 out:
-	chdir("..");
+	if (chdir("..") == -1)
+		PRINT_DBG("failed to restore the working dir\n");
 	closedir(dp);
 	return ret;
 }
 
-int wayca_sc_get_irq_list(size_t *num, uint32_t *irq)
+int WAYCA_SC_DECLSPEC wayca_sc_get_irq_list(size_t *num, uint32_t *irq)
 {
 	int ret;
 	int i;
@@ -2787,8 +2805,8 @@ int wayca_sc_get_irq_list(size_t *num, uint32_t *irq)
 	return 0;
 }
 
-int wayca_sc_get_irq_info(uint32_t irq_num,
-		struct wayca_sc_irq_info *irq_info)
+int WAYCA_SC_DECLSPEC wayca_sc_get_irq_info(uint32_t irq_num,
+					    struct wayca_sc_irq_info *irq_info)
 {
 	int ret;
 	int i;
@@ -2817,7 +2835,8 @@ int wayca_sc_get_irq_info(uint32_t irq_num,
 	return 0;
 }
 
-int wayca_sc_get_device_list(int numa_node, size_t *num, const char **name)
+int WAYCA_SC_DECLSPEC wayca_sc_get_device_list(int numa_node, size_t *num,
+					       const char **name)
 {
 	int start_node, end_node;
 	int i, j, k;
@@ -2874,7 +2893,8 @@ static void topo_copy_pcidev_info(struct wayca_sc_device_info *dev_info,
 	dev_info->irq_numbers = pcidev->irqs.irq_numbers;
 }
 
-int wayca_sc_get_device_info(const char *name, struct wayca_sc_device_info *dev_info)
+int WAYCA_SC_DECLSPEC wayca_sc_get_device_info(const char *name,
+					       struct wayca_sc_device_info *dev_info)
 {
 	int j, k;
 

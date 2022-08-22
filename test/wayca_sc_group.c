@@ -132,7 +132,7 @@ void readEnv(void)
 
 int main()
 {
-	int i, j, group_created, group_elem_created, ret = 0;
+	int i, j, group_created, group_elem_created = 0, ret = 0;
 	wayca_sc_group_attr_t group_attr;
 
 	readEnv();

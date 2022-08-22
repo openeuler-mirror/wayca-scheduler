@@ -295,7 +295,8 @@ static int deploy_program(struct program *prog, int fd)
 	}
 
 	/* tell client deployed has completed the binding */
-	write(fd, &flags, sizeof(flags));
+	if (write(fd, &flags, sizeof(flags)) <= 0)
+		perror("Failed to notify client\n");
 
 	return 0;
 }
