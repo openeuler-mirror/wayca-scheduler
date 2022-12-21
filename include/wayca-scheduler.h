@@ -241,6 +241,12 @@ int wayca_sc_package_cpu_mask(int package_id, size_t cpusetsize, cpu_set_t *mask
 int wayca_sc_total_cpu_mask(size_t cpusetsize, cpu_set_t *mask);
 
 /**
+ * wayca_sc_total_online_cpu_mask - retrieve the mask for online cpus in the system
+ * Return 0 on success and a negative error number on failure.
+ */
+int wayca_sc_total_online_cpu_mask(size_t cpusetsize, cpu_set_t *mask);
+
+/**
  * wayca_sc_package_node_mask - retrieve the node mask in a certain package
  * @package_id: target package ID
  * @setsize: size of @mask
