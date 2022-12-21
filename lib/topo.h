@@ -165,6 +165,7 @@ struct wayca_topo {
 
 	size_t n_cpus;			/* total number of possible CPUs */
 	cpu_set_t *cpu_map;		/* possible CPU mask */
+	cpu_set_t *online_cpu_map;	/* online CPU mask */
 	struct wayca_cpu	**cpus;		/* possible CPUs */
 
 	size_t n_cores;				/* number of cores in this node */
