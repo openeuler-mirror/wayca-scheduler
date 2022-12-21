@@ -1621,21 +1621,21 @@ int WAYCA_SC_DECLSPEC wayca_sc_cpus_in_ccl(void)
 {
 	if (topo.n_clusters < 1)
 		return -ENODATA; /* not initialized */
-	return topo.ccls[0]->n_cpus;
+	return topo.n_cpus / topo.n_clusters;
 }
 
 int WAYCA_SC_DECLSPEC wayca_sc_cpus_in_node(void)
 {
 	if (topo.n_nodes < 1)
 		return -ENODATA; /* not initialized */
-	return topo.nodes[0]->n_cpus;
+	return topo.n_cpus / topo.n_nodes;
 }
 
 int WAYCA_SC_DECLSPEC wayca_sc_cpus_in_package(void)
 {
 	if (topo.n_packages < 1)
 		return -ENODATA; /* not initialized */
-	return topo.packages[0]->n_cpus;
+	return topo.n_cpus / topo.n_packages;
 }
 
 int WAYCA_SC_DECLSPEC wayca_sc_cpus_in_total(void)
@@ -1651,21 +1651,21 @@ int WAYCA_SC_DECLSPEC wayca_sc_cores_in_ccl(void)
 		return -ENODATA; /* not initialized */
 	if (topo.n_cores < 1)
 		return -ENODATA; /* not initialized */
-	return topo.ccls[0]->n_cpus / topo.cores[0]->n_cpus;
+	return topo.n_cores / topo.n_clusters;
 }
 
 int WAYCA_SC_DECLSPEC wayca_sc_cores_in_node(void)
 {
 	if (topo.n_cores < 1)
 		return -ENODATA; /* not initialized */
-	return topo.nodes[0]->n_cpus / topo.cores[0]->n_cpus;
+	return topo.n_cores / topo.n_nodes;
 }
 
 int WAYCA_SC_DECLSPEC wayca_sc_cores_in_package(void)
 {
 	if (topo.n_cores < 1)
 		return -ENODATA; /* not initialized */
-	return topo.packages[0]->n_cpus / topo.cores[0]->n_cpus;
+	return topo.n_cores / topo.n_packages;
 }
 
 int WAYCA_SC_DECLSPEC wayca_sc_cores_in_total(void)
@@ -1679,14 +1679,14 @@ int WAYCA_SC_DECLSPEC wayca_sc_ccls_in_package(void)
 {
 	if (topo.n_clusters < 1)
 		return -ENODATA; /* not initialized */
-	return topo.packages[0]->n_cpus / topo.ccls[0]->n_cpus;
+	return topo.n_clusters / topo.n_packages;
 }
 
 int WAYCA_SC_DECLSPEC wayca_sc_ccls_in_node(void)
 {
 	if (topo.n_clusters < 1)
 		return -ENODATA; /* not initialized */
-	return topo.nodes[0]->n_cpus / topo.ccls[0]->n_cpus;
+	return topo.n_clusters / topo.n_nodes;
 }
 
 int WAYCA_SC_DECLSPEC wayca_sc_ccls_in_total(void)
@@ -1700,7 +1700,7 @@ int WAYCA_SC_DECLSPEC wayca_sc_nodes_in_package(void)
 {
 	if (topo.n_packages < 1)
 		return -ENODATA; /* not initialized */
-	return topo.packages[0]->n_cpus / topo.nodes[0]->n_cpus;
+	return topo.n_nodes / topo.n_packages;
 }
 
 int WAYCA_SC_DECLSPEC wayca_sc_nodes_in_total(void)
