@@ -508,7 +508,8 @@ static int topo_parse_cpu_node_info(struct wayca_topo *p_topo, int cpu_index)
 				return -ENOMEM;
 			}
 			p_topo->nodes[node_index]->node_idx = node_index;
-			/* initialize this node's cpu_map */
+
+			/* initialize this node's possible cpu_map */
 			p_topo->nodes[node_index]->cpu_map =
 				CPU_ALLOC(p_topo->kernel_max_cpus);
 			if (!p_topo->nodes[node_index]->cpu_map) {
@@ -621,7 +622,8 @@ static int topo_parse_cpu_pkg_info(struct wayca_topo *p_topo,
 		if (!p_topo->packages[i])
 			return -ENOMEM;
 		p_topo->n_packages++;
-		/* initialize this package's cpu_map */
+
+		/* initialize this package's online cpu_map */
 		p_topo->packages[i]->cpu_map =
 			CPU_ALLOC(p_topo->kernel_max_cpus);
 		if (!p_topo->packages[i]->cpu_map)

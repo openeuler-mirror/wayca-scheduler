@@ -90,8 +90,8 @@ struct wayca_core {
 
 struct wayca_cluster {
 	int cluster_id;
-	size_t n_cpus;		/* number of CPUs in this cluster */
-	cpu_set_t *cpu_map;	/* mask of contained CPUs */
+	size_t n_cpus;		/* number of possible CPUs in this cluster */
+	cpu_set_t *cpu_map;	/* mask of contained possible CPUs */
 };
 
 struct wayca_smmu {
@@ -135,7 +135,7 @@ struct wayca_pci_device {
 struct wayca_node {
 	int node_idx;			/* index of node */
 	size_t n_cpus;			/* number of CPUs in this numa node */
-	cpu_set_t *cpu_map;		/* mask of contained CPUs */
+	cpu_set_t *cpu_map;		/* mask of contained possible CPUs */
 	cpu_set_t *cluster_map;		/* mask of contained clusters */
 
 	int *distance;			/* array of distance */
@@ -154,8 +154,8 @@ struct wayca_meminfo {
 
 struct wayca_package {
 	int physical_package_id;
-	size_t n_cpus;		/* number of CPUs in this cluster */
-	cpu_set_t *cpu_map;		/* mask of contained CPUs */
+	size_t n_cpus;			/* number of online CPUs in package */
+	cpu_set_t *cpu_map;		/* mask of contained online CPUs */
 	cpu_set_t *numa_map;		/* mask of contained numa nodes */
 };
 
@@ -163,8 +163,8 @@ struct wayca_topo {
 	int kernel_max_cpus;			/* maximum number of CPUs kernel can support */
 	size_t setsize;				/* setsize for use in CPU_SET macros */
 
-	size_t n_cpus;				/* total number of CPUs */
-	cpu_set_t *cpu_map;
+	size_t n_cpus;			/* total number of possible CPUs */
+	cpu_set_t *cpu_map;		/* possible CPU mask */
 	struct wayca_cpu	**cpus;		/* possible CPUs */
 
 	size_t n_cores;				/* number of cores in this node */
