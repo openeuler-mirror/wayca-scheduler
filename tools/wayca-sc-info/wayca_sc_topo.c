@@ -541,7 +541,7 @@ static int numa_prop_build(xmlNodePtr numa_node, int numa_id)
 	char content[CONTENT_STR_LEN] = {0};
 	unsigned long mem_size;
 	xmlAttrPtr prop;
-	int cache_size;
+	int cache_size = -1;
 	int num_cpu, i;
 	int ret;
 
