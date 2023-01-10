@@ -1187,8 +1187,10 @@ static int topo_construct_numa_topology(struct wayca_topo *p_topo)
 			  p_topo->online_cpu_map,
 			  p_topo->nodes[i]->cpu_map);
 		/* determine if the node has online cpus */
-		if (!CPU_COUNT_S(topo.setsize, online_cpu_map))
+		if (!CPU_COUNT_S(topo.setsize, online_cpu_map)) {
+			CPU_FREE(online_cpu_map);
 			continue;
+		}
 
 		/* build the package numa map */
 		CPU_ZERO_S(setsize, bitmask);
