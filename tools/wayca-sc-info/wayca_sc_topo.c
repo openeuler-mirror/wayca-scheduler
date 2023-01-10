@@ -202,6 +202,7 @@ static int add_elem_formater(xmlDocPtr doc, xmlValidCtxtPtr ctxt,
 		 * in a element, we need make them a tree
 		 */
 		p_cont->c2 = c_cont;
+		c_cont->parent = p_cont;
 		p_cont = c_cont;
 	}
 
@@ -1096,6 +1097,7 @@ static int validate_format(xmlDocPtr topo_doc)
 	ret = ret == 1 ? 0 : -EINVAL;
 free_format:
 	xmlFreeValidCtxt(ctxt);
+	xmlFreeDtd(topo_dtd);
 	return ret;
 }
 
