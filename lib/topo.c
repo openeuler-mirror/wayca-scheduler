@@ -1968,6 +1968,10 @@ int WAYCA_SC_DECLSPEC wayca_sc_get_package_id(int cpu_id)
 	if (!topo_is_valid_cpu(cpu_id))
 		return -EINVAL;
 
+	/* if cpu is offline, can't get physical_package_id */
+	if (!wayca_sc_is_cpu_online(cpu_id))
+		return -ENOENT;
+
 	physical_id = topo.cpus[cpu_id]->p_package->physical_package_id;
 	for (i = 0; i < topo.n_packages; i++) {
 		if (topo.packages[i]->physical_package_id == physical_id)
