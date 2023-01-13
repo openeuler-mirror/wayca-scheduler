@@ -71,11 +71,9 @@ int WAYCA_SC_DECLSPEC list_to_mask(char *s, size_t cpusetsize, cpu_set_t *mask)
 int WAYCA_SC_DECLSPEC thread_bind_cpu(pid_t pid, int cpu)
 {
 	cpu_set_t mask;
-	int ret;
 
-	ret = wayca_sc_core_cpu_mask(cpu, sizeof(cpu_set_t), &mask);
-	if (ret < 0)
-		return ret;
+	CPU_ZERO(&mask);
+	CPU_SET(cpu, &mask);
 
 	return thread_sched_setaffinity(pid, sizeof(mask), &mask);
 }
@@ -189,11 +187,9 @@ static int process_sched_setaffinity(pid_t pid, int size, cpu_set_t * mask)
 int WAYCA_SC_DECLSPEC process_bind_cpu(pid_t pid, int cpu)
 {
 	cpu_set_t mask;
-	int ret;
 
-	ret = wayca_sc_core_cpu_mask(cpu, sizeof(cpu_set_t), &mask);
-	if (ret < 0)
-		return ret;
+	CPU_ZERO(&mask);
+	CPU_SET(cpu, &mask);
 
 	return process_sched_setaffinity(pid, sizeof(mask), &mask);
 }

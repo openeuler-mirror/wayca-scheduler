@@ -452,6 +452,8 @@ free_buf:
 	return ret;
 }
 
+static bool wayca_sc_is_cpu_online(int cpu);
+
 static int topo_parse_cpu_node_info(struct wayca_topo *p_topo, int cpu_index)
 {
 	char path_buffer[WAYCA_SC_PATH_LEN_MAX];
@@ -508,7 +510,8 @@ static int topo_parse_cpu_node_info(struct wayca_topo *p_topo, int cpu_index)
 				return -ENOMEM;
 			}
 			p_topo->nodes[node_index]->node_idx = node_index;
-			/* initialize this node's cpu_map */
+
+			/* initialize this node's possible cpu_map */
 			p_topo->nodes[node_index]->cpu_map =
 				CPU_ALLOC(p_topo->kernel_max_cpus);
 			if (!p_topo->nodes[node_index]->cpu_map) {
@@ -535,68 +538,18 @@ static int topo_parse_cpu_node_info(struct wayca_topo *p_topo, int cpu_index)
 	return 0;
 }
 
-static int topo_parse_cpu_cluster_info(struct wayca_topo *p_topo,
-			const char *path_buffer, int cpu_index)
-{
-	int cluster_id;
-	int ret;
-	int i;
-
-	/* cluster level may not set */
-	if (topo_path_read_s32(path_buffer, "cluster_id", &cluster_id) != 0) {
-		p_topo->cpus[cpu_index]->p_cluster = NULL;
-		return 0;
-	}
-
-	/* check this "cluster_id" exists or not */
-	for (i = 0; i < p_topo->n_clusters; i++) {
-		if (p_topo->ccls[i]->cluster_id == cluster_id)
-			break;
-	}
-	/* need to create a new wayca_cluster */
-	if (i == p_topo->n_clusters) {
-		/* increase p_topo->ccls array */
-		p_topo->ccls = (struct wayca_cluster **)topo_expand_mem(
-				p_topo->ccls, i * sizeof(*p_topo->ccls),
-				(i + 1) * sizeof(*p_topo->ccls));
-		if (!p_topo->ccls)
-			return -ENOMEM;
-		/* allocate a new wayca_cluster struct, and link it to p_topo->ccls */
-		p_topo->ccls[i] = (struct wayca_cluster *)calloc(
-			1, sizeof(struct wayca_cluster));
-		if (!p_topo->ccls[i])
-			return -ENOMEM;
-		p_topo->n_clusters++;
-		/* initialize this cluster's cpu_map */
-		p_topo->ccls[i]->cpu_map = CPU_ALLOC(p_topo->kernel_max_cpus);
-		if (!p_topo->ccls[i]->cpu_map)
-			return -ENOMEM;
-		/* read "cluster_cpus_list" */
-		ret = topo_path_read_cpulist(path_buffer, "cluster_cpus_list",
-					     p_topo->ccls[i]->cpu_map,
-					     p_topo->kernel_max_cpus);
-		if (ret) {
-			PRINT_ERROR(
-				"get ccl %d cluster_cpu_list fail, ret = %d\n",
-				i, ret);
-			return ret;
-		}
-		/* assign cluster_id and n_cpus */
-		p_topo->ccls[i]->cluster_id = cluster_id;
-		p_topo->ccls[i]->n_cpus =
-			CPU_COUNT_S(p_topo->setsize, p_topo->ccls[i]->cpu_map);
-	}
-	/* link this cluster back to current CPU */
-	p_topo->cpus[cpu_index]->p_cluster = p_topo->ccls[i];
-	return 0;
-}
-
 static int topo_parse_cpu_pkg_info(struct wayca_topo *p_topo,
 			const char *path_buffer, int cpu_index)
 {
 	int ppkg_id;
 	int ret;
 	int i;
+
+	/* If the cpu offline,return 0 */
+	if (!wayca_sc_is_cpu_online(cpu_index)) {
+		p_topo->cpus[cpu_index]->p_package = NULL;
+		return 0;
+	}
 
 	/* read "physical_package_id" */
 	ret = topo_path_read_s32(path_buffer, "physical_package_id", &ppkg_id);
@@ -621,7 +574,8 @@ static int topo_parse_cpu_pkg_info(struct wayca_topo *p_topo,
 		if (!p_topo->packages[i])
 			return -ENOMEM;
 		p_topo->n_packages++;
-		/* initialize this package's cpu_map */
+
+		/* initialize this package's online cpu_map */
 		p_topo->packages[i]->cpu_map =
 			CPU_ALLOC(p_topo->kernel_max_cpus);
 		if (!p_topo->packages[i]->cpu_map)
@@ -658,11 +612,20 @@ static int topo_parse_cpu_core_info(struct wayca_topo *p_topo,
 	int core_id;
 	int ret;
 
-	/* read "core_id" */
-	if (topo_path_read_s32(path_buffer, "core_id", &core_id) != 0)
+	/* If the cpu offline,return 0 */
+	if (!wayca_sc_is_cpu_online(cpu_index)) {
 		p_topo->cpus[cpu_index]->core_id = -1;
-	else
-		p_topo->cpus[cpu_index]->core_id = core_id;
+		p_topo->cpus[cpu_index]->core_cpus_map = NULL;
+		return 0;
+	}
+
+	/* read "core_id" */
+	ret = topo_path_read_s32(path_buffer, "core_id", &core_id);
+	if (ret) {
+		PRINT_ERROR("get core_id fail, ret = %d\n", ret);
+		return ret;
+	}
+	p_topo->cpus[cpu_index]->core_id = core_id;
 
 	/* read core_cpus_list, (SMT: simultaneous multi-threading) */
 	p_topo->cpus[cpu_index]->core_cpus_map =
@@ -767,6 +730,13 @@ static int topo_parse_cpu_cache_info(struct wayca_topo *p_topo, int cpu_index)
 	int ret;
 	int i;
 
+	/* If the cpu offline,return 0 */
+	if (!wayca_sc_is_cpu_online(cpu_index)) {
+		p_topo->cpus[cpu_index]->n_caches = 0;
+		p_topo->cpus[cpu_index]->p_caches = NULL;
+		return 0;
+	}
+
 	/* count the number of caches exists */
 	do {
 		/* move the base to "cpu%d/cache/index%zu" */
@@ -843,13 +813,6 @@ static int topo_read_cpu_topology(struct wayca_topo *p_topo, int cpu_index)
 		return ret;
 	}
 
-	ret = topo_parse_cpu_cluster_info(p_topo, path_buffer, cpu_index);
-	if (ret) {
-		PRINT_ERROR("parse CPU%d ccl information failed, ret = %d\n",
-				cpu_index, ret);
-		return ret;
-	}
-
 	ret = topo_parse_cpu_pkg_info(p_topo, path_buffer, cpu_index);
 	if (ret) {
 		PRINT_ERROR("parse CPU%d pkg information failed, ret = %d\n",
@@ -872,7 +835,7 @@ static int topo_read_cpu_topology(struct wayca_topo *p_topo, int cpu_index)
  */
 static int topo_read_node_topology(struct wayca_topo *p_topo, int node_index)
 {
-	cpu_set_t *node_cpu_map;
+	cpu_set_t *node_cpu_map, *online_cpu_map;
 	char path_buffer[WAYCA_SC_PATH_LEN_MAX];
 	struct wayca_meminfo *meminfo_tmp;
 	int *distance_array;
@@ -886,18 +849,25 @@ static int topo_read_node_topology(struct wayca_topo *p_topo, int node_index)
 	if (!node_cpu_map)
 		return -ENOMEM;
 
+	online_cpu_map = CPU_ALLOC(p_topo->kernel_max_cpus);
+	if (!online_cpu_map)
+		return -ENOMEM;
+	CPU_AND_S(p_topo->setsize, online_cpu_map, p_topo->online_cpu_map,
+		  p_topo->nodes[node_index]->cpu_map);
+
 	ret = topo_path_read_cpulist(path_buffer, "cpulist", node_cpu_map,
 				     p_topo->kernel_max_cpus);
-	if (ret)
+	/* if topo_path_read_cpulist fail and cpu online, return ret */
+	if (ret && CPU_COUNT_S(topo.setsize, online_cpu_map))
 		return ret;
 	/* check w/ what's previously composed in cpu_topology reading */
-	if (!CPU_EQUAL_S(p_topo->setsize, node_cpu_map,
-			 p_topo->nodes[node_index]->cpu_map)) {
+	if (!CPU_EQUAL_S(p_topo->setsize, node_cpu_map, online_cpu_map)) {
 		PRINT_ERROR("mismatch detected in node%d cpulist read\n",
 			    node_index);
 		return -EINVAL;
 	}
 	CPU_FREE(node_cpu_map);
+	CPU_FREE(online_cpu_map);
 
 	/* allocate a distance array */
 	distance_array = (int *)calloc(p_topo->n_nodes, sizeof(int));
@@ -950,17 +920,8 @@ static int topo_construct_core_topology(struct wayca_topo *p_topo)
 	for (i = 0; i < p_topo->n_cpus; i++) {
 		/* read this cpu's core_id */
 		cur_core_id = p_topo->cpus[i]->core_id;
-		/* check whether it is already in wayca_core array */
-		for (j = 0; j < p_topo->n_cores; j++) {
-			if (p_topo->cores[j]->core_id == cur_core_id)
-				break; /* it exists, skip */
-		}
-		/*
-		 * cur_core_id exists in p_topo->cores, just go to check
-		 * next one
-		 */
-		if (j < p_topo->n_cores)
-			continue;
+
+		j = i;
 
 		/* allocate a new wayca_core if cur_core_id does not exist */
 		p_topo->cores = (struct wayca_core **)topo_expand_mem(
@@ -979,8 +940,12 @@ static int topo_construct_core_topology(struct wayca_topo *p_topo)
 		p_topo->cores[j]->core_id = cur_core_id;
 		p_topo->cores[j]->core_cpus_map =
 			p_topo->cpus[i]->core_cpus_map;
-		p_topo->cores[j]->n_cpus = CPU_COUNT_S(
-			p_topo->setsize, p_topo->cores[j]->core_cpus_map);
+
+		/* if cpu offline, core_cpus_map is NULL */
+		if (p_topo->cores[j]->core_cpus_map)
+			p_topo->cores[j]->n_cpus = CPU_COUNT_S(
+				p_topo->setsize,
+				p_topo->cores[j]->core_cpus_map);
 		p_topo->cores[j]->p_cluster = p_topo->cpus[i]->p_cluster;
 		p_topo->cores[j]->p_numa_node = p_topo->cpus[i]->p_numa_node;
 		p_topo->cores[j]->p_package = p_topo->cpus[i]->p_package;
@@ -995,7 +960,7 @@ static int topo_recursively_read_io_devices(struct wayca_topo *p_topo,
 
 static int topo_alloc_cpu(struct wayca_topo *p_topo)
 {
-	cpu_set_t *cpuset_possible;
+	cpu_set_t *cpuset_possible, *cpuset_online;
 
 	/*
 	 * read "cpu/kernel_max" to determine maximum size for future memory
@@ -1028,6 +993,20 @@ static int topo_alloc_cpu(struct wayca_topo *p_topo)
 		PRINT_ERROR("failed to read possible CPUs\n");
 		return -EINVAL;
 	}
+
+	/* read "cpu/online" to determine online CPUs mask */
+	cpuset_online = CPU_ALLOC(p_topo->kernel_max_cpus);
+	if (!cpuset_online)
+		return -ENOMEM;
+
+	if (topo_path_read_cpulist(WAYCA_SC_CPU_FNAME, "online",
+				   cpuset_online,
+				   p_topo->kernel_max_cpus) == 0) {
+		p_topo->online_cpu_map = cpuset_online;
+	} else {
+		PRINT_ERROR("failed to read online CPUs\n");
+		return -EINVAL;
+	}
 	return 0;
 }
 
@@ -1051,8 +1030,6 @@ static int topo_construct_cpu_topology(struct wayca_topo *p_topo)
 	 *  - p_topo->n_nodes
 	 *  - p_topo->node_map
 	 *  - p_topo->nodes[]
-	 *  - p_topo->n_clusters
-	 *  - p_topo->ccls[]
 	 *  - p_topo->n_packages
 	 *  - p_topo->packages[]
 	 */
@@ -1067,9 +1044,105 @@ static int topo_construct_cpu_topology(struct wayca_topo *p_topo)
 	return 0;
 }
 
+static int topo_construct_ccl_topology(struct wayca_topo *p_topo)
+{
+	char path_buffer[WAYCA_SC_PATH_LEN_MAX];
+	int ccl_buffer[p_topo->n_cpus][2];
+	int i, j, cluster_id, ccl_id;
+	int max_cpu = 1;
+
+	memset(ccl_buffer, 0, sizeof(ccl_buffer));
+
+	/* determine max cpu in ccl */
+	for (i = 0; i < p_topo->n_cpus; i++) {
+		snprintf(path_buffer, sizeof(path_buffer), "%s/cpu%d/topology",
+			WAYCA_SC_CPU_FNAME, i);
+
+		if (topo_path_read_s32(path_buffer, "cluster_id",
+				       &cluster_id) != 0) {
+			/* cluster level may not set */
+			if (wayca_sc_is_cpu_online(i))
+				p_topo->cpus[i]->p_cluster = NULL;
+			continue;
+		}
+
+		/* check this "cluster_id" exists or not */
+		for (j = 0; j < p_topo->n_cpus; j++) {
+			if (ccl_buffer[j][0] == cluster_id) {
+				ccl_buffer[j][1]++;
+				break;
+			}
+
+			if (!ccl_buffer[j][0]) {
+				ccl_buffer[j][0] = cluster_id;
+				ccl_buffer[j][1]++;
+				break;
+			}
+		}
+	}
+
+	/* cluster level may not set */
+	if (!ccl_buffer[0][0])
+		return 0;
+	for (i = 0; i < p_topo->n_cpus; i++) {
+		if (!ccl_buffer[i][0])
+			break;
+
+		if (ccl_buffer[i][1] > max_cpu)
+			max_cpu = ccl_buffer[i][1];
+	}
+	p_topo->n_clusters = (int)p_topo->n_cpus / max_cpu;
+	p_topo->ccls = (struct wayca_cluster **)calloc(p_topo->n_clusters,
+						       sizeof(*p_topo->ccls));
+	if (!p_topo->ccls)
+		return -ENOMEM;
+	for (i = 0; i < p_topo->n_clusters; i++) {
+		/* allocate a new wayca_cluster struct */
+		p_topo->ccls[i] = (struct wayca_cluster *)calloc(
+			1, sizeof(struct wayca_cluster));
+
+		if (!p_topo->ccls[i])
+			return -ENOMEM;
+
+		/* assign n_cpus */
+		p_topo->ccls[i]->n_cpus = max_cpu;
+
+		/* initialize this cluster's cpu_map */
+		p_topo->ccls[i]->cpu_map = CPU_ALLOC(p_topo->kernel_max_cpus);
+
+		if (!p_topo->ccls[i]->cpu_map)
+			return -ENOMEM;
+		CPU_ZERO_S(p_topo->setsize, p_topo->ccls[i]->cpu_map);
+	}
+	for (i = 0; i < p_topo->n_cpus; i++) {
+		ccl_id = i / max_cpu;
+		/* build the ccl cpu map */
+		CPU_SET_S(i, p_topo->setsize, p_topo->ccls[ccl_id]->cpu_map);
+
+		/* link this cluster back to current CPU */
+		p_topo->cpus[i]->p_cluster = p_topo->ccls[ccl_id];
+		snprintf(path_buffer, sizeof(path_buffer), "%s/cpu%d/topology",
+			WAYCA_SC_CPU_FNAME, i);
+
+		/* if cpu offline, can't get cluster_id */
+		if (topo_path_read_s32(path_buffer, "cluster_id",
+				       &cluster_id) != 0) {
+			if (!p_topo->ccls[ccl_id]->cluster_id)
+				p_topo->ccls[ccl_id]->cluster_id = -1;
+			continue;
+		}
+
+		/* check if this "cluster_id" exists to assign cluster_id */
+		if (!p_topo->ccls[ccl_id]->cluster_id ||
+		    p_topo->ccls[ccl_id]->cluster_id == -1)
+			p_topo->ccls[ccl_id]->cluster_id = cluster_id;
+	}
+	return 0;
+}
+
 static int topo_construct_numa_topology(struct wayca_topo *p_topo)
 {
-	cpu_set_t *bitmask;
+	cpu_set_t *bitmask, *online_cpu_map;
 	size_t setsize;
 	int i, j;
 	int ret;
@@ -1103,17 +1176,32 @@ static int topo_construct_numa_topology(struct wayca_topo *p_topo)
 				    ret);
 			goto cleanup;
 		}
+
+		online_cpu_map = CPU_ALLOC(p_topo->kernel_max_cpus);
+		if (!online_cpu_map) {
+			ret = -ENOMEM;
+			CPU_FREE(online_cpu_map);
+			goto cleanup;
+		}
+		CPU_AND_S(p_topo->setsize, online_cpu_map,
+			  p_topo->online_cpu_map,
+			  p_topo->nodes[i]->cpu_map);
+		/* determine if the node has online cpus */
+		if (!CPU_COUNT_S(topo.setsize, online_cpu_map)) {
+			CPU_FREE(online_cpu_map);
+			continue;
+		}
+
 		/* build the package numa map */
 		CPU_ZERO_S(setsize, bitmask);
 		for (j = 0; j < p_topo->n_packages; j++) {
 			CPU_AND_S(setsize, bitmask,
-				  p_topo->packages[j]->cpu_map,
-				  p_topo->nodes[i]->cpu_map);
-			if (CPU_EQUAL_S(setsize, bitmask,
-					p_topo->nodes[i]->cpu_map))
+				  p_topo->packages[j]->cpu_map, online_cpu_map);
+			if (CPU_EQUAL_S(setsize, bitmask, online_cpu_map))
 				CPU_SET_S(i, setsize,
 					  p_topo->packages[j]->numa_map);
 		}
+		CPU_FREE(online_cpu_map);
 	}
 cleanup:
 	CPU_FREE(bitmask);
@@ -1148,6 +1236,12 @@ static void topo_init(void)
 	ret = topo_construct_cpu_topology(p_topo);
 	if (ret) {
 		PRINT_ERROR("failed to construct cpu topology, ret = %d\n", ret);
+		goto cleanup_on_error;
+	}
+
+	ret = topo_construct_ccl_topology(p_topo);
+	if (ret) {
+		PRINT_ERROR("failed to construct ccl topology, ret = %d\n", ret);
 		goto cleanup_on_error;
 	}
 
@@ -1503,6 +1597,7 @@ void topo_free(void)
 	struct wayca_topo *p_topo = &topo;
 
 	CPU_FREE(p_topo->cpu_map);
+	CPU_FREE(p_topo->online_cpu_map);
 	topo_cpu_free(p_topo->cpus, p_topo->n_cpus);
 
 	topo_core_free(p_topo->cores, p_topo->n_cores);
@@ -1528,21 +1623,21 @@ int WAYCA_SC_DECLSPEC wayca_sc_cpus_in_ccl(void)
 {
 	if (topo.n_clusters < 1)
 		return -ENODATA; /* not initialized */
-	return topo.ccls[0]->n_cpus;
+	return topo.n_cpus / topo.n_clusters;
 }
 
 int WAYCA_SC_DECLSPEC wayca_sc_cpus_in_node(void)
 {
 	if (topo.n_nodes < 1)
 		return -ENODATA; /* not initialized */
-	return topo.nodes[0]->n_cpus;
+	return topo.n_cpus / topo.n_nodes;
 }
 
 int WAYCA_SC_DECLSPEC wayca_sc_cpus_in_package(void)
 {
 	if (topo.n_packages < 1)
 		return -ENODATA; /* not initialized */
-	return topo.packages[0]->n_cpus;
+	return topo.n_cpus / topo.n_packages;
 }
 
 int WAYCA_SC_DECLSPEC wayca_sc_cpus_in_total(void)
@@ -1558,21 +1653,21 @@ int WAYCA_SC_DECLSPEC wayca_sc_cores_in_ccl(void)
 		return -ENODATA; /* not initialized */
 	if (topo.n_cores < 1)
 		return -ENODATA; /* not initialized */
-	return topo.ccls[0]->n_cpus / topo.cores[0]->n_cpus;
+	return topo.n_cores / topo.n_clusters;
 }
 
 int WAYCA_SC_DECLSPEC wayca_sc_cores_in_node(void)
 {
 	if (topo.n_cores < 1)
 		return -ENODATA; /* not initialized */
-	return topo.nodes[0]->n_cpus / topo.cores[0]->n_cpus;
+	return topo.n_cores / topo.n_nodes;
 }
 
 int WAYCA_SC_DECLSPEC wayca_sc_cores_in_package(void)
 {
 	if (topo.n_cores < 1)
 		return -ENODATA; /* not initialized */
-	return topo.packages[0]->n_cpus / topo.cores[0]->n_cpus;
+	return topo.n_cores / topo.n_packages;
 }
 
 int WAYCA_SC_DECLSPEC wayca_sc_cores_in_total(void)
@@ -1586,14 +1681,14 @@ int WAYCA_SC_DECLSPEC wayca_sc_ccls_in_package(void)
 {
 	if (topo.n_clusters < 1)
 		return -ENODATA; /* not initialized */
-	return topo.packages[0]->n_cpus / topo.ccls[0]->n_cpus;
+	return topo.n_clusters / topo.n_packages;
 }
 
 int WAYCA_SC_DECLSPEC wayca_sc_ccls_in_node(void)
 {
 	if (topo.n_clusters < 1)
 		return -ENODATA; /* not initialized */
-	return topo.nodes[0]->n_cpus / topo.ccls[0]->n_cpus;
+	return topo.n_clusters / topo.n_nodes;
 }
 
 int WAYCA_SC_DECLSPEC wayca_sc_ccls_in_total(void)
@@ -1607,7 +1702,7 @@ int WAYCA_SC_DECLSPEC wayca_sc_nodes_in_package(void)
 {
 	if (topo.n_packages < 1)
 		return -ENODATA; /* not initialized */
-	return topo.packages[0]->n_cpus / topo.nodes[0]->n_cpus;
+	return topo.n_nodes / topo.n_packages;
 }
 
 int WAYCA_SC_DECLSPEC wayca_sc_nodes_in_total(void)
@@ -1649,6 +1744,35 @@ static bool topo_is_valid_package(int package_id)
 	return package_id >= 0 && package_id < wayca_sc_packages_in_total();
 }
 
+static bool wayca_sc_is_cpu_online(int cpu)
+{
+	char path_buffer[WAYCA_SC_PATH_LEN_MAX];
+	int online;
+
+	if (!topo_is_valid_cpu(cpu))
+		return false;
+
+	/* CPU 0 is always online */
+	if (!cpu)
+		return true;
+
+	snprintf(path_buffer, sizeof(path_buffer), "%s/cpu%d/",
+			WAYCA_SC_CPU_FNAME, cpu);
+	topo_path_read_s32(path_buffer, "online", &online);
+
+	/* check whether the cache status is the same as the actual CPU status */
+	if (online == CPU_ISSET_S(cpu, topo.setsize, topo.online_cpu_map))
+		return CPU_ISSET_S(cpu, topo.setsize, topo.online_cpu_map);
+
+	/*
+	 * When the CPU status is inconsistent with the cache status, need to
+	 * re-create the topology.
+	 */
+	topo_free();
+	topo_init();
+	return CPU_ISSET_S(cpu, topo.setsize, topo.online_cpu_map);
+}
+
 int WAYCA_SC_DECLSPEC wayca_sc_core_cpu_mask(int core_id, size_t cpusetsize,
 					     cpu_set_t *mask)
 {
@@ -1656,6 +1780,10 @@ int WAYCA_SC_DECLSPEC wayca_sc_core_cpu_mask(int core_id, size_t cpusetsize,
 
 	if (mask == NULL || !topo_is_valid_core(core_id))
 		return -EINVAL;
+
+	/* if all cpus in core are offline, core_cpus_map is NULL */
+	if (!topo.cores[core_id]->core_cpus_map)
+		return -ENOENT;
 
 	valid_cpu_setsize = CPU_ALLOC_SIZE(topo.n_cpus);
 	if (cpusetsize < valid_cpu_setsize)
@@ -1705,6 +1833,7 @@ int WAYCA_SC_DECLSPEC wayca_sc_package_cpu_mask(int package_id, size_t cpusetsiz
 						cpu_set_t *mask)
 {
 	size_t valid_cpu_setsize;
+	int num_cpu, i;
 
 	if (mask == NULL || !topo_is_valid_package(package_id))
 		return -EINVAL;
@@ -1712,6 +1841,11 @@ int WAYCA_SC_DECLSPEC wayca_sc_package_cpu_mask(int package_id, size_t cpusetsiz
 	valid_cpu_setsize = CPU_ALLOC_SIZE(topo.n_cpus);
 	if (cpusetsize < valid_cpu_setsize)
 		return -EINVAL;
+
+	/* check and update the CPU status in the package */
+	num_cpu = wayca_sc_cpus_in_package();
+	for (i = num_cpu * package_id; i < num_cpu * (package_id + 1); i++)
+		wayca_sc_is_cpu_online(i);
 
 	CPU_ZERO_S(cpusetsize, mask);
 	CPU_OR_S(valid_cpu_setsize, mask, mask,
@@ -1732,6 +1866,28 @@ int WAYCA_SC_DECLSPEC wayca_sc_total_cpu_mask(size_t cpusetsize, cpu_set_t *mask
 
 	CPU_ZERO_S(cpusetsize, mask);
 	CPU_OR_S(valid_cpu_setsize, mask, mask, topo.cpu_map);
+	return 0;
+}
+
+int WAYCA_SC_DECLSPEC wayca_sc_total_online_cpu_mask(size_t cpusetsize, cpu_set_t *mask)
+{
+	size_t valid_cpu_setsize;
+	int num_cpu, i;
+
+	if (mask == NULL)
+		return -EINVAL;
+
+	valid_cpu_setsize = CPU_ALLOC_SIZE(topo.n_cpus);
+	if (cpusetsize < valid_cpu_setsize)
+		return -EINVAL;
+
+	/* check and update the CPU status */
+	num_cpu = wayca_sc_cpus_in_total();
+	for (i = 0; i < num_cpu; i++)
+		wayca_sc_is_cpu_online(i);
+
+	CPU_ZERO_S(cpusetsize, mask);
+	CPU_OR_S(valid_cpu_setsize, mask, mask, topo.online_cpu_map);
 	return 0;
 }
 
@@ -1786,7 +1942,11 @@ int WAYCA_SC_DECLSPEC wayca_sc_get_ccl_id(int cpu_id)
 	if (!topo_is_valid_cpu(cpu_id) || wayca_sc_cpus_in_ccl() < 0)
 		return -EINVAL;
 
+	/* if cpu is offline, physical_id is -1 */
 	physical_id = topo.cpus[cpu_id]->p_cluster->cluster_id;
+	if (physical_id == -1)
+		return -ENOENT;
+
 	for (i = 0; i < topo.n_clusters; i++) {
 		if (topo.ccls[i]->cluster_id == physical_id)
 			return i;
@@ -1809,6 +1969,10 @@ int WAYCA_SC_DECLSPEC wayca_sc_get_package_id(int cpu_id)
 
 	if (!topo_is_valid_cpu(cpu_id))
 		return -EINVAL;
+
+	/* if cpu is offline, can't get physical_package_id */
+	if (!wayca_sc_is_cpu_online(cpu_id))
+		return -ENOENT;
 
 	physical_id = topo.cpus[cpu_id]->p_package->physical_package_id;
 	for (i = 0; i < topo.n_packages; i++) {
@@ -1849,6 +2013,10 @@ int WAYCA_SC_DECLSPEC wayca_sc_get_l1i_size(int cpu_id)
 	if (!topo_is_valid_cpu(cpu_id))
 		return -EINVAL;
 
+	/* if cpu offline, return 0 */
+	if (!wayca_sc_is_cpu_online(cpu_id))
+		return 0;
+
 	for (i = 0; i < topo.cpus[cpu_id]->n_caches; i++) {
 		level = topo.cpus[cpu_id]->p_caches[i].level;
 		type = topo.cpus[cpu_id]->p_caches[i].type;
@@ -1869,6 +2037,10 @@ int WAYCA_SC_DECLSPEC wayca_sc_get_l1d_size(int cpu_id)
 
 	if (!topo_is_valid_cpu(cpu_id))
 		return -EINVAL;
+
+	/* if cpu offline, return 0 */
+	if (!wayca_sc_is_cpu_online(cpu_id))
+		return 0;
 
 	for (i = 0; i < topo.cpus[cpu_id]->n_caches; i++) {
 		level = topo.cpus[cpu_id]->p_caches[i].level;
@@ -1891,6 +2063,10 @@ int WAYCA_SC_DECLSPEC wayca_sc_get_l2_size(int cpu_id)
 	if (!topo_is_valid_cpu(cpu_id))
 		return -EINVAL;
 
+	/* if cpu offline, return 0 */
+	if (!wayca_sc_is_cpu_online(cpu_id))
+		return 0;
+
 	for (i = 0; i < topo.cpus[cpu_id]->n_caches; i++) {
 		level = topo.cpus[cpu_id]->p_caches[i].level;
 		type = topo.cpus[cpu_id]->p_caches[i].type;
@@ -1911,6 +2087,10 @@ int WAYCA_SC_DECLSPEC wayca_sc_get_l3_size(int cpu_id)
 
 	if (!topo_is_valid_cpu(cpu_id))
 		return -EINVAL;
+
+	/* if cpu offline, return 0 */
+	if (!wayca_sc_is_cpu_online(cpu_id))
+		return 0;
 
 	for (i = 0; i < topo.cpus[cpu_id]->n_caches; i++) {
 		level = topo.cpus[cpu_id]->p_caches[i].level;
@@ -2458,7 +2638,9 @@ static int topo_parse_pci_info(struct wayca_topo *p_topo,
 	ret = topo_path_read_cpulist(dir, "local_cpulist",
 				     pcidev->local_cpu_map,
 				     p_topo->kernel_max_cpus);
-	if (ret != 0) {
+	/* if cpu online, return ret; else continue */
+	if (ret != 0 &&
+	    CPU_EQUAL_S(topo.setsize, topo.online_cpu_map, topo.cpu_map)) {
 		PRINT_ERROR("failed to get local_cpulist, ret = %d\n", ret);
 		return ret;
 	}

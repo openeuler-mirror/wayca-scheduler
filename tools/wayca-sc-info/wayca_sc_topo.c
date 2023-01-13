@@ -141,6 +141,21 @@ static int print_prop_list(xmlNodePtr node, const char * const *prop_list,
 					prop_list[i]);
 			return -ENOENT;
 		}
+
+		/* if the numa node's cpus are offline, prop is "0KB" */
+		if (!strcmp(prop_list[i], "L3_cache") && prop[0] == '0') {
+			printf("   Offline");
+			xmlFree(prop);
+			return 0;
+		}
+
+		/* if the cpu is offline, prop is "0KB" */
+		if (!strcmp(prop_list[i], "L1i_cache") && prop[0] == '0') {
+			printf("   Offline");
+			xmlFree(prop);
+			return 0;
+		}
+
 		printf("   %s %s", prop_list[i], prop);
 		xmlFree(prop);
 	}
@@ -187,6 +202,7 @@ static int add_elem_formater(xmlDocPtr doc, xmlValidCtxtPtr ctxt,
 		 * in a element, we need make them a tree
 		 */
 		p_cont->c2 = c_cont;
+		c_cont->parent = p_cont;
 		p_cont = c_cont;
 	}
 
@@ -526,7 +542,8 @@ static int numa_prop_build(xmlNodePtr numa_node, int numa_id)
 	char content[CONTENT_STR_LEN] = {0};
 	unsigned long mem_size;
 	xmlAttrPtr prop;
-	int cache_size;
+	int cache_size = -1;
+	int num_cpu, i;
 	int ret;
 
 	ret = wayca_sc_get_node_mem_size(numa_id, &mem_size);
@@ -541,7 +558,16 @@ static int numa_prop_build(xmlNodePtr numa_node, int numa_id)
 	if (!prop)
 		return -ENOMEM;
 
-	cache_size = wayca_sc_get_l3_size(numa_id);
+	/* read this node's L3_cache from node's online cpus */
+	num_cpu = wayca_sc_cpus_in_node();
+	for (i = num_cpu * numa_id; i < num_cpu * (numa_id + 1); i++) {
+		cache_size = wayca_sc_get_l3_size(i);
+
+		/* if cpu[i] online, cache_size > 0 */
+		if (cache_size > 0)
+			break;
+	}
+
 	snprintf(content, sizeof(content), "%dKB", cache_size);
 	prop = xmlNewProp(numa_node, BAD_CAST"L3_cache", BAD_CAST content);
 	if (!prop)
@@ -1071,6 +1097,7 @@ static int validate_format(xmlDocPtr topo_doc)
 	ret = ret == 1 ? 0 : -EINVAL;
 free_format:
 	xmlFreeValidCtxt(ctxt);
+	xmlFreeDtd(topo_dtd);
 	return ret;
 }
 
