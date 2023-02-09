@@ -448,6 +448,7 @@ static void walk_circular_list(struct buffer_info *info)
 static void *bench_thread(void *data)
 {
 	struct thread_info *info = data;
+	int overhead;
 
 	if (info->cpu >= 0) {
 		cpu_set_t *cpuset;
@@ -488,9 +489,11 @@ static void *bench_thread(void *data)
 		info->overhead = LONG_MAX;
 		info->total = 0;
 
-		for (i = 0; i < SAMPLES; i++)
-			info->overhead = min(info->overhead,
-				measure_execute_time(info->overhead_func, info->buf));
+		for (i = 0; i < SAMPLES; i++) {
+			overhead = measure_execute_time(info->overhead_func,
+							info->buf);
+			info->overhead = min(info->overhead, overhead);
+		}
 
 		i = 0;
 		while (info->total < 1 * NS_PER_SEC) {
