@@ -545,7 +545,7 @@ static int topo_parse_cpu_cluster_info(struct wayca_topo *p_topo,
 	int ret;
 	int i;
 
-	/* cluster level may not set */
+	/* cluster level may not set or cpu[cpu_indedx] is offline */
 	if (topo_path_read_s32(path_buffer, "cluster_id", &cluster_id) != 0) {
 		p_topo->cpus[cpu_index]->p_cluster = NULL;
 		return 0;
