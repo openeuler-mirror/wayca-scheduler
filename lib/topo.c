@@ -538,6 +538,62 @@ static int topo_parse_cpu_node_info(struct wayca_topo *p_topo, int cpu_index)
 	return 0;
 }
 
+static int topo_parse_cpu_cluster_info(struct wayca_topo *p_topo,
+			const char *path_buffer, int cpu_index)
+{
+	int cluster_id;
+	int ret;
+	int i;
+
+	/* cluster level may not set */
+	if (topo_path_read_s32(path_buffer, "cluster_id", &cluster_id) != 0) {
+		p_topo->cpus[cpu_index]->p_cluster = NULL;
+		return 0;
+	}
+
+	/* check this "cluster_id" exists or not */
+	for (i = 0; i < p_topo->n_clusters; i++) {
+		if (p_topo->ccls[i]->cluster_id == cluster_id)
+			break;
+	}
+	/* need to create a new wayca_cluster */
+	if (i == p_topo->n_clusters) {
+		/* increase p_topo->ccls array */
+		p_topo->ccls = (struct wayca_cluster **)topo_expand_mem(
+				p_topo->ccls, i * sizeof(*p_topo->ccls),
+				(i + 1) * sizeof(*p_topo->ccls));
+		if (!p_topo->ccls)
+			return -ENOMEM;
+		/* allocate a new wayca_cluster struct, and link it to p_topo->ccls */
+		p_topo->ccls[i] = (struct wayca_cluster *)calloc(
+			1, sizeof(struct wayca_cluster));
+		if (!p_topo->ccls[i])
+			return -ENOMEM;
+		p_topo->n_clusters++;
+		/* initialize this cluster's cpu_map */
+		p_topo->ccls[i]->cpu_map = CPU_ALLOC(p_topo->kernel_max_cpus);
+		if (!p_topo->ccls[i]->cpu_map)
+			return -ENOMEM;
+		/* read "cluster_cpus_list" */
+		ret = topo_path_read_cpulist(path_buffer, "cluster_cpus_list",
+					     p_topo->ccls[i]->cpu_map,
+					     p_topo->kernel_max_cpus);
+		if (ret) {
+			PRINT_ERROR(
+				"get ccl %d cluster_cpu_list fail, ret = %d\n",
+				i, ret);
+			return ret;
+		}
+		/* assign cluster_id and n_cpus */
+		p_topo->ccls[i]->cluster_id = cluster_id;
+		p_topo->ccls[i]->n_cpus =
+			CPU_COUNT_S(p_topo->setsize, p_topo->ccls[i]->cpu_map);
+	}
+	/* link this cluster back to current CPU */
+	p_topo->cpus[cpu_index]->p_cluster = p_topo->ccls[i];
+	return 0;
+}
+
 static int topo_parse_cpu_pkg_info(struct wayca_topo *p_topo,
 			const char *path_buffer, int cpu_index)
 {
@@ -813,6 +869,13 @@ static int topo_read_cpu_topology(struct wayca_topo *p_topo, int cpu_index)
 		return ret;
 	}
 
+	ret = topo_parse_cpu_cluster_info(p_topo, path_buffer, cpu_index);
+	if (ret) {
+		PRINT_ERROR("parse CPU%d ccl information failed, ret = %d\n",
+				cpu_index, ret);
+		return ret;
+	}
+
 	ret = topo_parse_cpu_pkg_info(p_topo, path_buffer, cpu_index);
 	if (ret) {
 		PRINT_ERROR("parse CPU%d pkg information failed, ret = %d\n",
@@ -1040,6 +1103,8 @@ static int topo_construct_cpu_topology(struct wayca_topo *p_topo)
 	 *  - p_topo->n_nodes
 	 *  - p_topo->node_map
 	 *  - p_topo->nodes[]
+	 *  - p_topo->n_clusters
+	 *  - p_topo->ccls[]
 	 *  - p_topo->n_packages
 	 *  - p_topo->packages[]
 	 */
@@ -1050,102 +1115,6 @@ static int topo_construct_cpu_topology(struct wayca_topo *p_topo)
 				    ret);
 			return ret;
 		}
-	}
-	return 0;
-}
-
-static int topo_construct_ccl_topology(struct wayca_topo *p_topo)
-{
-	char path_buffer[WAYCA_SC_PATH_LEN_MAX];
-	int ccl_buffer[p_topo->n_cpus][2];
-	int i, j, cluster_id, ccl_id;
-	int max_cpu = 1;
-
-	memset(ccl_buffer, 0, sizeof(ccl_buffer));
-
-	/* determine max cpu in ccl */
-	for (i = 0; i < p_topo->n_cpus; i++) {
-		snprintf(path_buffer, sizeof(path_buffer), "%s/cpu%d/topology",
-			WAYCA_SC_CPU_FNAME, i);
-
-		if (topo_path_read_s32(path_buffer, "cluster_id",
-				       &cluster_id) != 0) {
-			/* cluster level may not set */
-			if (wayca_sc_is_cpu_online(i))
-				p_topo->cpus[i]->p_cluster = NULL;
-			continue;
-		}
-
-		/* check this "cluster_id" exists or not */
-		for (j = 0; j < p_topo->n_cpus; j++) {
-			if (ccl_buffer[j][0] == cluster_id) {
-				ccl_buffer[j][1]++;
-				break;
-			}
-
-			if (!ccl_buffer[j][0]) {
-				ccl_buffer[j][0] = cluster_id;
-				ccl_buffer[j][1]++;
-				break;
-			}
-		}
-	}
-
-	/* cluster level may not set */
-	if (!ccl_buffer[0][0])
-		return 0;
-	for (i = 0; i < p_topo->n_cpus; i++) {
-		if (!ccl_buffer[i][0])
-			break;
-
-		if (ccl_buffer[i][1] > max_cpu)
-			max_cpu = ccl_buffer[i][1];
-	}
-	p_topo->n_clusters = (int)p_topo->n_cpus / max_cpu;
-	p_topo->ccls = (struct wayca_cluster **)calloc(p_topo->n_clusters,
-						       sizeof(*p_topo->ccls));
-	if (!p_topo->ccls)
-		return -ENOMEM;
-	for (i = 0; i < p_topo->n_clusters; i++) {
-		/* allocate a new wayca_cluster struct */
-		p_topo->ccls[i] = (struct wayca_cluster *)calloc(
-			1, sizeof(struct wayca_cluster));
-
-		if (!p_topo->ccls[i])
-			return -ENOMEM;
-
-		/* assign n_cpus */
-		p_topo->ccls[i]->n_cpus = max_cpu;
-
-		/* initialize this cluster's cpu_map */
-		p_topo->ccls[i]->cpu_map = CPU_ALLOC(p_topo->kernel_max_cpus);
-
-		if (!p_topo->ccls[i]->cpu_map)
-			return -ENOMEM;
-		CPU_ZERO_S(p_topo->setsize, p_topo->ccls[i]->cpu_map);
-	}
-	for (i = 0; i < p_topo->n_cpus; i++) {
-		ccl_id = i / max_cpu;
-		/* build the ccl cpu map */
-		CPU_SET_S(i, p_topo->setsize, p_topo->ccls[ccl_id]->cpu_map);
-
-		/* link this cluster back to current CPU */
-		p_topo->cpus[i]->p_cluster = p_topo->ccls[ccl_id];
-		snprintf(path_buffer, sizeof(path_buffer), "%s/cpu%d/topology",
-			WAYCA_SC_CPU_FNAME, i);
-
-		/* if cpu offline, can't get cluster_id */
-		if (topo_path_read_s32(path_buffer, "cluster_id",
-				       &cluster_id) != 0) {
-			if (!p_topo->ccls[ccl_id]->cluster_id)
-				p_topo->ccls[ccl_id]->cluster_id = -1;
-			continue;
-		}
-
-		/* check if this "cluster_id" exists to assign cluster_id */
-		if (!p_topo->ccls[ccl_id]->cluster_id ||
-		    p_topo->ccls[ccl_id]->cluster_id == -1)
-			p_topo->ccls[ccl_id]->cluster_id = cluster_id;
 	}
 	return 0;
 }
@@ -1246,12 +1215,6 @@ static void topo_init(void)
 	ret = topo_construct_cpu_topology(p_topo);
 	if (ret) {
 		PRINT_ERROR("failed to construct cpu topology, ret = %d\n", ret);
-		goto cleanup_on_error;
-	}
-
-	ret = topo_construct_ccl_topology(p_topo);
-	if (ret) {
-		PRINT_ERROR("failed to construct ccl topology, ret = %d\n", ret);
 		goto cleanup_on_error;
 	}
 
