@@ -1754,10 +1754,6 @@ int WAYCA_SC_DECLSPEC wayca_sc_core_cpu_mask(int core_id, size_t cpusetsize,
 	if (mask == NULL || !topo_is_valid_core(core_id))
 		return -EINVAL;
 
-	/* if all cpus in core are offline, core_cpus_map is NULL */
-	if (!topo.cores[core_id]->core_cpus_map)
-		return -ENOENT;
-
 	valid_cpu_setsize = CPU_ALLOC_SIZE(topo.n_cpus);
 	if (cpusetsize < valid_cpu_setsize)
 		return -EINVAL;
