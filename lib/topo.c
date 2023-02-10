@@ -921,7 +921,21 @@ static int topo_construct_core_topology(struct wayca_topo *p_topo)
 		/* read this cpu's core_id */
 		cur_core_id = p_topo->cpus[i]->core_id;
 
-		j = i;
+		/* if cpu[i] is offline, core_id = -1; continue */
+		if (cur_core_id == -1)
+			continue;
+
+		/* check whether it is already in wayca_core array */
+		for (j = 0; j < p_topo->n_cores; j++) {
+			if (p_topo->cores[j]->core_id == cur_core_id)
+				break; /* it exists, skip */
+		}
+		/*
+		 * cur_core_id exists in p_topo->cores, just go to check
+		 * next one
+		 */
+		if (j < p_topo->n_cores)
+			continue;
 
 		/* allocate a new wayca_core if cur_core_id does not exist */
 		p_topo->cores = (struct wayca_core **)topo_expand_mem(
@@ -940,12 +954,8 @@ static int topo_construct_core_topology(struct wayca_topo *p_topo)
 		p_topo->cores[j]->core_id = cur_core_id;
 		p_topo->cores[j]->core_cpus_map =
 			p_topo->cpus[i]->core_cpus_map;
-
-		/* if cpu offline, core_cpus_map is NULL */
-		if (p_topo->cores[j]->core_cpus_map)
-			p_topo->cores[j]->n_cpus = CPU_COUNT_S(
-				p_topo->setsize,
-				p_topo->cores[j]->core_cpus_map);
+		p_topo->cores[j]->n_cpus = CPU_COUNT_S(
+			p_topo->setsize, p_topo->cores[j]->core_cpus_map);
 		p_topo->cores[j]->p_cluster = p_topo->cpus[i]->p_cluster;
 		p_topo->cores[j]->p_numa_node = p_topo->cpus[i]->p_numa_node;
 		p_topo->cores[j]->p_package = p_topo->cpus[i]->p_package;
