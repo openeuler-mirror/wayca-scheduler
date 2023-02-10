@@ -1911,11 +1911,11 @@ int WAYCA_SC_DECLSPEC wayca_sc_get_ccl_id(int cpu_id)
 	if (!topo_is_valid_cpu(cpu_id) || wayca_sc_cpus_in_ccl() < 0)
 		return -EINVAL;
 
-	/* if cpu is offline, physical_id is -1 */
-	physical_id = topo.cpus[cpu_id]->p_cluster->cluster_id;
-	if (physical_id == -1)
+	/* if cpu is offline, can't get physical_cluster_id */
+	if (!wayca_sc_is_cpu_online(cpu_id))
 		return -ENOENT;
 
+	physical_id = topo.cpus[cpu_id]->p_cluster->cluster_id;
 	for (i = 0; i < topo.n_clusters; i++) {
 		if (topo.ccls[i]->cluster_id == physical_id)
 			return i;
