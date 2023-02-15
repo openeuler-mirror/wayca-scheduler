@@ -448,7 +448,7 @@ static void walk_circular_list(struct buffer_info *info)
 static void *bench_thread(void *data)
 {
 	struct thread_info *info = data;
-	int overhead;
+	long int overhead;
 
 	if (info->cpu >= 0) {
 		cpu_set_t *cpuset;
