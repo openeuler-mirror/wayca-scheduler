@@ -247,6 +247,36 @@ int wayca_sc_total_cpu_mask(size_t cpusetsize, cpu_set_t *mask);
 int wayca_sc_total_online_cpu_mask(size_t cpusetsize, cpu_set_t *mask);
 
 /**
+ * wayca_sc_ccl_core_mask - retrieve the core mask in a certain cluster
+ * @ccl_id: target cluster ID
+ * @setsize: size of @mask
+ * @mask: the core mask to receive the result
+ *
+ * Return 0 on success and a negative error number on failure.
+ */
+int wayca_sc_ccl_core_mask(int ccl_id, size_t setsize, cpu_set_t *mask);
+
+/**
+ * wayca_sc_node_core_mask - retrieve the core mask in a certain node
+ * @node_id: target node ID
+ * @setsize: size of @mask
+ * @mask: the core mask to receive the result
+ *
+ * Return 0 on success and a negative error number on failure.
+ */
+int wayca_sc_node_core_mask(int node_id, size_t setsize, cpu_set_t *mask);
+
+/**
+ * wayca_sc_node_ccl_mask - retrieve the cluster mask in a certain node
+ * @node_id: target node ID
+ * @setsize: size of @mask
+ * @mask: the cluster mask to receive the result
+ *
+ * Return 0 on success and a negative error number on failure.
+ */
+int wayca_sc_node_ccl_mask(int node_id, size_t setsize, cpu_set_t *mask);
+
+/**
  * wayca_sc_package_node_mask - retrieve the node mask in a certain package
  * @package_id: target package ID
  * @setsize: size of @mask

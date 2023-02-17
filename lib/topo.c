@@ -511,6 +511,26 @@ static int topo_parse_cpu_node_info(struct wayca_topo *p_topo, int cpu_index)
 			}
 			p_topo->nodes[node_index]->node_idx = node_index;
 
+			/* initialize this node's cluster_map */
+			p_topo->nodes[node_index]->cluster_map =
+				CPU_ALLOC(p_topo->kernel_max_cpus);
+			if (!p_topo->nodes[node_index]->cluster_map) {
+				closedir(dir);
+				return -ENOMEM;
+			}
+			CPU_ZERO_S(p_topo->setsize,
+				   p_topo->nodes[node_index]->cluster_map);
+
+			/* initialize this node's core_map */
+			p_topo->nodes[node_index]->core_map =
+				CPU_ALLOC(p_topo->kernel_max_cpus);
+			if (!p_topo->nodes[node_index]->core_map) {
+				closedir(dir);
+				return -ENOMEM;
+			}
+			CPU_ZERO_S(p_topo->setsize,
+				   p_topo->nodes[node_index]->core_map);
+
 			/* initialize this node's possible cpu_map */
 			p_topo->nodes[node_index]->cpu_map =
 				CPU_ALLOC(p_topo->kernel_max_cpus);
@@ -588,6 +608,16 @@ static int topo_parse_cpu_cluster_info(struct wayca_topo *p_topo,
 		p_topo->ccls[i]->cluster_id = cluster_id;
 		p_topo->ccls[i]->n_cpus =
 			CPU_COUNT_S(p_topo->setsize, p_topo->ccls[i]->cpu_map);
+
+		/* initialize this cluster's core_map */
+		p_topo->ccls[i]->core_map = CPU_ALLOC(p_topo->kernel_max_cpus);
+		if (!p_topo->ccls[i]->core_map)
+			return -ENOMEM;
+		CPU_ZERO_S(p_topo->setsize, p_topo->ccls[i]->core_map);
+
+		/* add the ccl into cluster_map of the numa for current CPU */
+		CPU_SET_S(i, p_topo->setsize,
+			  p_topo->cpus[cpu_index]->p_numa_node->cluster_map);
 	}
 	/* link this cluster back to current CPU */
 	p_topo->cpus[cpu_index]->p_cluster = p_topo->ccls[i];
@@ -1024,6 +1054,15 @@ static int topo_construct_core_topology(struct wayca_topo *p_topo)
 		p_topo->cores[j]->p_package = p_topo->cpus[i]->p_package;
 		p_topo->cores[j]->n_caches = p_topo->cpus[i]->n_caches;
 		p_topo->cores[j]->p_caches = p_topo->cpus[i]->p_caches;
+
+		/* add current core into core_map of the ccl for this CPU */
+		if (topo.n_clusters > 0) /* cluster may not set */
+			CPU_SET_S(j, p_topo->setsize,
+				  p_topo->cpus[i]->p_cluster->core_map);
+
+		/* add current core into core_map of the numa for this CPU */
+		CPU_SET_S(j, p_topo->setsize,
+			  p_topo->cpus[i]->p_numa_node->core_map);
 	}
 	return 0;
 }
@@ -1485,6 +1524,7 @@ static void topo_ccl_free(struct wayca_cluster **ccls, size_t n_clusters)
 			continue;
 
 		CPU_FREE(ccls[i]->cpu_map);
+		CPU_FREE(ccls[i]->core_map);
 		free(ccls[i]);
 	}
 	free(ccls);
@@ -1533,6 +1573,7 @@ static void topo_node_free(struct wayca_node **nodes, size_t n_nodes)
 			continue;
 
 		CPU_FREE(nodes[i]->cpu_map);
+		CPU_FREE(nodes[i]->core_map);
 		CPU_FREE(nodes[i]->cluster_map);
 		free(nodes[i]->distance);
 		free(nodes[i]->p_meminfo);
@@ -1781,6 +1822,23 @@ int WAYCA_SC_DECLSPEC wayca_sc_ccl_cpu_mask(int ccl_id, size_t cpusetsize,
 	return 0;
 }
 
+int WAYCA_SC_DECLSPEC wayca_sc_ccl_core_mask(int ccl_id, size_t setsize,
+					    cpu_set_t *mask)
+{
+	size_t valid_core_setsize;
+
+	if (mask == NULL || !topo_is_valid_ccl(ccl_id))
+		return -EINVAL;
+
+	valid_core_setsize = CPU_ALLOC_SIZE(topo.n_cores);
+	if (setsize < valid_core_setsize)
+		return -EINVAL;
+
+	CPU_ZERO_S(setsize, mask);
+	CPU_OR_S(valid_core_setsize, mask, mask, topo.ccls[ccl_id]->core_map);
+	return 0;
+}
+
 int WAYCA_SC_DECLSPEC wayca_sc_node_cpu_mask(int node_id, size_t cpusetsize,
 					     cpu_set_t *mask)
 {
@@ -1795,6 +1853,42 @@ int WAYCA_SC_DECLSPEC wayca_sc_node_cpu_mask(int node_id, size_t cpusetsize,
 
 	CPU_ZERO_S(cpusetsize, mask);
 	CPU_OR_S(valid_cpu_setsize, mask, mask, topo.nodes[node_id]->cpu_map);
+	return 0;
+}
+
+int WAYCA_SC_DECLSPEC wayca_sc_node_core_mask(int node_id, size_t setsize,
+					     cpu_set_t *mask)
+{
+	size_t valid_core_setsize;
+
+	if (mask == NULL || !topo_is_valid_node(node_id))
+		return -EINVAL;
+
+	valid_core_setsize = CPU_ALLOC_SIZE(topo.n_cores);
+	if (setsize < valid_core_setsize)
+		return -EINVAL;
+
+	CPU_ZERO_S(setsize, mask);
+	CPU_OR_S(valid_core_setsize, mask, mask,
+		 topo.nodes[node_id]->core_map);
+	return 0;
+}
+
+int WAYCA_SC_DECLSPEC wayca_sc_node_ccl_mask(int node_id, size_t setsize,
+					     cpu_set_t *mask)
+{
+	size_t valid_ccl_setsize;
+
+	if (mask == NULL || !topo_is_valid_node(node_id))
+		return -EINVAL;
+
+	valid_ccl_setsize = CPU_ALLOC_SIZE(topo.n_clusters);
+	if (setsize < valid_ccl_setsize)
+		return -EINVAL;
+
+	CPU_ZERO_S(setsize, mask);
+	CPU_OR_S(valid_ccl_setsize, mask, mask,
+		 topo.nodes[node_id]->cluster_map);
 	return 0;
 }
 
