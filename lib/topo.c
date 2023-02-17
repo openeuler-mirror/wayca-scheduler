@@ -1827,6 +1827,18 @@ static bool topo_is_valid_package(int package_id)
 	return package_id >= 0 && package_id < topo.n_packages;
 }
 
+int WAYCA_SC_DECLSPEC wayca_sc_get_physical_id(char *elem_name, int logical_id)
+{
+	if (!strcmp(elem_name, "package") && topo_is_valid_package(logical_id))
+		return topo.packages[logical_id]->physical_package_id;
+	if (!strcmp(elem_name, "cluster") && topo_is_valid_ccl(logical_id))
+		return topo.ccls[logical_id]->cluster_id;
+	if (!strcmp(elem_name, "core") && topo_is_valid_core(logical_id))
+		return topo.cores[logical_id]->core_id;
+
+	return -ENODATA;
+}
+
 static bool wayca_sc_is_cpu_online(int cpu)
 {
 	char path_buffer[WAYCA_SC_PATH_LEN_MAX];

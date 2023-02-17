@@ -218,6 +218,18 @@ int wayca_sc_nodes_in_total(void);
  */
 int wayca_sc_packages_in_total(void);
 
+/**
+ * wayca_sc_get_physical_id - retrieve the physical id in a certain
+ * topology structure by logical id.
+ * @elem_name: a certain topology structure's name, like "cluster" "package" or
+ * "core"
+ * @logical_id: logical id of a certain topology structure
+ *
+ * Return a certain topology structure's physical id  on success and a negative
+ * error number on failure.
+ */
+int wayca_sc_get_physical_id(char *elem_name, int logical_id);
+
 /*
  * The following family of functions retrieve the cpuset mask of certain
  * topology structure.
