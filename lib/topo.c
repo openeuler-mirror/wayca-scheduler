@@ -1856,6 +1856,16 @@ static bool wayca_sc_is_cpu_online(int cpu)
 	return CPU_ISSET_S(cpu, topo.setsize, topo.online_cpu_map);
 }
 
+static void check_and_update_cpu_status(void)
+{
+	int num_cpu, i;
+
+	/* check and update the CPU status */
+	num_cpu = wayca_sc_cpus_in_total();
+	for (i = 0; i < num_cpu; i++)
+		wayca_sc_is_cpu_online(i);
+}
+
 int WAYCA_SC_DECLSPEC wayca_sc_core_cpu_mask(int core_id, size_t cpusetsize,
 					     cpu_set_t *mask)
 {
@@ -1863,6 +1873,8 @@ int WAYCA_SC_DECLSPEC wayca_sc_core_cpu_mask(int core_id, size_t cpusetsize,
 
 	if (mask == NULL || !topo_is_valid_core(core_id))
 		return -EINVAL;
+
+	check_and_update_cpu_status();
 
 	valid_cpu_setsize = CPU_ALLOC_SIZE(topo.n_cpus);
 	if (cpusetsize < valid_cpu_setsize)
@@ -1882,6 +1894,8 @@ int WAYCA_SC_DECLSPEC wayca_sc_ccl_cpu_mask(int ccl_id, size_t cpusetsize,
 	if (mask == NULL || !topo_is_valid_ccl(ccl_id))
 		return -EINVAL;
 
+	check_and_update_cpu_status();
+
 	valid_cpu_setsize = CPU_ALLOC_SIZE(topo.n_cpus);
 	if (cpusetsize < valid_cpu_setsize)
 		return -EINVAL;
@@ -1898,6 +1912,8 @@ int WAYCA_SC_DECLSPEC wayca_sc_ccl_core_mask(int ccl_id, size_t setsize,
 
 	if (mask == NULL || !topo_is_valid_ccl(ccl_id))
 		return -EINVAL;
+
+	check_and_update_cpu_status();
 
 	valid_core_setsize = CPU_ALLOC_SIZE(topo.n_cores);
 	if (setsize < valid_core_setsize)
@@ -1916,6 +1932,8 @@ int WAYCA_SC_DECLSPEC wayca_sc_node_cpu_mask(int node_id, size_t cpusetsize,
 	if (mask == NULL || !topo_is_valid_node(node_id))
 		return -EINVAL;
 
+	check_and_update_cpu_status();
+
 	valid_cpu_setsize = CPU_ALLOC_SIZE(topo.n_cpus);
 	if (cpusetsize < valid_cpu_setsize)
 		return -EINVAL;
@@ -1932,6 +1950,8 @@ int WAYCA_SC_DECLSPEC wayca_sc_node_core_mask(int node_id, size_t setsize,
 
 	if (mask == NULL || !topo_is_valid_node(node_id))
 		return -EINVAL;
+
+	check_and_update_cpu_status();
 
 	valid_core_setsize = CPU_ALLOC_SIZE(topo.n_cores);
 	if (setsize < valid_core_setsize)
@@ -1951,6 +1971,8 @@ int WAYCA_SC_DECLSPEC wayca_sc_node_ccl_mask(int node_id, size_t setsize,
 	if (mask == NULL || !topo_is_valid_node(node_id))
 		return -EINVAL;
 
+	check_and_update_cpu_status();
+
 	valid_ccl_setsize = CPU_ALLOC_SIZE(topo.n_clusters);
 	if (setsize < valid_ccl_setsize)
 		return -EINVAL;
@@ -1965,19 +1987,15 @@ int WAYCA_SC_DECLSPEC wayca_sc_package_cpu_mask(int package_id, size_t cpusetsiz
 						cpu_set_t *mask)
 {
 	size_t valid_cpu_setsize;
-	int num_cpu, i;
 
 	if (mask == NULL || !topo_is_valid_package(package_id))
 		return -EINVAL;
 
+	check_and_update_cpu_status();
+
 	valid_cpu_setsize = CPU_ALLOC_SIZE(topo.n_cpus);
 	if (cpusetsize < valid_cpu_setsize)
 		return -EINVAL;
-
-	/* check and update the CPU status in the package */
-	num_cpu = wayca_sc_cpus_in_package();
-	for (i = num_cpu * package_id; i < num_cpu * (package_id + 1); i++)
-		wayca_sc_is_cpu_online(i);
 
 	CPU_ZERO_S(cpusetsize, mask);
 	CPU_OR_S(valid_cpu_setsize, mask, mask,
@@ -1992,6 +2010,8 @@ int WAYCA_SC_DECLSPEC wayca_sc_total_cpu_mask(size_t cpusetsize, cpu_set_t *mask
 	if (mask == NULL)
 		return -EINVAL;
 
+	check_and_update_cpu_status();
+
 	valid_cpu_setsize = CPU_ALLOC_SIZE(topo.n_cpus);
 	if (cpusetsize < valid_cpu_setsize)
 		return -EINVAL;
@@ -2004,19 +2024,15 @@ int WAYCA_SC_DECLSPEC wayca_sc_total_cpu_mask(size_t cpusetsize, cpu_set_t *mask
 int WAYCA_SC_DECLSPEC wayca_sc_total_online_cpu_mask(size_t cpusetsize, cpu_set_t *mask)
 {
 	size_t valid_cpu_setsize;
-	int num_cpu, i;
 
 	if (mask == NULL)
 		return -EINVAL;
 
+	check_and_update_cpu_status();
+
 	valid_cpu_setsize = CPU_ALLOC_SIZE(topo.n_cpus);
 	if (cpusetsize < valid_cpu_setsize)
 		return -EINVAL;
-
-	/* check and update the CPU status */
-	num_cpu = wayca_sc_cpus_in_total();
-	for (i = 0; i < num_cpu; i++)
-		wayca_sc_is_cpu_online(i);
 
 	CPU_ZERO_S(cpusetsize, mask);
 	CPU_OR_S(valid_cpu_setsize, mask, mask, topo.online_cpu_map);
@@ -2030,6 +2046,8 @@ int WAYCA_SC_DECLSPEC wayca_sc_package_node_mask(int package_id, size_t setsize,
 
 	if (mask == NULL || !topo_is_valid_package(package_id))
 		return -EINVAL;
+
+	check_and_update_cpu_status();
 
 	valid_numa_setsize = CPU_ALLOC_SIZE(topo.n_nodes);
 	if (setsize < valid_numa_setsize)
@@ -2047,6 +2065,8 @@ int WAYCA_SC_DECLSPEC wayca_sc_total_node_mask(size_t setsize, cpu_set_t *mask)
 
 	if (mask == NULL)
 		return -EINVAL;
+
+	check_and_update_cpu_status();
 
 	valid_numa_setsize = CPU_ALLOC_SIZE(topo.n_nodes);
 	if (setsize < valid_numa_setsize)
