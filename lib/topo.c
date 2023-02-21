@@ -40,6 +40,9 @@ WAYCA_SC_INIT_PRIO(topo_init, TOPO);
 WAYCA_SC_FINI_PRIO(topo_free, TOPO);
 static struct wayca_topo topo;
 
+static size_t max_cores;
+static size_t max_ccls;
+
 /* topo_expand_mem - expand memory size to 'new_size', if ptr is not empty,
  * original data will be copied to the new allocated buffer. Or a totally new
  * buffer will be returned.
@@ -1630,14 +1633,24 @@ int WAYCA_SC_DECLSPEC wayca_sc_cpus_in_core(void)
 {
 	if (topo.n_cores < 1)
 		return -ENODATA; /* not initialized */
-	return topo.cores[0]->n_cpus;
+
+	wayca_sc_cores_in_total();
+	if (max_cores > 0)
+		return topo.n_cpus / max_cores;
+	else
+		return -ENODATA; /* not initialized */
 }
 
 int WAYCA_SC_DECLSPEC wayca_sc_cpus_in_ccl(void)
 {
 	if (topo.n_clusters < 1)
 		return -ENODATA; /* not initialized */
-	return topo.n_cpus / topo.n_clusters;
+
+	wayca_sc_ccls_in_total();
+	if (max_ccls > 0)
+		return topo.n_cpus / max_ccls;
+	else
+		return -ENODATA; /* not initialized */
 }
 
 int WAYCA_SC_DECLSPEC wayca_sc_cpus_in_node(void)
@@ -1667,49 +1680,105 @@ int WAYCA_SC_DECLSPEC wayca_sc_cores_in_ccl(void)
 		return -ENODATA; /* not initialized */
 	if (topo.n_cores < 1)
 		return -ENODATA; /* not initialized */
-	return topo.n_cores / topo.n_clusters;
+
+	wayca_sc_cores_in_total();
+	wayca_sc_ccls_in_total();
+	if (max_ccls > 0 && max_cores > 0)
+		return max_cores / max_ccls;
+	else
+		return -ENODATA; /* not initialized */
 }
 
 int WAYCA_SC_DECLSPEC wayca_sc_cores_in_node(void)
 {
 	if (topo.n_cores < 1)
 		return -ENODATA; /* not initialized */
-	return topo.n_cores / topo.n_nodes;
+
+	wayca_sc_cores_in_total();
+	if (max_cores > 0)
+		return max_cores / topo.n_nodes;
+	else
+		return -ENODATA; /* not initialized */
 }
 
 int WAYCA_SC_DECLSPEC wayca_sc_cores_in_package(void)
 {
 	if (topo.n_cores < 1)
 		return -ENODATA; /* not initialized */
-	return topo.n_cores / topo.n_packages;
+
+	wayca_sc_cores_in_total();
+	if (max_cores > 0)
+		return max_cores / topo.n_packages;
+	else
+		return -ENODATA; /* not initialized */
 }
 
 int WAYCA_SC_DECLSPEC wayca_sc_cores_in_total(void)
 {
+	size_t cpu_in_core = 0;
+	int i;
+
 	if (topo.n_cores < 1)
 		return -ENODATA; /* not initialized */
-	return topo.n_cores;
+
+	/* determines the maximum number of CPUs contained in the core */
+	for (i = 0; i < topo.n_cores; i++) {
+		if (topo.cores[i]->n_cpus > cpu_in_core)
+			cpu_in_core = topo.cores[i]->n_cpus;
+	}
+
+	if (cpu_in_core > 0)
+		max_cores = topo.n_cpus / cpu_in_core;
+	else
+		return -ENODATA;
+
+	return max_cores;
 }
 
 int WAYCA_SC_DECLSPEC wayca_sc_ccls_in_package(void)
 {
 	if (topo.n_clusters < 1)
 		return -ENODATA; /* not initialized */
-	return topo.n_clusters / topo.n_packages;
+
+	wayca_sc_ccls_in_total();
+	if (max_ccls > 0)
+		return max_ccls / topo.n_packages;
+	else
+		return -ENODATA; /* not initialized */
 }
 
 int WAYCA_SC_DECLSPEC wayca_sc_ccls_in_node(void)
 {
 	if (topo.n_clusters < 1)
 		return -ENODATA; /* not initialized */
-	return topo.n_clusters / topo.n_nodes;
+
+	wayca_sc_ccls_in_total();
+	if (max_ccls > 0)
+		return max_ccls / topo.n_nodes;
+	else
+		return -ENODATA; /* not initialized */
 }
 
 int WAYCA_SC_DECLSPEC wayca_sc_ccls_in_total(void)
 {
+	size_t cpu_in_ccl = 0;
+	int i;
+
 	if (topo.n_clusters < 1)
 		return -ENODATA; /* not initialized */
-	return topo.n_clusters;
+
+	/* determines the maximum number of CPUs contained in the ccl */
+	for (i = 0; i < topo.n_clusters; i++) {
+		if (topo.ccls[i]->n_cpus > cpu_in_ccl)
+			cpu_in_ccl = topo.ccls[i]->n_cpus;
+	}
+
+	if (cpu_in_ccl > 0)
+		max_ccls = topo.n_cpus / cpu_in_ccl;
+	else
+		return -ENODATA;
+
+	return max_ccls;
 }
 
 int WAYCA_SC_DECLSPEC wayca_sc_nodes_in_package(void)
@@ -1735,27 +1804,27 @@ int WAYCA_SC_DECLSPEC wayca_sc_packages_in_total(void)
 
 static bool topo_is_valid_cpu(int cpu_id)
 {
-	return cpu_id >= 0 && cpu_id < wayca_sc_cpus_in_total();
+	return cpu_id >= 0 && cpu_id < topo.n_cpus;
 }
 
 static bool topo_is_valid_core(int core_id)
 {
-	return core_id >= 0 && core_id < wayca_sc_cores_in_total();
+	return core_id >= 0 && core_id < topo.n_cores;
 }
 
 static bool topo_is_valid_ccl(int ccl_id)
 {
-	return ccl_id >= 0 && ccl_id < wayca_sc_ccls_in_total();
+	return ccl_id >= 0 && ccl_id < topo.n_clusters;
 }
 
 static bool topo_is_valid_node(int node_id)
 {
-	return node_id >= 0 && node_id < wayca_sc_nodes_in_total();
+	return node_id >= 0 && node_id < topo.n_nodes;
 }
 
 static bool topo_is_valid_package(int package_id)
 {
-	return package_id >= 0 && package_id < wayca_sc_packages_in_total();
+	return package_id >= 0 && package_id < topo.n_packages;
 }
 
 static bool wayca_sc_is_cpu_online(int cpu)
