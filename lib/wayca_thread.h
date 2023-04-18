@@ -140,7 +140,7 @@ int wayca_group_add_thread(struct wayca_sc_group *group, struct wayca_thread *th
 int wayca_group_delete_thread(struct wayca_sc_group *group, struct wayca_thread *thread);
 
 /* Rearrange the resource assigned to the thread as the attribute of thread has been changed */
-int wayca_group_rearrange_thread(struct wayca_sc_group *group, struct wayca_thread *thread);
+int wayca_group_rearrange_thread(struct wayca_thread *thread);
 
 /* Rearrange all the group threads' resources as the attribute of the group has been changed */
 int wayca_group_rearrange_group(struct wayca_sc_group *group);

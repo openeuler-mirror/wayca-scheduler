@@ -612,8 +612,7 @@ int wayca_group_delete_thread(struct wayca_sc_group *group,
 	return 0;
 }
 
-int wayca_group_rearrange_thread(struct wayca_sc_group *group,
-				 struct wayca_thread *thread)
+int wayca_group_rearrange_thread(struct wayca_thread *thread)
 {
 	thread_sched_setaffinity(thread->pid,
 				 sizeof(cpu_set_t), &thread->cur_set);
@@ -656,7 +655,7 @@ int wayca_group_rearrange_group(struct wayca_sc_group *group)
 		group_for_each_threads(thread, group) {
 			wayca_thread_update_load(thread, false);
 			wayca_group_assign_thread_resource(group, thread);
-			wayca_group_rearrange_thread(group, thread);
+			wayca_group_rearrange_thread(thread);
 		}
 	} else if (group->nr_groups) {
 		struct wayca_sc_group *child;

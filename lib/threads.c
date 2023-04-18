@@ -544,7 +544,7 @@ int WAYCA_SC_DECLSPEC wayca_sc_thread_set_attr(wayca_sc_thread_t wthread,
 	wt_p->attribute = *attr;
 
 	if (wt_p->group)
-		wayca_group_rearrange_thread(wt_p->group, wt_p);
+		wayca_group_rearrange_thread(wt_p);
 
 	return thread_sched_setaffinity(wt_p->pid, sizeof(cpu_set_t), &wt_p->cur_set);
 }
@@ -912,7 +912,7 @@ int WAYCA_SC_DECLSPEC wayca_sc_thread_attach_group(wayca_sc_thread_t wthread,
 	if (ret)
 		wayca_thread_update_load(wt_p, true);
 	else
-		ret = wayca_group_rearrange_thread(wg_p, wt_p);
+		ret = wayca_group_rearrange_thread(wt_p);
 
 	pthread_mutex_unlock(&wg_p->mutex);
 	return ret;
