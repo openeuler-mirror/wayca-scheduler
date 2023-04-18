@@ -874,7 +874,8 @@ static int system_elem_build(xmlNodePtr node)
 {
 	const xmlChar *next_elem;
 	int package_nr;
-	int ret, i;
+	int ret = 0;
+	int i;
 
 	package_nr = wayca_sc_packages_in_total();
 	if (package_nr < 0) {
