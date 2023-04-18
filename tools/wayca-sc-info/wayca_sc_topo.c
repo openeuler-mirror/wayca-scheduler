@@ -158,7 +158,9 @@ static int print_prop_list(xmlNodePtr node, const char * const *prop_list,
 					prop_list[i]);
 			return -ENOENT;
 		}
-		if (!is_valid_memory_size(prop, "KB"))
+		if ((!strcmp((char *)node->name, topo_elem[TOPO_NUMA].name) ||
+		    !strcmp((char *)node->name, topo_elem[TOPO_CORE].name)) &&
+		    !is_valid_memory_size(prop, "KB"))
 			printf("   %s NA", prop_list[i]);
 		else
 			printf("   %s %s", prop_list[i], prop);
