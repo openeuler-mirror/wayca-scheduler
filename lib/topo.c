@@ -2091,10 +2091,21 @@ int WAYCA_SC_DECLSPEC wayca_sc_total_node_mask(size_t setsize, cpu_set_t *mask)
 
 int WAYCA_SC_DECLSPEC wayca_sc_get_core_id(int cpu_id)
 {
+	int physical_id, i;
+
 	if (!topo_is_valid_cpu(cpu_id))
 		return -EINVAL;
 
-	return topo.cpus[cpu_id]->core_id;
+	/* if cpu is offline, can't get physical_core_id */
+	if (!wayca_sc_is_cpu_online(cpu_id))
+		return -ENOENT;
+
+	physical_id = topo.cpus[cpu_id]->core_id;
+	for (i = 0; i < topo.n_cores; i++) {
+		if (topo.cores[i]->core_id == physical_id)
+			return i;
+	}
+	return -EINVAL;
 }
 
 int WAYCA_SC_DECLSPEC wayca_sc_get_ccl_id(int cpu_id)
