@@ -22,6 +22,7 @@ option(WAYCA_SC_BUILD_TOOLS "Build various tools of the wayca scheduler" on)
 option(WAYCA_SC_BUILD_TEST "Build the test program of the project" on)
 
 add_compile_options(-Wall -Wl,-z,relro -Wl,-z,noexecstack)
+add_compile_options(-Wextra -Wno-sign-compare -Wno-unused-parameter)
 add_compile_options(-Wformat=2 -Wfloat-equal -Wshadow)
 add_compile_options(-fvisibility=hidden -fstack-protector-strong)
 add_compile_options(-ftrapv -fstack-check -fPIC -fno-common)
