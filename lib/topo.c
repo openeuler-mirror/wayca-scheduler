@@ -2882,7 +2882,7 @@ static int topo_parse_pci_device(struct wayca_topo *p_topo, const char *dir)
 	if (!p_pcidev)
 		return -ENOMEM;
 	/* store dir full path */
-	strncpy(p_pcidev->absolute_path, dir, WAYCA_SC_PATH_LEN_MAX - 1);
+	(void)strncpy(p_pcidev->absolute_path, dir, WAYCA_SC_PATH_LEN_MAX - 1);
 	PRINT_DBG("absolute path: %s\n", p_pcidev->absolute_path);
 
 	/*
@@ -2891,7 +2891,7 @@ static int topo_parse_pci_device(struct wayca_topo *p_topo, const char *dir)
 	 */
 	p_index = rindex(dir, '/');
 	if (p_index) {
-		strncpy(p_pcidev->slot_name, p_index + 1,
+		(void)strncpy(p_pcidev->slot_name, p_index + 1,
 				WAYCA_SC_PCI_SLOT_NAME_LEN_MAX - 1);
 		PRINT_DBG("slot_name : %s\n", p_pcidev->slot_name);
 	}
@@ -2941,7 +2941,7 @@ static int topo_parse_smmu_info(struct wayca_smmu *p_smmu, const char *dir)
 		return -EIO;
 	}
 
-	strncpy(p_smmu->name, p_index, sizeof(p_smmu->name) - 1);
+	(void)strncpy(p_smmu->name, p_index, sizeof(p_smmu->name) - 1);
 	PRINT_DBG("smmu name: %s\n", p_smmu->name);
 	/* read type (modalias) */
 	ret = topo_path_read_buffer(dir, "modalias", p_smmu->modalias,
@@ -3123,7 +3123,7 @@ static int topo_recursively_read_io_devices(struct wayca_topo *p_topo,
 			if (strcmp(".", entry->d_name) == 0 ||
 			    strcmp("..", entry->d_name) == 0)
 				continue;
-			topo_recursively_read_io_devices(p_topo, entry->d_name);
+			(void)topo_recursively_read_io_devices(p_topo, entry->d_name);
 		} else {
 			/*
 			 * TODO: We rely on 'numa_node' to represent a
@@ -3132,7 +3132,7 @@ static int topo_recursively_read_io_devices(struct wayca_topo *p_topo,
 			 * consider a better idea of identifying i/o device.
 			 */
 			if (strcmp("numa_node", entry->d_name) == 0)
-				topo_parse_io_device(p_topo,
+				(void)topo_parse_io_device(p_topo,
 					getcwd(cwd, WAYCA_SC_PATH_LEN_MAX));
 		}
 	}

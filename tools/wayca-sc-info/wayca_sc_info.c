@@ -53,7 +53,7 @@ static int canonicalize_export_filename(const char *filename,
 	char *bname;
 	char *name;
 
-	strncpy(file_dirname, filename, WAYCA_INFO_MAX_FILE_NAME - 1);
+	(void)strncpy(file_dirname, filename, WAYCA_INFO_MAX_FILE_NAME - 1);
 	dname = dirname(file_dirname);
 	if (!dname)
 		return -EINVAL;
@@ -66,7 +66,7 @@ static int canonicalize_export_filename(const char *filename,
 	if (final_filename[strlen(final_filename) - 1] != '/')
 		strncat(final_filename, "/", size - strlen(final_filename));
 
-	strncpy(file_basename, filename, WAYCA_INFO_MAX_FILE_NAME - 1);
+	(void)strncpy(file_basename, filename, WAYCA_INFO_MAX_FILE_NAME - 1);
 	bname = basename(file_basename);
 	if (!bname)
 		return -EINVAL;
