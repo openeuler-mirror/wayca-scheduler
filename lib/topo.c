@@ -1691,7 +1691,7 @@ int WAYCA_SC_DECLSPEC wayca_sc_cores_in_ccl(void)
 
 int WAYCA_SC_DECLSPEC wayca_sc_cores_in_node(void)
 {
-	if (topo.n_cores < 1)
+	if (topo.n_cores < 1 || topo.n_nodes < 1)
 		return -ENODATA; /* not initialized */
 
 	wayca_sc_cores_in_total();
@@ -1703,7 +1703,7 @@ int WAYCA_SC_DECLSPEC wayca_sc_cores_in_node(void)
 
 int WAYCA_SC_DECLSPEC wayca_sc_cores_in_package(void)
 {
-	if (topo.n_cores < 1)
+	if (topo.n_cores < 1 || topo.n_packages < 1)
 		return -ENODATA; /* not initialized */
 
 	wayca_sc_cores_in_total();
@@ -1737,7 +1737,7 @@ int WAYCA_SC_DECLSPEC wayca_sc_cores_in_total(void)
 
 int WAYCA_SC_DECLSPEC wayca_sc_ccls_in_package(void)
 {
-	if (topo.n_clusters < 1)
+	if (topo.n_clusters < 1 || topo.n_packages < 1)
 		return -ENODATA; /* not initialized */
 
 	wayca_sc_ccls_in_total();
@@ -1749,7 +1749,7 @@ int WAYCA_SC_DECLSPEC wayca_sc_ccls_in_package(void)
 
 int WAYCA_SC_DECLSPEC wayca_sc_ccls_in_node(void)
 {
-	if (topo.n_clusters < 1)
+	if (topo.n_clusters < 1 || topo.n_nodes < 1)
 		return -ENODATA; /* not initialized */
 
 	wayca_sc_ccls_in_total();
