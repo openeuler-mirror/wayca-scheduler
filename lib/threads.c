@@ -326,6 +326,11 @@ static void wayca_thread_init(void)
 	int total_cpu_cnt;
 	size_t num;
 
+	pthread_mutex_init(&wayca_cpu_loads_mutex, NULL);
+	pthread_mutex_init(&wayca_threads_array_mutex, NULL);
+	pthread_mutex_init(&wayca_groups_array_mutex, NULL);
+	pthread_mutex_init(&wayca_threadpools_array_mutex, NULL);
+
 	CPU_ZERO(&total_cpu_set);
 	total_cpu_cnt = wayca_sc_cpus_in_total();
 	if (total_cpu_cnt < 0)
@@ -339,7 +344,6 @@ static void wayca_thread_init(void)
 		return;
 
 	memset(wayca_cpu_loads, 0, sizeof(long long) * total_cpu_cnt);
-	pthread_mutex_init(&wayca_cpu_loads_mutex, NULL);
 
 	wayca_thread_init_from_envs(&num, DEFAULT_WAYCA_SC_THREADS_NUM,
 				    "WAYCA_SC_THREADS_NUMBER");
@@ -351,7 +355,6 @@ static void wayca_thread_init(void)
 
 	memset(wayca_threads_array, 0, num * sizeof(struct wayca_thread *));
 	wayca_threads_array_size = num;
-	pthread_mutex_init(&wayca_threads_array_mutex, NULL);
 
 	wayca_thread_init_from_envs(&num, DEFAULT_WAYCA_SC_GROUPS_NUM,
 				    "WAYCA_SC_GROUPS_NUMBER");
@@ -364,7 +367,6 @@ static void wayca_thread_init(void)
 
 	memset(wayca_groups_array, 0, num * sizeof(struct wayca_sc_group *));
 	wayca_groups_array_size = num;
-	pthread_mutex_init(&wayca_groups_array_mutex, NULL);
 
 	wayca_thread_init_from_envs(&num, DEFAULT_WAYCA_SC_THREADPOOLS_NUM,
 				    "WAYCA_SC_THREADPOOLS_NUMBER");
@@ -377,7 +379,6 @@ static void wayca_thread_init(void)
 	memset(wayca_threadpools_array, 0,
 	       num * sizeof(struct wayca_threadpool *));
 	wayca_threadpools_num = num;
-	pthread_mutex_init(&wayca_threadpools_array_mutex, NULL);
 }
 
 static void wayca_thread_exit(void)
@@ -386,25 +387,25 @@ static void wayca_thread_exit(void)
 		free(wayca_cpu_loads);
 		wayca_cpu_loads = NULL;
 	}
-	pthread_mutex_destroy(&wayca_cpu_loads_mutex);
 
 	if (wayca_threads_array) {
 		free(wayca_threads_array);
 		wayca_threads_array = NULL;
 	}
-	pthread_mutex_destroy(&wayca_threads_array_mutex);
 
 	if (wayca_groups_array) {
 		free(wayca_groups_array);
 		wayca_groups_array = NULL;
 	}
-	pthread_mutex_destroy(&wayca_groups_array_mutex);
 
 	if (wayca_threadpools_array) {
 		free(wayca_threadpools_array);
 		wayca_threadpools_array = NULL;
 	}
 	pthread_mutex_destroy(&wayca_threadpools_array_mutex);
+	pthread_mutex_destroy(&wayca_groups_array_mutex);
+	pthread_mutex_destroy(&wayca_threads_array_mutex);
+	pthread_mutex_destroy(&wayca_cpu_loads_mutex);
 }
 
 /**
