@@ -1111,7 +1111,7 @@ static struct wayca_threadpool *wayca_threadpool_alloc(size_t thread_num)
 
 	wayca_threadpools_array[id]->workers = malloc(thread_num *
 						sizeof(struct wayca_threads *));
-	if (!wayca_threadpools_array[id]) {
+	if (!wayca_threadpools_array[id]->workers) {
 		free(wayca_threadpools_array[id]);
 		wayca_threadpools_array[id] = NULL;
 		goto err;
