@@ -72,7 +72,12 @@ void *topo_expand_mem(void *ptr, size_t old_size, size_t new_size)
 		goto out;
 	memcpy(mem, ptr, old_size);
 out:
-	free(ptr);
+	/*
+	 * Though free() can correctly handle the NULL pointer, check it
+	 * explicitly to avoid confusion.
+	 */
+	if (ptr)
+		free(ptr);
 	return mem;
 }
 
