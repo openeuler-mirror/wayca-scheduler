@@ -174,7 +174,7 @@ static int thread_synchronize(struct pipe_info *pipes, enum sync_signals sig,
 			      bool recv, int num)
 {
 	int fd, i, ret = -EINVAL;
-	char dummy;
+	char dummy = '0';
 
 	/* Get fd index according to @recv */
 	i = recv ? 0 : 1;
