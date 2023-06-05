@@ -76,7 +76,7 @@ static inline
 unsigned long _find_next_bit(const unsigned long *addr, unsigned long nbits,
 			     unsigned long start, unsigned long invert)
 {
-	unsigned long tmp, mask;
+	unsigned long tmp, mask, ffs;
 
 	WAYCA_SC_ASSERT(start < nbits);
 
@@ -95,7 +95,8 @@ unsigned long _find_next_bit(const unsigned long *addr, unsigned long nbits,
 		tmp ^= invert;
 	}
 
-	return min(start + __ffs(tmp), nbits);
+	ffs = start + __ffs(tmp);
+	return min(ffs, nbits);
 }
 
 static inline
@@ -135,7 +136,7 @@ unsigned long find_next_zero_bit(const unsigned long *addr, unsigned long size,
 static inline
 unsigned long find_first_bit(const unsigned long *addr, unsigned long size)
 {
-	unsigned long idx;
+	unsigned long idx, ffs;
 
 	if (small_const_nbits(size)) {
 		unsigned long val = *addr & GENMASK(size - 1, 0);
@@ -144,8 +145,10 @@ unsigned long find_first_bit(const unsigned long *addr, unsigned long size)
 	}
 
 	for (idx = 0; idx * BITS_PER_LONG < size; idx++) {
-		if (addr[idx])
-			return min(idx * BITS_PER_LONG + __ffs(addr[idx]), size);
+		if (addr[idx]) {
+			ffs = idx * BITS_PER_LONG + __ffs(addr[idx]);
+			return min(ffs, size);
+		}
 	}
 
 	return size;
@@ -180,7 +183,7 @@ unsigned long find_last_bit(const unsigned long *addr, unsigned long size)
 static inline
 unsigned long find_first_zero_bit(const unsigned long *addr, unsigned long size)
 {
-	unsigned long idx;
+	unsigned long idx, ffz;
 
 	if (small_const_nbits(size)) {
 		unsigned long val = *addr | ~GENMASK(size - 1, 0);
@@ -189,8 +192,10 @@ unsigned long find_first_zero_bit(const unsigned long *addr, unsigned long size)
 	}
 
 	for (idx = 0; idx * BITS_PER_LONG < size; idx++) {
-		if (addr[idx] != ~0UL)
-			return min(idx * BITS_PER_LONG + __ffz(addr[idx]), size);
+		if (addr[idx] != ~0UL) {
+			ffz = idx * BITS_PER_LONG + __ffz(addr[idx]);
+			return min(ffz, size);
+		}
 	}
 
 	return size;
