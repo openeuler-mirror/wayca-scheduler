@@ -79,6 +79,9 @@ static int bitmap_str_to_cpumask(const char *start, size_t len,
 	int i, pos, num;
 	char *c, *tmp;
 
+	if (len <= 0)
+		return -errno;
+
 	c = strchr(start, '\n');
 	if (!c)
 		return -EINVAL;

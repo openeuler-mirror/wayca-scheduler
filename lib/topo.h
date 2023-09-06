@@ -92,6 +92,7 @@ struct wayca_cluster {
 	int cluster_id;
 	size_t n_cpus;		/* number of possible CPUs in this cluster */
 	cpu_set_t *cpu_map;	/* mask of contained possible CPUs */
+	cpu_set_t *core_map;	/* mask of contained cores */
 };
 
 struct wayca_smmu {
@@ -136,6 +137,7 @@ struct wayca_node {
 	int node_idx;			/* index of node */
 	size_t n_cpus;			/* number of CPUs in this numa node */
 	cpu_set_t *cpu_map;		/* mask of contained possible CPUs */
+	cpu_set_t *core_map;		/* mask of contained cores */
 	cpu_set_t *cluster_map;		/* mask of contained clusters */
 
 	int *distance;			/* array of distance */

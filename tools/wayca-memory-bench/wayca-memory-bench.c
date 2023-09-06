@@ -174,7 +174,7 @@ static int thread_synchronize(struct pipe_info *pipes, enum sync_signals sig,
 			      bool recv, int num)
 {
 	int fd, i, ret = -EINVAL;
-	char dummy;
+	char dummy = '0';
 
 	/* Get fd index according to @recv */
 	i = recv ? 0 : 1;
@@ -448,6 +448,7 @@ static void walk_circular_list(struct buffer_info *info)
 static void *bench_thread(void *data)
 {
 	struct thread_info *info = data;
+	long int overhead;
 
 	if (info->cpu >= 0) {
 		cpu_set_t *cpuset;
@@ -488,9 +489,11 @@ static void *bench_thread(void *data)
 		info->overhead = LONG_MAX;
 		info->total = 0;
 
-		for (i = 0; i < SAMPLES; i++)
-			info->overhead = min(info->overhead,
-				measure_execute_time(info->overhead_func, info->buf));
+		for (i = 0; i < SAMPLES; i++) {
+			overhead = measure_execute_time(info->overhead_func,
+							info->buf);
+			info->overhead = min(info->overhead, overhead);
+		}
 
 		i = 0;
 		while (info->total < 1 * NS_PER_SEC) {

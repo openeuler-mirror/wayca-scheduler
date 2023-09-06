@@ -218,6 +218,18 @@ int wayca_sc_nodes_in_total(void);
  */
 int wayca_sc_packages_in_total(void);
 
+/**
+ * wayca_sc_get_physical_id - retrieve the physical id in a certain
+ * topology structure by logical id.
+ * @elem_name: a certain topology structure's name, like "cluster" "package" or
+ * "core"
+ * @logical_id: logical id of a certain topology structure
+ *
+ * Return a certain topology structure's physical id  on success and a negative
+ * error number on failure.
+ */
+int wayca_sc_get_physical_id(char *elem_name, int logical_id);
+
 /*
  * The following family of functions retrieve the cpuset mask of certain
  * topology structure.
@@ -245,6 +257,36 @@ int wayca_sc_total_cpu_mask(size_t cpusetsize, cpu_set_t *mask);
  * Return 0 on success and a negative error number on failure.
  */
 int wayca_sc_total_online_cpu_mask(size_t cpusetsize, cpu_set_t *mask);
+
+/**
+ * wayca_sc_ccl_core_mask - retrieve the core mask in a certain cluster
+ * @ccl_id: target cluster ID
+ * @setsize: size of @mask
+ * @mask: the core mask to receive the result
+ *
+ * Return 0 on success and a negative error number on failure.
+ */
+int wayca_sc_ccl_core_mask(int ccl_id, size_t setsize, cpu_set_t *mask);
+
+/**
+ * wayca_sc_node_core_mask - retrieve the core mask in a certain node
+ * @node_id: target node ID
+ * @setsize: size of @mask
+ * @mask: the core mask to receive the result
+ *
+ * Return 0 on success and a negative error number on failure.
+ */
+int wayca_sc_node_core_mask(int node_id, size_t setsize, cpu_set_t *mask);
+
+/**
+ * wayca_sc_node_ccl_mask - retrieve the cluster mask in a certain node
+ * @node_id: target node ID
+ * @setsize: size of @mask
+ * @mask: the cluster mask to receive the result
+ *
+ * Return 0 on success and a negative error number on failure.
+ */
+int wayca_sc_node_ccl_mask(int node_id, size_t setsize, cpu_set_t *mask);
 
 /**
  * wayca_sc_package_node_mask - retrieve the node mask in a certain package

@@ -11,6 +11,7 @@
  * See the Mulan PSL v2 for more details.
  */
 
+#define _GNU_SOURCE
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
@@ -18,6 +19,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sched.h>
 
 #include "common.h"
 #include "wayca-scheduler.h"
@@ -31,6 +33,12 @@ typedef int (*topo_print_prop_t)(xmlNodePtr node);
 
 static int output_irq;
 static int output_dev;
+
+static bool numa_mem_error;
+static bool core_mem_error;
+
+#define ccl_set_t cpu_set_t
+#define core_set_t cpu_set_t
 
 static int numa_prop_print(xmlNodePtr node);
 static int numa_prop_verify(xmlNodePtr node);
@@ -128,6 +136,15 @@ static bool is_valid_num(const char *num, int base, long min, long max)
 	return *endstr == '\0' && ret >= min && ret <= max;
 }
 
+static bool is_valid_memory_size(const char *mem_size, const char *need_endstr)
+{
+	char *real_endstr;
+	long ret;
+
+	ret = strtol(mem_size, &real_endstr, 10);
+	return ret >= 0 && !strcmp(need_endstr, real_endstr);
+}
+
 static int print_prop_list(xmlNodePtr node, const char * const *prop_list,
 			   int list_size)
 {
@@ -141,22 +158,12 @@ static int print_prop_list(xmlNodePtr node, const char * const *prop_list,
 					prop_list[i]);
 			return -ENOENT;
 		}
-
-		/* if the numa node's cpus are offline, prop is "0KB" */
-		if (!strcmp(prop_list[i], "L3_cache") && prop[0] == '0') {
-			printf("   Offline");
-			xmlFree(prop);
-			return 0;
-		}
-
-		/* if the cpu is offline, prop is "0KB" */
-		if (!strcmp(prop_list[i], "L1i_cache") && prop[0] == '0') {
-			printf("   Offline");
-			xmlFree(prop);
-			return 0;
-		}
-
-		printf("   %s %s", prop_list[i], prop);
+		if ((!strcmp((char *)node->name, topo_elem[TOPO_NUMA].name) ||
+		    !strcmp((char *)node->name, topo_elem[TOPO_CORE].name)) &&
+		    !is_valid_memory_size(prop, "KB"))
+			printf("   %s NA", prop_list[i]);
+		else
+			printf("   %s %s", prop_list[i], prop);
 		xmlFree(prop);
 	}
 	return 0;
@@ -275,41 +282,84 @@ prop_free:
 	return ret;
 }
 
-static int build_prop_index(xmlNodePtr node, int id)
+static int build_prop_index(xmlNodePtr node, int id, char *index_name)
 {
 #define MAX_INT_SIZE 32
 	char index[MAX_INT_SIZE] = {0};
 	xmlAttrPtr prop;
 
 	snprintf(index, sizeof(index), "%d", id);
-	prop = xmlNewProp(node, BAD_CAST "index", BAD_CAST index);
+	prop = xmlNewProp(node, BAD_CAST index_name, BAD_CAST index);
 	if (!prop)
 		return -ENOMEM;
 	return 0;
 }
 
-static int topo_build_next_elem(xmlNodePtr node, int index, int c_elem_nr,
-		const xmlChar *next_elem)
+static int topo_build_single_elem(xmlNodePtr node, int index,
+				  const xmlChar *next_elem)
 {
+	int ret, i, p_index;
 	xmlNodePtr c_node;
-	int i, j;
-	int ret;
 
-	for (i = index * c_elem_nr; i < (index + 1) * c_elem_nr; i++) {
-		c_node = xmlNewChild(node, NULL, next_elem, NULL);
-		if (!c_node) {
-			topo_err("fail to create sub node %d", i);
-			return -ENOMEM;
-		}
+	c_node = xmlNewChild(node, NULL, next_elem, NULL);
+	if (!c_node) {
+		topo_err("fail to create sub node %d", index);
+		return -ENOMEM;
+	}
 
-		for (j = 0; j < ARRAY_SIZE(topo_elem); j++) {
-			if (!(strcmp((char *)c_node->name, topo_elem[j].name)))
-				break;
-		}
-		if (j >= ARRAY_SIZE(topo_elem) || !topo_elem[j].has_idx)
+	for (i = 0; i < ARRAY_SIZE(topo_elem); i++) {
+		if (!(strcmp((char *)c_node->name, topo_elem[i].name)))
+			break;
+	}
+	if (i >= ARRAY_SIZE(topo_elem) || !topo_elem[i].has_idx)
+		return 0;
+
+	/* index is used for element construction */
+	ret = build_prop_index(c_node, index, "index");
+	if (ret)
+		return ret;
+
+	/* p_index is physical ID of a certain topology structure */
+	if (!strcmp((char *)c_node->name, topo_elem[TOPO_CCL].name)) {
+		p_index = wayca_sc_get_physical_id("cluster", index);
+		if (p_index < 0)
+			return p_index;
+		ret = build_prop_index(c_node, p_index, "p_index");
+		if (ret)
+			return ret;
+	} else if (!strcmp((char *)c_node->name, topo_elem[TOPO_PKG].name)) {
+		p_index = wayca_sc_get_physical_id("package", index);
+		if (p_index < 0)
+			return p_index;
+		ret = build_prop_index(c_node, p_index, "p_index");
+		if (ret)
+			return ret;
+	} else if (!strcmp((char *)c_node->name, topo_elem[TOPO_CORE].name)) {
+		p_index = wayca_sc_get_physical_id("core", index);
+		if (p_index < 0)
+			return p_index;
+		ret = build_prop_index(c_node, p_index, "p_index");
+		if (ret)
+			return ret;
+	} else {
+		ret = build_prop_index(c_node, index, "p_index");
+		if (ret)
+			return ret;
+	}
+	return 0;
+}
+
+static int topo_build_next_elem(xmlNodePtr node, cpu_set_t mask, int elem_nr,
+				const xmlChar *next_elem)
+{
+	int ret, i;
+
+	for (i = 0; i < elem_nr; i++) {
+		ret = CPU_ISSET(i, &mask);
+		if (!ret)
 			continue;
 
-		ret = build_prop_index(c_node, i);
+		ret = topo_build_single_elem(node, i, next_elem);
 		if (ret)
 			return ret;
 	}
@@ -324,15 +374,6 @@ static bool is_valid_idx(const char *num)
 
 	ret = strtol(num, &endstr, 10);
 	return *endstr == '\0' && ret >= 0 && ret < MAX_CPUS;
-}
-
-static bool is_valid_memory_size(const char *mem_size, const char *need_endstr)
-{
-	char *real_endstr;
-	long ret;
-
-	ret = strtol(mem_size, &real_endstr, 10);
-	return ret >= 0 && !strcmp(need_endstr, real_endstr);
 }
 
 static int cpu_elem_build(xmlNodePtr node)
@@ -370,26 +411,26 @@ static int core_prop_print(xmlNodePtr node)
 	return 0;
 }
 
-static int core_prop_build(xmlNodePtr numa_node, int core_id)
+static int core_prop_build(xmlNodePtr numa_node, int cpu_id)
 {
 	char content[CONTENT_STR_LEN] = {0};
 	xmlAttrPtr prop;
 	int cache_size;
 
-	cache_size = wayca_sc_get_l1i_size(core_id);
+	cache_size = wayca_sc_get_l1i_size(cpu_id);
 	snprintf(content, sizeof(content), "%dKB", cache_size);
 	prop = xmlNewProp(numa_node, BAD_CAST"L1i_cache", BAD_CAST content);
 	if (!prop)
 		return -ENOMEM;
 
-	cache_size = wayca_sc_get_l1d_size(core_id);
+	cache_size = wayca_sc_get_l1d_size(cpu_id);
 	memset(content, 0, sizeof(content));
 	snprintf(content, sizeof(content), "%dKB", cache_size);
 	prop = xmlNewProp(numa_node, BAD_CAST"L1d_cache", BAD_CAST content);
 	if (!prop)
 		return -ENOMEM;
 
-	cache_size = wayca_sc_get_l2_size(core_id);
+	cache_size = wayca_sc_get_l2_size(cpu_id);
 	memset(content, 0, sizeof(content));
 	snprintf(content, sizeof(content), "%dKB", cache_size);
 	prop = xmlNewProp(numa_node, BAD_CAST"L2_cache", BAD_CAST content);
@@ -427,7 +468,8 @@ static int core_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd)
 
 static int core_prop_verify(xmlNodePtr node)
 {
-	char *prop;
+	char *prop, *error;
+	long ret;
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(core_prop_list); i++) {
@@ -438,10 +480,14 @@ static int core_prop_verify(xmlNodePtr node)
 			return -ENOENT;
 		}
 		if (!is_valid_memory_size(prop, "KB")) {
-			topo_err("%s: invalid %s: %s.", node->name,
-					core_prop_list[i], prop);
+			if (!core_mem_error) {
+				ret = strtol(prop, &error, 10);
+				topo_err("%s: invalid %s: %d.", node->name,
+					 core_prop_list[i], ret);
+				core_mem_error = true;
+			}
 			xmlFree(prop);
-			return -EINVAL;
+			return 0;
 		}
 		xmlFree(prop);
 	}
@@ -451,21 +497,42 @@ static int core_prop_verify(xmlNodePtr node)
 static int core_elem_build(xmlNodePtr node)
 {
 	const xmlChar *next_elem = BAD_CAST topo_elem[TOPO_CPU].name;
+	cpu_set_t mask;
 	int c_nr = 1;
 	int core_id;
-	int ret;
+	int ret, i;
 
 	ret = get_index_from_prop(node, &core_id);
 	if (ret)
 		return ret;
 
-	ret = core_prop_build(node, core_id);
+	ret = wayca_sc_core_cpu_mask(core_id, sizeof(cpu_set_t),
+				     &mask);
+	if (ret < 0) {
+		topo_err("fail to get core cpu mask.");
+		return ret;
+	}
+
+	c_nr = wayca_sc_cpus_in_total();
+	if (c_nr < 0) {
+		topo_err("number of cpu is wrong.");
+		return c_nr;
+	}
+
+	/* find one online CPU in this core, i corresponds to CPU id */
+	for (i = 0; i < c_nr; i++) {
+		ret = CPU_ISSET(i, &mask);
+		if (!ret)
+			continue;
+		break;
+	}
+	ret = core_prop_build(node, i);
 	if (ret) {
 		topo_err("build core properties fail, ret = %d.", ret);
 		return ret;
 	}
 
-	ret = topo_build_next_elem(node, core_id, c_nr, next_elem);
+	ret = topo_build_next_elem(node, mask, c_nr, next_elem);
 	if (ret)
 		topo_err("fail to create core node.");
 	return ret;
@@ -490,6 +557,7 @@ static int ccl_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt, xmlDtdPtr topo_dtd)
 static int ccl_elem_build(xmlNodePtr node)
 {
 	const xmlChar *next_elem = BAD_CAST topo_elem[TOPO_CORE].name;
+	core_set_t mask;
 	int c_nr = 1;
 	int ccl_id;
 	int ret;
@@ -498,15 +566,22 @@ static int ccl_elem_build(xmlNodePtr node)
 	if (ret)
 		return ret;
 
-	c_nr = wayca_sc_cpus_in_ccl();
+	ret = wayca_sc_ccl_core_mask(ccl_id, sizeof(core_set_t),
+				     &mask);
+	if (ret < 0) {
+		topo_err("fail to get cluster core mask.");
+		return ret;
+	}
+
+	c_nr = wayca_sc_cores_in_total();
 	if (c_nr < 0) {
 		topo_err("number of core is wrong, ret = %d.", c_nr);
 		return c_nr;
 	}
 
-	ret = topo_build_next_elem(node, ccl_id, c_nr, next_elem);
+	ret = topo_build_next_elem(node, mask, c_nr, next_elem);
 	if (ret)
-		topo_err("fail to create ccl node.");
+		topo_err("fail to create core node.");
 
 	return ret;
 }
@@ -544,6 +619,7 @@ static int numa_prop_build(xmlNodePtr numa_node, int numa_id)
 	xmlAttrPtr prop;
 	int cache_size = -1;
 	int num_cpu, i;
+	cpu_set_t mask;
 	int ret;
 
 	ret = wayca_sc_get_node_mem_size(numa_id, &mem_size);
@@ -558,9 +634,24 @@ static int numa_prop_build(xmlNodePtr numa_node, int numa_id)
 	if (!prop)
 		return -ENOMEM;
 
+	ret = wayca_sc_node_cpu_mask(numa_id, sizeof(cpu_set_t),
+				     &mask);
+	if (ret < 0) {
+		topo_err("fail to get node cpu mask.");
+		return ret;
+	}
+
 	/* read this node's L3_cache from node's online cpus */
-	num_cpu = wayca_sc_cpus_in_node();
-	for (i = num_cpu * numa_id; i < num_cpu * (numa_id + 1); i++) {
+	num_cpu = wayca_sc_cpus_in_total();
+	if (num_cpu < 0) {
+		topo_err("number of cpu is wrong.");
+		return num_cpu;
+	}
+	for (i = 0; i < num_cpu; i++) {
+		ret = CPU_ISSET(i, &mask);
+		if (!ret)
+			continue;
+
 		cache_size = wayca_sc_get_l3_size(i);
 
 		/* if cpu[i] online, cache_size > 0 */
@@ -573,7 +664,7 @@ static int numa_prop_build(xmlNodePtr numa_node, int numa_id)
 	if (!prop)
 		return -ENOMEM;
 
-	return ret;
+	return 0;
 }
 
 static int get_dev_elem_type(enum wayca_sc_device_type dev_type,
@@ -651,6 +742,8 @@ buffer_free:
 static int numa_elem_build(xmlNodePtr node)
 {
 	const xmlChar *next_elem = BAD_CAST topo_elem[TOPO_CCL].name;
+	core_set_t core_mask;
+	ccl_set_t ccl_mask;
 	int numa_id;
 	int c_nr;
 	int ret;
@@ -665,21 +758,41 @@ static int numa_elem_build(xmlNodePtr node)
 		return ret;
 	}
 
-	c_nr = wayca_sc_ccls_in_node();
+	c_nr = wayca_sc_ccls_in_total();
 	if (c_nr < 0) {
 		topo_warn("number of clusters is invalid, cluster level may not be supported.");
-		c_nr = wayca_sc_cores_in_node();
+		c_nr = wayca_sc_cores_in_total();
 		if (c_nr < 0) {
 			topo_err("number of core is wrong.");
 			return c_nr;
 		}
 		next_elem = BAD_CAST topo_elem[TOPO_CORE].name;
-	}
 
-	ret = topo_build_next_elem(node, numa_id, c_nr, next_elem);
-	if (ret) {
-		topo_err("fail to create numa node.");
-		return ret;
+		ret = wayca_sc_node_core_mask(numa_id, sizeof(core_set_t),
+					      &core_mask);
+		if (ret < 0) {
+			topo_err("fail to get node core mask.");
+			return ret;
+		}
+
+		ret = topo_build_next_elem(node, core_mask, c_nr, next_elem);
+		if (ret) {
+			topo_err("fail to create core node.");
+			return ret;
+		}
+	} else {
+		ret = wayca_sc_node_ccl_mask(numa_id, sizeof(ccl_set_t),
+					     &ccl_mask);
+		if (ret < 0) {
+			topo_err("fail to get node cluster mask.");
+			return ret;
+		}
+
+		ret = topo_build_next_elem(node, ccl_mask, c_nr, next_elem);
+		if (ret) {
+			topo_err("fail to create cluster node.");
+			return ret;
+		}
 	}
 
 	if (!output_dev)
@@ -712,23 +825,31 @@ static int pkg_format(xmlDocPtr doc, xmlValidCtxtPtr ctxt,
 static int package_elem_build(xmlNodePtr node)
 {
 	const xmlChar *next_elem = BAD_CAST topo_elem[TOPO_NUMA].name;
+	node_set_t mask;
 	int package_id;
 	int numa_nr;
 	int ret;
-
-	numa_nr = wayca_sc_nodes_in_package();
-	if (numa_nr < 0) {
-		topo_err("number of package is wrong.");
-		return numa_nr;
-	}
 
 	ret = get_index_from_prop(node, &package_id);
 	if (ret)
 		return ret;
 
-	ret = topo_build_next_elem(node, package_id, numa_nr, next_elem);
+	ret = wayca_sc_package_node_mask(package_id, sizeof(node_set_t),
+					 &mask);
+	if (ret < 0) {
+		topo_err("fail to get package node mask.");
+		return ret;
+	}
+
+	numa_nr = wayca_sc_nodes_in_total();
+	if (numa_nr < 0) {
+		topo_err("number of numa is wrong.");
+		return numa_nr;
+	}
+
+	ret = topo_build_next_elem(node, mask, numa_nr, next_elem);
 	if (ret)
-		topo_err("fail to create package node.");
+		topo_err("fail to create numa node.");
 
 	return ret;
 }
@@ -753,7 +874,8 @@ static int system_elem_build(xmlNodePtr node)
 {
 	const xmlChar *next_elem;
 	int package_nr;
-	int ret;
+	int ret = 0;
+	int i;
 
 	package_nr = wayca_sc_packages_in_total();
 	if (package_nr < 0) {
@@ -762,17 +884,19 @@ static int system_elem_build(xmlNodePtr node)
 	}
 
 	next_elem = BAD_CAST topo_elem[TOPO_PKG].name;
-	ret = topo_build_next_elem(node, 0, package_nr, next_elem);
-	if (ret) {
-		topo_err("fail to create package node.");
-		return ret;
+	for (i = 0; i < package_nr; i++) {
+		ret = topo_build_single_elem(node, i, next_elem);
+		if (ret) {
+			topo_err("fail to create package node.");
+			return ret;
+		}
 	}
 
 	if (!output_irq)
 		return ret;
 
 	next_elem = BAD_CAST topo_elem[TOPO_INTR].name;
-	ret = topo_build_next_elem(node, 0, 1, next_elem);
+	ret = topo_build_single_elem(node, 0, next_elem);
 	if (ret)
 		topo_err("fail to create interrupts node.");
 
@@ -928,15 +1052,28 @@ static int numa_prop_print(xmlNodePtr node)
 
 static int print_index(xmlNodePtr node)
 {
-	char *index_prop;
+	char *index_prop, *p_index_prop;
 
-	index_prop = (char *)xmlGetProp(node, BAD_CAST "index");
-	if (!index_prop) {
-		topo_err("get index fail.");
+	p_index_prop = (char *)xmlGetProp(node, BAD_CAST "p_index");
+	if (!p_index_prop) {
+		topo_err("get p_index fail.");
 		return -ENOENT;
 	}
-	printf(" #%s", index_prop);
-	xmlFree(index_prop);
+
+	if (!strcmp((char *)node->name, topo_elem[TOPO_NUMA].name) ||
+	    !strcmp((char *)node->name, topo_elem[TOPO_CPU].name)) {
+		printf(" P#%s", p_index_prop);
+	} else {
+		index_prop = (char *)xmlGetProp(node, BAD_CAST "index");
+		if (!index_prop) {
+			topo_err("get index fail.");
+			return -ENOENT;
+		}
+
+		printf(" L#%s P#%s", index_prop, p_index_prop);
+		xmlFree(index_prop);
+	}
+	xmlFree(p_index_prop);
 	return 0;
 }
 
@@ -1091,6 +1228,10 @@ static int validate_format(xmlDocPtr topo_doc)
 		xmlAddAttributeDecl(ctxt, topo_dtd, BAD_CAST topo_elem[i].name,
 			BAD_CAST "index", NULL, XML_ATTRIBUTE_CDATA,
 			XML_ATTRIBUTE_REQUIRED, NULL, NULL);
+
+		xmlAddAttributeDecl(ctxt, topo_dtd, BAD_CAST topo_elem[i].name,
+			BAD_CAST "p_index", NULL, XML_ATTRIBUTE_CDATA,
+			XML_ATTRIBUTE_REQUIRED, NULL, NULL);
 	}
 	/* It will return 1 after successful verification */
 	ret = xmlValidateDtd(ctxt, topo_doc, topo_dtd);
@@ -1103,7 +1244,8 @@ free_format:
 
 static int numa_prop_verify(xmlNodePtr node)
 {
-	char *prop;
+	char *prop, *error;
+	long ret;
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(numa_prop_list); i++) {
@@ -1114,10 +1256,14 @@ static int numa_prop_verify(xmlNodePtr node)
 			return -ENOENT;
 		}
 		if (!is_valid_memory_size(prop, "KB")) {
-			topo_err("%s: invalid %s: %s.", node->name,
-					numa_prop_list[i], prop);
+			if (!numa_mem_error) {
+				ret = strtol(prop, &error, 10);
+				topo_err("%s: invalid %s: %d.", node->name,
+					 numa_prop_list[i], ret);
+				numa_mem_error = true;
+			}
 			xmlFree(prop);
-			return -EINVAL;
+			return 0;
 		}
 		xmlFree(prop);
 	}
