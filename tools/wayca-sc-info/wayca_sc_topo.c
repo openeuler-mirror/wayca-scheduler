@@ -368,7 +368,7 @@ static int topo_build_next_elem(xmlNodePtr node, cpu_set_t mask, int elem_nr,
 
 static bool is_valid_idx(const char *num)
 {
-#define MAX_CPUS 1280 // kunpeng930 support 16 packects interconnected
+#define MAX_CPUS 4096 /* Currently Linux supports up to 4096 CPUs for arm64 */
 	char *endstr;
 	long ret;
 
