@@ -55,7 +55,7 @@ static size_t max_ccls;
  * - new_size: size expend to
  * return:
  *   NULL: fail to alloc memory, and origin memory will be freed.
- *   other: success to expand the memmory
+ *   other: success to expand the memory
  */
 void *topo_expand_mem(void *ptr, size_t old_size, size_t new_size)
 {
