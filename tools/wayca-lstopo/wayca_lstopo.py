@@ -242,10 +242,10 @@ To get the calibration data of cpu 0 to cpu 4:
     parser.add_argument(
         '--wayca-scope',
         help="Data scope which would be displayed, format \"cpu: 0 20\", "
-        "default diaplay all the cpu data.")
+        "default display all the cpu data.")
     parser.add_argument(
         '--wayca-type', choices=['all', 'latency', 'bandwidth'], default='all',
-        help="Data type which shoud be display, default all.")
+        help="Data type which should be display, default all.")
     parser.add_argument(
         '--wayca-data', help="Which Calibration data file will be used.")
     parser.add_argument(
@@ -329,7 +329,7 @@ class WaycaMatrix():
 
 def find_title(line):
     """
-    The valid titile is like {banchmark}{topo}{LAT|Band}{cache}({unit})
+    The valid title is like {banchmark}{topo}{LAT|Band}{cache}({unit})
     E.g. WAYCACPULATL1CACHE(MB)
     """
     topo_type = WaycaLstopoArgs().topo_type
