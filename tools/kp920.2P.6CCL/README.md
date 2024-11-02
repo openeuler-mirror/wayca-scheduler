@@ -6,7 +6,7 @@ These benchmarks in this folder is captured on the following machine:
  - Memory: 512GB.
 	 - All DIMM 0 sockets are mounted with a 32GB memory board.
 	 - All DIMM 1 sockets are empty.
-	 - Detials:
+	 - Details:
 ```
 SOCKET 0 CHANNEL 0 DIMM 0
 Samsung, 32GB, 2933MHz, 1.2V/2.0V   (M393A4K40CB2-CVF)

@@ -669,7 +669,7 @@ typedef unsigned long long	wayca_sc_group_attr_t;
  * member groups will be changed as well as their father group's attribute
  * has been changed.
  *
- * Return 0 on succes, otherwise a negative error number on failure.
+ * Return 0 on success, otherwise a negative error number on failure.
  */
 int wayca_sc_group_set_attr(wayca_sc_group_t group, wayca_sc_group_attr_t *attr);
 
