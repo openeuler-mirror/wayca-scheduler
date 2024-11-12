@@ -97,7 +97,7 @@ static void find_idlest_set(struct wayca_sc_group *group, cpu_set_t *cpuset)
 	pthread_mutex_lock(&wayca_cpu_loads_mutex);
 	while (pos <= cpuset_find_last_set(cpuset)) {
 		/**
-		 * @cpuset maybe inconsistent. So skip the inavailable
+		 * @cpuset maybe inconsistent. So skip the unavailable
 		 * set of cpus.
 		 */
 		if (!CPU_ISSET(pos, cpuset)) {
@@ -152,7 +152,7 @@ static int find_incomplete_set(struct wayca_sc_group *group, cpu_set_t *cpuset)
 		pos += stride;
 	}
 
-	/* No imcomplete set is found in the @cpuset */
+	/* No incomplete set is found in the @cpuset */
 	return -ENODATA;
 }
 
@@ -532,7 +532,7 @@ static void wayca_group_assign_thread_resource(struct wayca_sc_group *group,
 	 * If the relationship between threads is compact, we only
 	 * record the @target_pos of this thread in the group->used,
 	 * as next thread may be placed in the same topology set.
-	 * Otherwise the threads are scatterred, we have to record
+	 * Otherwise the threads are scattered, we have to record
 	 * all the CPUs assigned to this thread in the group->used,
 	 * as it's exclusive to the next thread.
 	 */
@@ -641,7 +641,7 @@ int wayca_group_rearrange_group(struct wayca_sc_group *group)
 	group->roll_over_cnts = 0;
 
 	/*
-	 * We need to check whehter this is a thread group or not.
+	 * We need to check whether this is a thread group or not.
 	 * If this is a thread group, update the resources of each
 	 * member threads; if this is a groups' group, rearrange
 	 * each member groups.
