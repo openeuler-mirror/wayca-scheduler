@@ -257,7 +257,7 @@ static int init_socket()
 	}
 
 	addr.sun_family = AF_UNIX;
-	strncpy(addr.sun_path, SOCKET_PATH, sizeof(addr.sun_path));
+	strncpy(addr.sun_path, SOCKET_PATH, sizeof(addr.sun_path) - 1);
 	if (bind(socket_fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		fprintf(stderr, "Failed to bind socket\n");
 		return -1;
