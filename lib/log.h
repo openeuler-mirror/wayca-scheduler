@@ -76,7 +76,7 @@ static inline void _log(FILE *file, bool conn, char *fmt, ...)
  *
  * WAYCA_SC_LOG_{ERR,WARN,INFO}: log with timestamp and colored message level
  *                               banner
- * WAYCA_SC_LOG_{ERR,WARN,INFO}_CONN: log connnected to the previous one,
+ * WAYCA_SC_LOG_{ERR,WARN,INFO}_CONN: log connected to the previous one,
  *                                    without timestamp or message level banner
  * WAYCA_SC_LOG_{ERR,WARN,INFO}_NO_TS: log without timestamp but with message
  *                                     level banner

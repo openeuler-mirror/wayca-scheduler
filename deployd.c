@@ -215,7 +215,7 @@ static int parse_cfg_file(void)
 			else if (str_start_with(p, "occupied_io_nodes")) {
 				char occupied_io_nodes[PATH_MAX];
 				cfg_strtostr(p, occupied_io_nodes);
-				/* TODO: not impemented occupied_io_nodes */
+				/* TODO: not implemented occupied_io_nodes */
 			}
 			else if (str_start_with(p, "default_task_bind")) {
 				char default_task_bind_str[PATH_MAX];

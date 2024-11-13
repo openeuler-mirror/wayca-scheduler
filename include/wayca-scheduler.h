@@ -872,7 +872,7 @@ int wayca_sc_threadpool_get_group(wayca_sc_threadpool_t threadpool,
  * @arg: the argument of @task_func
  *
  * Queue a task into the threadpool to execute. If there's idle working
- * thread(s) in the pool, the task will be executed immediatedly.
+ * thread(s) in the pool, the task will be executed immediately.
  * Otherwise it will be queued into an internal FIFO waiting for
  * execution.
  *
