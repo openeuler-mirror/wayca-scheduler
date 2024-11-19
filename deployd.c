@@ -34,7 +34,7 @@ static char *config_file_path = WAYCA_SCD_DEFAULT_CONFIG_PATH;
 /* default CPU binding modes */
 static enum CPUBIND default_task_bind = AUTO;
 
-/* default memory bandwidth requirment of the application */
+/* default memory bandwidth requirement of the application */
 static enum MEMBAND default_mem_bandwidth = ALL;
 
 #define NR_CPUS 1024
