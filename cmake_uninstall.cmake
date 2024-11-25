@@ -12,7 +12,7 @@
 set(MANIFEST "${CMAKE_CURRENT_BINARY_DIR}/install_manifest.txt")
 
 if(NOT EXISTS ${MANIFEST})
-    message(FATAL_ERROR "Cannot find install mainfest: ${MANIFEST}")
+    message(FATAL_ERROR "Cannot find install manifest: ${MANIFEST}")
 endif()
 
 file(STRINGS ${MANIFEST} files)

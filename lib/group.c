@@ -494,7 +494,7 @@ static void wayca_group_assign_thread_resource(struct wayca_sc_group *group,
 		target_pos = find_idlest_core(&available_set);
 	}
 
-	/* Reset the thread's cpuset infomation first */
+	/* Reset the thread's cpuset information first */
 	CPU_ZERO(&thread->allowed_set);
 	CPU_ZERO(&thread->cur_set);
 	thread->target_pos = target_pos;
